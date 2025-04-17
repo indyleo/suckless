@@ -70,7 +70,7 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[]     = { "dmenu_run", NULL };
-static const char *termcmd[]      = { "st", NULL };
+static const char *termcmd[]      = { "alacritty", NULL };
 static const char *filemanager[]  = { "thunar", NULL };
 static const char *browser[]      = { "firefox-esr", NULL };
 
@@ -83,7 +83,7 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_p, spawn,               SHCMD("dmenupower") },
 	{ MODKEY|ShiftMask,             XK_c, spawn,               SHCMD("dmenuclip") },
 	{ MODKEY|ShiftMask,             XK_e, spawn,               SHCMD("dmenuem") },
-	{ MODKEY|ShiftMask,             XK_l, spawn,             SHCMD("slock") },
+	{ MODKEY|ShiftMask,             XK_l, spawn,               SHCMD("slock") },
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
