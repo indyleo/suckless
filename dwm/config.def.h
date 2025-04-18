@@ -135,6 +135,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
   { 0,                            XK_Print,  spawn,          {.v = flameshot} },
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
+	{ MODKEY,                       XK_p,      spawn,          SHCMD("dmenu_flatpak") },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 };
 
