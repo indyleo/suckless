@@ -67,5 +67,12 @@ static const struct arg args[] = {
 	/* function format          argument */
 	{ datetime, "%s",           "  %A %B %d %Y | 󰥔  %I:%M %p" },
   { run_command, "%s",       "echo ' || '" },
+  { run_command, "%s",       "sysstats cpu" },
+  { run_command, "%s",       "echo ' | '" },
+  { run_command, "%s",       "sysstats mem" },
+  { run_command, "%s",       "echo ' | '" },
+  { run_command, "%s",       "sysstats disk" },
+  { run_command, "%s",       "echo ' || '" },
   { run_command, "%s",       "battery" },
+
 };
