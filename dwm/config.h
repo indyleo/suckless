@@ -72,7 +72,7 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[]     = { "dmenu_run", NULL };
 static const char *termcmd[]      = { "alacritty", NULL };
 static const char *filemanager[]  = { "thunar", NULL };
-static const char *browser[]      = { "firefox-esr", NULL };
+static const char *browser[]      = { "brave-browser", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
