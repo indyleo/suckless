@@ -59,6 +59,7 @@ static const Layout layouts[] = {
 /* key definitions */
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
+#define ALTKEY Mod1Mask
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
@@ -137,6 +138,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_p,      spawn,          SHCMD("dmenu_flatpak") },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
+
+  /* Alt Tab */
+  { ALTKEY,                       XK_Tab,    spawn,          SHCMD("dmenu_alttab") },
 };
 
 /* button definitions */
