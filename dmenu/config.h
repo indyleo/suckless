@@ -7,7 +7,7 @@ static const unsigned int alpha = 0xff;     /* Amount of opacity. 0xff is opaque
 static const int user_bh = 4;               /* add an defined amount of pixels to the bar height */
 
 static const char *fonts[] = {
-	"FiraCode Nerd Font:size=14"
+	"FiraCode Nerd Font:pixelsize=12"
 };
 static const char *prompt      = "What to Run > ";      /* -p  option; prompt to the left of input field */
 static const char *colors[SchemeLast][2] = {
