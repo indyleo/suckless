@@ -67,5 +67,6 @@ xwalr "$HOME/Pictures/Wallpapers"
 [[ -f "$HOME/.Xresources" ]] || xrdb -load "$HOME/.Xresources"
 systemctl --user import-environment DISPLAY
 StartProc
+StartFlat
 
 exec dwm
