@@ -12,7 +12,10 @@ static const int showsystray        = 1;        /* 0 means no systray */
 static const int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]                    = { "MesloLGS Nerd Font Mono:size=14", "NotoColorEmoji:size=14:antialias=true:autohint=true" };
+static const char *fonts[]                    = { 
+  "MesloLGS Nerd Font Mono:size=12", 
+  "NotoColorEmoji:size=12:antialias=true:autohint=true" 
+};
 static const char normbordercolor[]           = "#3B4252";
 static const char normbgcolor[]               = "#2E3440";
 static const char normfgcolor[]               = "#D8DEE9";
