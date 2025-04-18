@@ -91,7 +91,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY,                       XK_q,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+	{ MODKEY|ShiftMask,             XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
@@ -117,17 +117,23 @@ static const Key keys[] = {
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
 	{ 0,                            XF86XK_AudioLowerVolume,    spawn,          SHCMD("volumectrl --dec") },
   { 0,                            XF86XK_AudioRaiseVolume,    spawn,          SHCMD("volumectrl --inc") },
+  { MODKEY,                       XK_s,                       spawn,          SHCMD("songctrl --togglepause Supersonic") },
+  { MODKEY|ShiftMask,             XK_s,                       spawn,          SHCMD("songctrl --skip Supersonic") },
+  { MODKEY|ControlMask,           XK_s,                       spawn,          SHCMD("songctrl --previous Supersonic") },
+
+
+  /* Brightness Controls */
   { 0,                            XF86XK_MonBrightnessUp,     spawn,          SHCMD("brightnessctrl --inc 5") },
   { 0,                            XF86XK_MonBrightnessDown,   spawn,          SHCMD("brightnessctrl --dec 5") },
   
   /* Launchers */
-  { MODKEY|ShiftMask,             XK_p, spawn,               SHCMD("dmenu_power") },
-	{ MODKEY|ShiftMask,             XK_c, spawn,               SHCMD("dmenu_clip") },
-	{ MODKEY|ShiftMask,             XK_e, spawn,               SHCMD("dmenu_emoji") },
-	{ MODKEY|ShiftMask,             XK_l, spawn,               SHCMD("slock") },
-	{ MODKEY,                       XK_f, spawn,               {.v = filemanager } },
-	{ MODKEY,                       XK_b, spawn,               {.v = browser } },
-  { 0,                            XK_Print,                  spawn, {.v = flameshot} },
+  { MODKEY|ShiftMask,             XK_p,      spawn,          SHCMD("dmenu_power") },
+	{ MODKEY|ShiftMask,             XK_c,      spawn,          SHCMD("dmenu_clip") },
+	{ MODKEY|ShiftMask,             XK_e,      spawn,          SHCMD("dmenu_emoji") },
+	{ MODKEY|ShiftMask,             XK_l,      spawn,          SHCMD("slock") },
+	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
+	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
+  { 0,                            XK_Print,  spawn,          {.v = flameshot} },
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 };
