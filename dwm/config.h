@@ -57,6 +57,7 @@ static const Layout layouts[] = {
 };
 
 /* key definitions */
+#include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
@@ -69,21 +70,16 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "-1"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[]     = { "dmenu_run", NULL };
+static const char *dmenucmd[]     = { "dmenu_run", "-m", dmenumon, NULL };
 static const char *termcmd[]      = { "alacritty", NULL };
 static const char *filemanager[]  = { "thunar", NULL };
 static const char *browser[]      = { "brave-browser", NULL };
+static const char *flameshot[]    = { "flameshot", "gui", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
-	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
-	{ MODKEY,                       XK_f, spawn,               {.v = filemanager } },
-	{ MODKEY,                       XK_b, spawn,               {.v = browser } },
-	{ MODKEY|ShiftMask,             XK_p, spawn,               SHCMD("dmenu_power") },
-	{ MODKEY|ShiftMask,             XK_c, spawn,               SHCMD("dmenu_clip") },
-	{ MODKEY|ShiftMask,             XK_e, spawn,               SHCMD("dmenu_emoji") },
-	{ MODKEY|ShiftMask,             XK_l, spawn,               SHCMD("slock") },
+
+  /* DWM Controls */
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
@@ -105,6 +101,8 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
+
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
@@ -114,7 +112,24 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
-	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
+
+  /* Media Controls  */
+	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
+	{ 0,                            XF86XK_AudioLowerVolume,    spawn,          SHCMD("volumectrl --dec") },
+  { 0,                            XF86XK_AudioRaiseVolume,    spawn,          SHCMD("volumectrl --inc") },
+  { 0,                            XF86XK_MonBrightnessUp,     spawn,          SHCMD("brightnessctrl --inc 5") },
+  { 0,                            XF86XK_MonBrightnessDown,   spawn,          SHCMD("brightnessctrl --dec 5") },
+  
+  /* Launchers */
+  { MODKEY|ShiftMask,             XK_p, spawn,               SHCMD("dmenu_power") },
+	{ MODKEY|ShiftMask,             XK_c, spawn,               SHCMD("dmenu_clip") },
+	{ MODKEY|ShiftMask,             XK_e, spawn,               SHCMD("dmenu_emoji") },
+	{ MODKEY|ShiftMask,             XK_l, spawn,               SHCMD("slock") },
+	{ MODKEY,                       XK_f, spawn,               {.v = filemanager } },
+	{ MODKEY,                       XK_b, spawn,               {.v = browser } },
+  { 0,                            XK_Print,                  spawn, {.v = flameshot} },
+	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
+	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 };
 
 /* button definitions */
