@@ -27,7 +27,7 @@ static const char *colors[][3]      = {
 };
 
 /* tagging */
-static const char *tags[] = { "󰖟", "", "", "", "", "" };
+static const char *tags[] = { "󰖟", "", "󰙯", "", "", "" };
 
 static const Rule rules[] = {
 	/* xprop(1):
@@ -35,11 +35,11 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class     instance  title           tags mask  isfloating  isterminal  noswallow  monitor */
-	{ "Gimp",    NULL,     NULL,           0,         1,          0,           0,        0 },
-	{ "Firefox", NULL,     NULL,           1 << 8,    0,          0,          -1,        0 },
-	{ "St",      NULL,     NULL,           0,         0,          1,           0,        0 },
-  { "Alacritty", NULL,   NULL,           0,         0,          1,           0,        0 },
-	{ NULL,      NULL,     "Event Tester", 0,         0,          0,           1,        0 }, /* xev */
+	{ "Gimp",    NULL,     NULL,           0,         1,          0,           0,        -1 },
+	{ "Firefox", NULL,     NULL,           1 << 8,    0,          0,          -1,        -1 },
+	{ "St",      NULL,     NULL,           0,         0,          1,           0,        -1 },
+  { "Alacritty", NULL,   NULL,           0,         0,          1,           0,        -1 },
+	{ NULL,      NULL,     "Event Tester", 0,         0,          0,           1,        -1 }, /* xev */
 };
 
 /* layout(s) */
@@ -68,7 +68,7 @@ static const Layout layouts[] = {
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+static char dmenumon[2] = "-1"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[]     = { "dmenu_run", NULL };
 static const char *termcmd[]      = { "alacritty", NULL };
 static const char *filemanager[]  = { "thunar", NULL };
@@ -80,9 +80,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_f, spawn,               {.v = filemanager } },
 	{ MODKEY,                       XK_b, spawn,               {.v = browser } },
-	{ MODKEY|ShiftMask,             XK_p, spawn,               SHCMD("dmenupower") },
-	{ MODKEY|ShiftMask,             XK_c, spawn,               SHCMD("dmenuclip") },
-	{ MODKEY|ShiftMask,             XK_e, spawn,               SHCMD("dmenuem") },
+	{ MODKEY|ShiftMask,             XK_p, spawn,               SHCMD("dmenu_power") },
+	{ MODKEY|ShiftMask,             XK_c, spawn,               SHCMD("dmenu_clip") },
+	{ MODKEY|ShiftMask,             XK_e, spawn,               SHCMD("dmenu_emoji") },
 	{ MODKEY|ShiftMask,             XK_l, spawn,               SHCMD("slock") },
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
