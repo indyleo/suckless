@@ -50,8 +50,4 @@ xwalr "$HOME/Pictures/Wallpapers"
 systemctl --user import-environment DISPLAY
 StartProc
 
-# exec dwm
-
-while true; do
-    dwm 2> ~/.cache/dwm.log
-done
+exec dwm
