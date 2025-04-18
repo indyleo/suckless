@@ -135,6 +135,7 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_c,      spawn,          SHCMD("dmenu_clip") },
 	{ MODKEY|ShiftMask,             XK_e,      spawn,          SHCMD("dmenu_emoji") },
 	{ MODKEY|ShiftMask,             XK_l,      spawn,          SHCMD("slock") },
+	{ MODKEY,                       XK_d,      spawn,          SHCMD("flatpak run dev.vencord.Vesktop") },
 	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
   { 0,                            XK_Print,  spawn,          {.v = flameshot} },
