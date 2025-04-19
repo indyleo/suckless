@@ -131,9 +131,6 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	{ MODKEY|SHIFTKEY,              XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|SHIFTKEY,              XK_period, tagmon,         {.i = +1 } },
-  { MODKEY,            		      	XK_y,  	   togglescratch,  {.ui = 0 } },
-  { MODKEY,                		  	XK_u,	     togglescratch,  {.ui = 1 } },
-  { MODKEY,                 			XK_x,	     togglescratch,  {.ui = 2 } },
 	{ MODKEY|SHIFTKEY,              XK_q,      quit,           {0} },
 
 	TAGKEYS(                        XK_1,                      0)
@@ -145,6 +142,13 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
+
+  /* Scratch Pads */
+  { MODKEY,            		      	XK_t,  	   togglescratch,  {.ui = 0 } },
+  { MODKEY,                		  	XK_y,	     togglescratch,  {.ui = 1 } },
+  { MODKEY,                 			XK_z,	     togglescratch,  {.ui = 2 } },
+  { MODKEY,                 			XK_a,	     togglescratch,  {.ui = 3 } },
+  { MODKEY,                 			XK_n,	     togglescratch,  {.ui = 4 } },
 
   /* Media Controls  */
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
