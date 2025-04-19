@@ -63,11 +63,13 @@ static const Layout layouts[] = {
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define ALTKEY Mod1Mask
+#define CTRLKEY ControlMask
+#define SHIFTKEY ShiftMask
 #define TAGKEYS(KEY,TAG) \
-	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
-	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
+	{ MODKEY,                  KEY,      view,           {.ui = 1 << TAG} }, \
+	{ MODKEY|CTRLKEY,          KEY,      toggleview,     {.ui = 1 << TAG} }, \
+	{ MODKEY|SHIFTKEY,         KEY,      tag,            {.ui = 1 << TAG} }, \
+	{ MODKEY|CTRLKEY|SHIFTKEY, KEY,      toggletag,      {.ui = 1 << TAG} },
 
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
@@ -84,28 +86,28 @@ static const Key keys[] = {
 	/* modifier                     key        function        argument */
 
   /* DWM Controls */
-	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
+	{ MODKEY|SHIFTKEY,              XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
-	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
-	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
+	{ MODKEY|SHIFTKEY,              XK_i,      incnmaster,     {.i = +1 } },
+	{ MODKEY|SHIFTKEY,              XK_d,      incnmaster,     {.i = -1 } },
+	{ MODKEY|SHIFTKEY,              XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY,                       XK_q,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY|ShiftMask,             XK_f,      setlayout,      {.v = &layouts[1]} },
+	{ MODKEY|ALTKEY|SHIFTKEY,       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
-	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
+	{ MODKEY|SHIFTKEY,              XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
-	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
+	{ MODKEY|SHIFTKEY,              XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
+	{ MODKEY|SHIFTKEY,              XK_comma,  tagmon,         {.i = -1 } },
+	{ MODKEY|SHIFTKEY,              XK_period, tagmon,         {.i = +1 } },
+	{ MODKEY|SHIFTKEY,              XK_q,      quit,           {0} },
 
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
@@ -122,8 +124,8 @@ static const Key keys[] = {
 	{ 0,                            XF86XK_AudioLowerVolume,    spawn,          SHCMD("volumectrl --dec") },
   { 0,                            XF86XK_AudioRaiseVolume,    spawn,          SHCMD("volumectrl --inc") },
   { MODKEY,                       XK_s,                       spawn,          SHCMD("songctrl --togglepause Supersonic") },
-  { MODKEY|ShiftMask,             XK_s,                       spawn,          SHCMD("songctrl --skip Supersonic") },
-  { MODKEY|ControlMask,           XK_s,                       spawn,          SHCMD("songctrl --previous Supersonic") },
+  { MODKEY|SHIFTKEY,              XK_s,                       spawn,          SHCMD("songctrl --skip Supersonic") },
+  { MODKEY|CTRLKEY,               XK_s,                       spawn,          SHCMD("songctrl --previous Supersonic") },
 
 
   /* Brightness Controls */
@@ -131,10 +133,10 @@ static const Key keys[] = {
   { 0,                            XF86XK_MonBrightnessDown,   spawn,          SHCMD("brightnessctrl --dec 5") },
   
   /* Launchers */
-  { MODKEY|ShiftMask,             XK_p,      spawn,          SHCMD("dmenu_power") },
-	{ MODKEY|ShiftMask,             XK_c,      spawn,          SHCMD("dmenu_clip") },
-	{ MODKEY|ShiftMask,             XK_e,      spawn,          SHCMD("dmenu_emoji") },
-	{ MODKEY|ShiftMask,             XK_l,      spawn,          SHCMD("slock") },
+  { MODKEY|SHIFTKEY,              XK_p,      spawn,          SHCMD("dmenu_power") },
+	{ MODKEY|SHIFTKEY,              XK_c,      spawn,          SHCMD("dmenu_clip") },
+	{ MODKEY|SHIFTKEY,              XK_e,      spawn,          SHCMD("dmenu_emoji") },
+	{ MODKEY|SHIFTKEY,              XK_l,      spawn,          SHCMD("slock") },
 	{ MODKEY,                       XK_d,      spawn,          SHCMD("flatpak run dev.vencord.Vesktop") },
 	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
