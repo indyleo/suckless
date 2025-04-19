@@ -71,11 +71,5 @@ static const struct arg args[] = {
   { run_command, "%s",       "echo ' | '" },
   { run_command, "%s",       "volumectrl --printvol" },
   { run_command, "%s",       "echo ' || '" },
-  { run_command, "%s",       "sysstats cpu" },
-  { run_command, "%s",       "echo ' | '" },
-  { run_command, "%s",       "sysstats mem" },
-  { run_command, "%s",       "echo ' | '" },
-  { run_command, "%s",       "sysstats disk" },
-  { run_command, "%s",       "echo ' || '" },
   { run_command, "%s",       "battery" },
 };
