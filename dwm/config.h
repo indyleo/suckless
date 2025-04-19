@@ -29,6 +29,24 @@ static const char *colors[][3]      = {
 	[SchemeSel]  = { "#ECEFF4", "#81A1C1", "#5E81AC" },  /* selected */
 };
 
+typedef struct {
+	const char *name;
+	const void *cmd;
+} Sp;
+const char *spcmd1[] = {"alacritty", "--class", "termsc", NULL };
+const char *spcmd2[] = {"alacritty", "--class", "yazisc",  "-e", "yazi",       NULL };
+const char *spcmd3[] = {"alacritty", "--class", "qalsc",   "-e", "qalc",       NULL };
+const char *spcmd4[] = {"alacritty", "--class", "pulsesc", "-e", "pulsemixer", NULL };
+const char *spcmd5[] = {"alacritty", "--class", "notesc",  "-e", "nvim", "~/Documents/Markdown/Notes.md",  NULL };
+static Sp scratchpads[] = {
+	/* name          cmd  */
+	{"termsc",      spcmd1},
+	{"yazisc",      spcmd2},
+	{"qalsc",       spcmd3},
+	{"pulsesc",     spcmd4},
+	{"notesc",      spcmd5},
+};
+
 /* tagging */
 static const char *tags[] = { "󰖟", "", "󰙯", "", "", "" };
 
@@ -37,12 +55,17 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class     instance  title           tags mask  isfloating  isterminal  noswallow  monitor */
-	{ "Gimp",    NULL,     NULL,           0,         1,          0,           0,        -1 },
-	{ "Firefox", NULL,     NULL,           1 << 8,    0,          0,          -1,        -1 },
-	{ "St",      NULL,     NULL,           0,         0,          1,           0,        -1 },
-  { "Alacritty", NULL,   NULL,           0,         0,          1,           0,        -1 },
-	{ NULL,      NULL,     "Event Tester", 0,         0,          0,           1,        -1 }, /* xev */
+	/* class     instance      title           tags mask  isfloating  isterminal  noswallow  monitor */
+	{ "Gimp",      NULL,        NULL,           0,         1,          0,           0,        -1 },
+	{ "Firefox",   NULL,        NULL,           1 << 8,    0,          0,          -1,        -1 },
+	{ "St",        NULL,        NULL,           0,         0,          1,           0,        -1 },
+  { "Alacritty", NULL,        NULL,           0,         0,          1,           0,        -1 },
+	{ NULL,        NULL,       "Event Tester",  0,         0,          0,           1,        -1 }, /* xev */
+  { "termsc",    NULL,			  NULL,		        SPTAG(0),	 1,                                 -1 },
+  { "yazisc",		 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
+  { "qalsc",		 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
+  { "pulsesc",	 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
+  { "notesc",		 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
 };
 
 /* layout(s) */
@@ -99,7 +122,7 @@ static const Key keys[] = {
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_m,      setlayout,      {.v = &layouts[2]} },
-  { MODKEY|ShiftMask,             XK_f,      fullscreen,     {0} },
+  { MODKEY|SHIFTKEY,              XK_f,      fullscreen,     {0} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|SHIFTKEY,              XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
@@ -108,6 +131,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	{ MODKEY|SHIFTKEY,              XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|SHIFTKEY,              XK_period, tagmon,         {.i = +1 } },
+  { MODKEY,            		      	XK_y,  	   togglescratch,  {.ui = 0 } },
+  { MODKEY,                		  	XK_u,	     togglescratch,  {.ui = 1 } },
+  { MODKEY,                 			XK_x,	     togglescratch,  {.ui = 2 } },
 	{ MODKEY|SHIFTKEY,              XK_q,      quit,           {0} },
 
 	TAGKEYS(                        XK_1,                      0)
@@ -162,7 +188,7 @@ static const Button buttons[] = {
 	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
 	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
-	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
+	{ ClkClientWin,         MODKEY,         Button1,        resizemouse,    {0} },
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
