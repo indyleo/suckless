@@ -99,11 +99,14 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "-1"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[]     = { "dmenu_run", "-m", dmenumon, NULL };
-static const char *termcmd[]      = { "alacritty", NULL };
-static const char *filemanager[]  = { "thunar", NULL };
-static const char *browser[]      = { "brave-browser", NULL };
-static const char *flameshot[]    = { "flameshot", "gui", NULL };
+static const char *dmenucmd[]        = { "dmenu_run", "-m", dmenumon, NULL };
+static const char *termcmd[]         = { "alacritty", NULL };
+static const char *filemanager[]     = { "thunar", NULL };
+static const char *browser[]         = { "brave-browser", NULL };
+static const char *flameshotgui[]    = { "flameshot", "gui",  "-p", "~/Pictures/Screenshots", NULL };
+static const char *flameshotfull[]   = { "flameshot", "full", "-c",  "-p", "~/Pictures/Screenshots", NULL };
+static const char *flameshotscreen[] = { "flameshot", "gui",  "-c",  "-p", "~/Pictures/Screenshots", NULL };
+
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -172,7 +175,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_m,      spawn,          SHCMD("flatpak run io.github.dweymouth.supersonic") },
 	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
-  { 0,                            XK_Print,  spawn,          {.v = flameshot} },
+  { 0,                            XK_Print,  spawn,          {.v = flameshotgui} },
+  { MODKEY,                       XK_Print,  spawn,          {.v = flameshotscreen} },
+  { MODKEY|SHIFTKEY,              XK_Print,  spawn,          {.v = flameshotfull} },
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_p,      spawn,          SHCMD("dmenu_flatpak") },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
