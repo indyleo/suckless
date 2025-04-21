@@ -103,9 +103,9 @@ static const char *dmenucmd[]        = { "dmenu_run", "-m", dmenumon, NULL };
 static const char *termcmd[]         = { "alacritty", NULL };
 static const char *filemanager[]     = { "thunar", NULL };
 static const char *browser[]         = { "brave-browser", NULL };
-static const char *flameshotgui[]    = { "flameshot", "gui",  "-p", "~/Pictures/Screenshots", NULL };
-static const char *flameshotfull[]   = { "flameshot", "full", "-c",  "-p", "~/Pictures/Screenshots", NULL };
-static const char *flameshotscreen[] = { "flameshot", "gui",  "-c",  "-p", "~/Pictures/Screenshots", NULL };
+static const char *ssgui[]           = { "sstool", "--select", NULL };
+static const char *ssscreen[]        = { "sstool", "--screen", NULL };
+static const char *ssfull[]          = { "sstool", "--full", NULL };
 
 
 static const Key keys[] = {
@@ -160,6 +160,11 @@ static const Key keys[] = {
   { MODKEY,                       XK_s,                       spawn,          SHCMD("songctrl --togglepause Supersonic") },
   { MODKEY|SHIFTKEY,              XK_s,                       spawn,          SHCMD("songctrl --skip Supersonic") },
   { MODKEY|CTRLKEY,               XK_s,                       spawn,          SHCMD("songctrl --previous Supersonic") },
+  { MODKEY,                       XK_v,                       spawn,          SHCMD("vidctrl --togglepause") },
+  { MODKEY|SHIFTKEY,              XK_v,                       spawn,          SHCMD("vidctrl --forward") },
+  { MODKEY|CTRLKEY,               XK_v,                       spawn,          SHCMD("vidctrl --backward") },
+  { MODKEY|ALTKEY,                XK_v,                       spawn,          SHCMD("vidctrl --skip") },
+  { MODKEY|ALTKEY|SHIFTKEY,       XK_v,                       spawn,          SHCMD("vidctrl --previous") },
 
 
   /* Brightness Controls */
@@ -175,9 +180,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_m,      spawn,          SHCMD("flatpak run io.github.dweymouth.supersonic") },
 	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
-  { 0,                            XK_Print,  spawn,          {.v = flameshotgui} },
-  { MODKEY,                       XK_Print,  spawn,          {.v = flameshotscreen} },
-  { MODKEY|SHIFTKEY,              XK_Print,  spawn,          {.v = flameshotfull} },
+  { 0,                            XK_Print,  spawn,          {.v = ssgui} },
+  { MODKEY,                       XK_Print,  spawn,          {.v = ssscreen} },
+  { MODKEY|SHIFTKEY,              XK_Print,  spawn,          {.v = ssfull} },
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_p,      spawn,          SHCMD("dmenu_flatpak") },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
