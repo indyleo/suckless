@@ -33,11 +33,11 @@ typedef struct {
 	const char *name;
 	const void *cmd;
 } Sp;
-const char *spcmd1[] = {"alacritty", "--class", "termsc", NULL };
-const char *spcmd2[] = {"alacritty", "--class", "yazisc",  "-e", "yazi",       NULL };
-const char *spcmd3[] = {"alacritty", "--class", "qalsc",   "-e", "qalc",       NULL };
-const char *spcmd4[] = {"alacritty", "--class", "pulsesc", "-e", "pulsemixer", NULL };
-const char *spcmd5[] = {"alacritty", "--class", "notesc",  "-e", "nvim", "~/Documents/Markdown/Notes.md",  NULL };
+const char *spcmd1[] = {"alacritty", "--class", "termsc,Termsc", NULL };
+const char *spcmd2[] = {"alacritty", "--class", "yazisc,Yazisc",  "-e", "yazi",       NULL };
+const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",   "-e", "qalc",       NULL };
+const char *spcmd4[] = {"alacritty", "--class", "pulsesc,Pulsesc", "-e", "pulsemixer", NULL };
+const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "nvim", "~/Documents/Markdown/Notes.md",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
