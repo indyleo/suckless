@@ -63,9 +63,9 @@ static const Rule rules[] = {
 	{ NULL,        NULL,       "Event Tester",  0,         0,          0,           1,        -1 }, /* xev */
   { "termsc",    NULL,			  NULL,		        SPTAG(0),	 1,                                 -1 },
   { "yazisc",		 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
-  { "qalsc",		 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
-  { "pulsesc",	 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
-  { "notesc",		 NULL,        NULL,		        SPTAG(1),	 1,			                            -1 },
+  { "qalsc",		 NULL,        NULL,		        SPTAG(2),	 1,			                            -1 },
+  { "pulsesc",	 NULL,        NULL,		        SPTAG(3),	 1,			                            -1 },
+  { "notesc",		 NULL,        NULL,		        SPTAG(4),	 1,			                            -1 },
 };
 
 /* layout(s) */
