@@ -106,7 +106,7 @@ static const char *browser[]         = { "brave-browser", NULL };
 static const char *ssgui[]           = { "sstool", "--select", NULL };
 static const char *ssscreen[]        = { "sstool", "--screen", NULL };
 static const char *ssfull[]          = { "sstool", "--full", NULL };
-
+static const char *guieditor[]           = { "neovide", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -177,6 +177,7 @@ static const Key keys[] = {
   { 0,                            XK_Print,  spawn,          {.v = ssgui} },
   { MODKEY,                       XK_Print,  spawn,          {.v = ssscreen} },
   { MODKEY|SHIFTKEY,              XK_Print,  spawn,          {.v = ssfull} },
+	{ MODKEY,                       XK_e,      spawn,          {.v = guieditor } },
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_p,      spawn,          SHCMD("dmenu_flatpak") },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
