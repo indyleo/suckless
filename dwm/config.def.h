@@ -160,12 +160,6 @@ static const Key keys[] = {
   { MODKEY,                       XK_s,                       spawn,          SHCMD("songctrl --togglepause Supersonic") },
   { MODKEY|SHIFTKEY,              XK_s,                       spawn,          SHCMD("songctrl --skip Supersonic") },
   { MODKEY|CTRLKEY,               XK_s,                       spawn,          SHCMD("songctrl --previous Supersonic") },
-  { MODKEY,                       XK_v,                       spawn,          SHCMD("vidctrl --togglepause") },
-  { MODKEY|SHIFTKEY,              XK_v,                       spawn,          SHCMD("vidctrl --forward") },
-  { MODKEY|CTRLKEY,               XK_v,                       spawn,          SHCMD("vidctrl --backward") },
-  { MODKEY|ALTKEY,                XK_v,                       spawn,          SHCMD("vidctrl --skip") },
-  { MODKEY|ALTKEY|SHIFTKEY,       XK_v,                       spawn,          SHCMD("vidctrl --previous") },
-
 
   /* Brightness Controls */
   { 0,                            XF86XK_MonBrightnessUp,     spawn,          SHCMD("brightnessctrl --inc 5") },
