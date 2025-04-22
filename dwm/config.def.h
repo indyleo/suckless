@@ -38,6 +38,7 @@ const char *spcmd2[] = {"alacritty", "--class", "yazisc,Yazisc",  "-e", "yazi", 
 const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",   "-e", "qalc",       NULL };
 const char *spcmd4[] = {"alacritty", "--class", "pulsesc,Pulsesc", "-e", "pulsemixer", NULL };
 const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "nvim", "~/Documents/Markdown/Notes.md",  NULL };
+const char *spcmd6[] = {"alacritty", "--class", "keymaps,Keymaps",  "-e", "moar", "~/Github/dotfiles-stow/keymaps.md",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
@@ -45,6 +46,7 @@ static Sp scratchpads[] = {
 	{"qalsc",       spcmd3},
 	{"pulsesc",     spcmd4},
 	{"notesc",      spcmd5},
+	{"keymaps",     spcmd6},
 };
 
 /* tagging */
@@ -66,6 +68,7 @@ static const Rule rules[] = {
   { "qalsc",		 NULL,        NULL,		        SPTAG(2),	 1,			                            -1 },
   { "pulsesc",	 NULL,        NULL,		        SPTAG(3),	 1,			                            -1 },
   { "notesc",		 NULL,        NULL,		        SPTAG(4),	 1,			                            -1 },
+  { "keymaps",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
 };
 
 /* layout(s) */
@@ -106,7 +109,7 @@ static const char *browser[]         = { "brave-browser", NULL };
 static const char *ssgui[]           = { "sstool", "--select", NULL };
 static const char *ssscreen[]        = { "sstool", "--screen", NULL };
 static const char *ssfull[]          = { "sstool", "--full", NULL };
-static const char *guieditor[]           = { "neovide", NULL };
+static const char *guieditor[]       = { "neovide", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -152,6 +155,7 @@ static const Key keys[] = {
   { MODKEY,                 			XK_z,	     togglescratch,  {.ui = 2 } },
   { MODKEY,                 			XK_a,	     togglescratch,  {.ui = 3 } },
   { MODKEY,                 			XK_n,	     togglescratch,  {.ui = 4 } },
+  { MODKEY|SHIFTKEY,         			XK_k,	     togglescratch,  {.ui = 5 } },
 
   /* Media Controls  */
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
