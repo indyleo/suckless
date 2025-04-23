@@ -15,6 +15,7 @@ FLAT_PROCS=(
     org.fkoehler.KTailctl
 )
 
+# Functions
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
@@ -44,6 +45,7 @@ StartFlat() {
     done
 }
 
+# Main
 xset s off
 xset s noblank
 xset -dpms
