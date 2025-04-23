@@ -50,7 +50,7 @@ static Sp scratchpads[] = {
 };
 
 /* tagging */
-static const char *tags[] = { "󰖟", "", "󰙯", "", "", "" };
+static const char *tags[] = { "󰖟", "", "󰙯", "", "", "", "󰨇" };
 
 static const Rule rules[] = {
 	/* xprop(1):
@@ -146,8 +146,6 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_5,                      4)
 	TAGKEYS(                        XK_6,                      5)
 	TAGKEYS(                        XK_7,                      6)
-	TAGKEYS(                        XK_8,                      7)
-	TAGKEYS(                        XK_9,                      8)
 
   /* Scratch Pads */
   { MODKEY,            		      	XK_t,  	   togglescratch,  {.ui = 0 } },
