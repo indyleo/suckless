@@ -52,6 +52,10 @@ xset -dpms
 xsetroot -cursor_name left_ptr
 dbus-update-activation-environment --systemd --all
 
+if command_exists solaar; then
+    solaar --window hide
+fi
+
 if command_exists nvidia-settings; then
     # Configure NVIDIA settings
     nvidia-settings --assign CurrentMetaMode="nvidia-auto-select +0+0 {ForceFullCompositionPipeline=On}"
