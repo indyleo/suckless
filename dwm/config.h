@@ -122,7 +122,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY|SHIFTKEY,              XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY|SHIFTKEY,              XK_d,      incnmaster,     {.i = -1 } },
-	{ MODKEY|SHIFTKEY,              XK_Return, zoom,           {0} },
+	{ MODKEY|SHIFTKEY,              XK_z, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY,                       XK_q,      killclient,     {0} },
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_t,      setlayout,      {.v = &layouts[0]} },
