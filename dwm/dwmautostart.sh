@@ -16,7 +16,7 @@ FLAT_PROCS=(
 )
 
 ARGS=(
-    timexwalr ~/Pictures/Wallpapers 900
+    timexwalr "${HOME}/Pictures/Wallpapers" 900
 )
 
 ARG_PROCS=(
