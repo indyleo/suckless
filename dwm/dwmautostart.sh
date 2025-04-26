@@ -15,6 +15,14 @@ FLAT_PROCS=(
     org.fkoehler.KTailctl
 )
 
+ARGS=(
+    timexwalr ~/Pictures/Wallpapers 900
+)
+
+ARG_PROCS=(
+    xwall
+)
+
 # Functions
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -26,6 +34,15 @@ StartProc() {
         if ! pgrep -x "$program" > /dev/null; then
             # If it's not running, start it in the background
             "$program" &
+        fi
+    done
+}
+
+ArgStart() {
+    for program in "${ARG_PROCS[@]}"; do
+        if ! pgrep -x "$program" > /dev/null; then
+            # Start the program with arguments in the background
+            "$program" "${ARGS[@]}" &
         fi
     done
 }
@@ -66,10 +83,10 @@ else
 fi
 
 picom -b
-xwalr "$HOME/Pictures/Wallpapers"
 [[ -f "$HOME/.Xresources" ]] && xrdb -load "$HOME/.Xresources"
 systemctl --user import-environment DISPLAY
 StartProc
+ArgStart
 StartFlat
 
 exec dwm

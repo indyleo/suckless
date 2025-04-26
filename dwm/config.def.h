@@ -183,7 +183,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_r,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_p,      spawn,          SHCMD("dmenu_flatpak") },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
-	{ MODKEY|SHIFTKEY,              XK_w,      spawn,          SHCMD("xwalr ~/Pictures/Wallpapers") },
+	{ MODKEY|SHIFTKEY,              XK_w,      spawn,          SHCMD("xwall xwalr ~/Pictures/Wallpapers") },
 
   /* Alt Tab */
   { ALTKEY,                       XK_Tab,    spawn,          SHCMD("dmenu_alttab") },
