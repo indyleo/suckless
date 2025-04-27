@@ -39,6 +39,7 @@ const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",   "-e", "qalc",  
 const char *spcmd4[] = {"alacritty", "--class", "pulsesc,Pulsesc", "-e", "pulsemixer", NULL };
 const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "zsh", "-c", "notes",  NULL };
 const char *spcmd6[] = {"alacritty", "--class", "keymaps,Keymaps",  "-e", "zsh", "-c", "keymaps",  NULL };
+const char *spcmd7[] = {"qutebrowser",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
@@ -47,6 +48,7 @@ static Sp scratchpads[] = {
 	{"pulsesc",     spcmd4},
 	{"notesc",      spcmd5},
 	{"keymaps",     spcmd6},
+	{"qutebrowser",     spcmd7},
 };
 
 /* tagging */
@@ -69,6 +71,7 @@ static const Rule rules[] = {
   { "pulsesc",	 NULL,        NULL,		        SPTAG(3),	 1,			                            -1 },
   { "notesc",		 NULL,        NULL,		        SPTAG(4),	 1,			                            -1 },
   { "keymaps",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
+  { "qutebrowser",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
 };
 
 /* layout(s) */
@@ -154,6 +157,7 @@ static const Key keys[] = {
   { MODKEY,                 			XK_a,	     togglescratch,  {.ui = 3 } },
   { MODKEY,                 			XK_n,	     togglescratch,  {.ui = 4 } },
   { MODKEY|SHIFTKEY,         			XK_k,	     togglescratch,  {.ui = 5 } },
+  { MODKEY,         	        		XK_o,	     togglescratch,  {.ui = 6 } },
 
   /* Media Controls  */
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
