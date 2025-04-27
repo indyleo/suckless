@@ -71,7 +71,7 @@ static const Rule rules[] = {
   { "pulsesc",	 NULL,        NULL,		        SPTAG(3),	 1,			                            -1 },
   { "notesc",		 NULL,        NULL,		        SPTAG(4),	 1,			                            -1 },
   { "keymaps",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
-  { "qutebrowser",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
+  { "qutebrowser",	 NULL,    NULL,           SPTAG(6),	 1,			                            -1 },
 };
 
 /* layout(s) */
