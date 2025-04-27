@@ -48,7 +48,7 @@ static Sp scratchpads[] = {
 	{"pulsesc",     spcmd4},
 	{"notesc",      spcmd5},
 	{"keymaps",     spcmd6},
-	{"qutebrowser",     spcmd7},
+	{"qutebrowser", spcmd7},
 };
 
 /* tagging */
