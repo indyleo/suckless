@@ -40,7 +40,7 @@ const char *spcmd4[] = {"alacritty", "--class", "pulsesc,Pulsesc", "-e", "pulsem
 const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "zsh", "-c", "notes",  NULL };
 const char *spcmd6[] = {"alacritty", "--class", "keymaps,Keymaps",  "-e", "zsh", "-c", "keymaps",  NULL };
 const char *spcmd7[] = {"qutebrowser",  NULL };
-const char *spcmd8[] = {"alacritty", "--class", "discordo,Discordo",  "-e", "zsh", "-c", "discordio",  NULL };
+const char *spcmd8[] = {"alacritty", "--class", "discordo,Discordo",  "-e", "zsh", "-c", "discodio",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
