@@ -40,6 +40,7 @@ const char *spcmd4[] = {"alacritty", "--class", "pulsesc,Pulsesc", "-e", "pulsem
 const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "zsh", "-c", "notes",  NULL };
 const char *spcmd6[] = {"alacritty", "--class", "keymaps,Keymaps",  "-e", "zsh", "-c", "keymaps",  NULL };
 const char *spcmd7[] = {"qutebrowser",  NULL };
+const char *spcmd8[] = {"alacritty", "--class", "discordo,Discordo",  "-e", "zsh", "-c", "discordio",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
@@ -49,6 +50,7 @@ static Sp scratchpads[] = {
 	{"notesc",      spcmd5},
 	{"keymaps",     spcmd6},
 	{"qutebrowser", spcmd7},
+	{"discordo", spcmd8},
 };
 
 /* tagging */
@@ -72,6 +74,7 @@ static const Rule rules[] = {
   { "notesc",		 NULL,        NULL,		        SPTAG(4),	 1,			                            -1 },
   { "keymaps",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
   { "qutebrowser",	 NULL,    NULL,           SPTAG(6),	 1,			                            -1 },
+  { "discord",	 NULL,        NULL,           SPTAG(7),	 1,			                            -1 },
 };
 
 /* layout(s) */
@@ -158,6 +161,7 @@ static const Key keys[] = {
   { MODKEY,                 			XK_n,	     togglescratch,  {.ui = 4 } },
   { MODKEY|SHIFTKEY,         			XK_k,	     togglescratch,  {.ui = 5 } },
   { MODKEY,         	        		XK_o,	     togglescratch,  {.ui = 6 } },
+  { MODKEY,         	        		XK_d,	     togglescratch,  {.ui = 7 } },
 
   /* Media Controls  */
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
@@ -176,7 +180,7 @@ static const Key keys[] = {
 	{ MODKEY|SHIFTKEY,              XK_c,      spawn,          SHCMD("dmenu_clip") },
 	{ MODKEY|SHIFTKEY,              XK_e,      spawn,          SHCMD("dmenu_emoji") },
 	{ MODKEY|SHIFTKEY,              XK_l,      spawn,          SHCMD("slock") },
-	{ MODKEY,                       XK_d,      spawn,          SHCMD("flatpak run dev.vencord.Vesktop") },
+	{ MODKEY|SHIFTKEY,              XK_d,      spawn,          SHCMD("flatpak run dev.vencord.Vesktop") },
 	{ MODKEY,                       XK_m,      spawn,          SHCMD("flatpak run io.github.dweymouth.supersonic") },
 	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
