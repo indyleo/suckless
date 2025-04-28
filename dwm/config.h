@@ -41,6 +41,7 @@ const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "zsh", "
 const char *spcmd6[] = {"alacritty", "--class", "keymaps,Keymaps",  "-e", "zsh", "-c", "keymaps",  NULL };
 const char *spcmd7[] = {"qutebrowser",  NULL };
 const char *spcmd8[] = {"alacritty", "--class", "discordo,Discordo",  "-e", "zsh", "-c", "discodio",  NULL };
+const char *spcmd9[] = {"flatpak", "run", "com.chatterino.chatterino",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
@@ -50,7 +51,8 @@ static Sp scratchpads[] = {
 	{"notesc",      spcmd5},
 	{"keymaps",     spcmd6},
 	{"qutebrowser", spcmd7},
-	{"discordo", spcmd8},
+	{"discordo",    spcmd8},
+  {"chatterino",  spcmd9},
 };
 
 /* tagging */
@@ -75,6 +77,7 @@ static const Rule rules[] = {
   { "keymaps",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
   { "qutebrowser",	 NULL,    NULL,           SPTAG(6),	 1,			                            -1 },
   { "discord",	 NULL,        NULL,           SPTAG(7),	 1,			                            -1 },
+  { "chatterino",	 NULL,      NULL,           SPTAG(8),	 1,			                            -1 },
 };
 
 /* layout(s) */
@@ -162,6 +165,7 @@ static const Key keys[] = {
   { MODKEY|SHIFTKEY,         			XK_k,	     togglescratch,  {.ui = 5 } },
   { MODKEY,         	        		XK_o,	     togglescratch,  {.ui = 6 } },
   { MODKEY,         	        		XK_d,	     togglescratch,  {.ui = 7 } },
+  { MODKEY,         	        		XK_c,	     togglescratch,  {.ui = 8 } },
 
   /* Media Controls  */
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
