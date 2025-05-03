@@ -180,7 +180,7 @@ static const Key keys[] = {
 	{ MODKEY|SHIFTKEY,              XK_c,      spawn,          SHCMD("dmenu_clip") },
 	{ MODKEY|SHIFTKEY,              XK_e,      spawn,          SHCMD("dmenu_emoji") },
 	{ MODKEY|SHIFTKEY,              XK_l,      spawn,          SHCMD("slock") },
-	{ MODKEY|SHIFTKEY,              XK_d,      spawn,          SHCMD("flatpak run dev.vencord.Vesktop") },
+	{ MODKEY,                       XK_g,      spawn,          SHCMD("signal-desktop") },
 	{ MODKEY,                       XK_m,      spawn,          SHCMD("flatpak run io.github.dweymouth.supersonic") },
 	{ MODKEY,                       XK_f,      spawn,          {.v = filemanager } },
 	{ MODKEY,                       XK_b,      spawn,          {.v = browser } },
