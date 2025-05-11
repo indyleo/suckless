@@ -37,14 +37,19 @@ install: all
 	mkdir -pv ${DESTDIR}${MANPREFIX}/man1
 	sed "s/VERSION/${VERSION}/g" < dwm.1 > ${DESTDIR}${MANPREFIX}/man1/dwm.1
 	chmod 644 ${DESTDIR}${MANPREFIX}/man1/dwm.1
-	
 	mkdir -pv ${DESTDIR}${PREFIX}/bin
 	cp -fv dwmautostart.sh ${DESTDIR}${PREFIX}/bin/dwmautostart.sh
 	chmod 755 ${DESTDIR}${PREFIX}/bin/dwmautostart.sh
+	mkdir -pv ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/
+	cp -fv dwm.png ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png
+	mkdir -pv ${DESTDIR}/usr/share/xsessions/
+	cp -fv dwm.desktop ${DESTDIR}/usr/share/xsessions/dwm.desktop
 
 uninstall:
 	rm -fv ${DESTDIR}${PREFIX}/bin/dwm \
 	${DESTDIR}${PREFIX}/bin/dwmautostart.sh \
+  ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png \
+  ${DESTDIR}/usr/share/xsessions/dwm.desktop \
 	${DESTDIR}${MANPREFIX}/man1/dwm.1
 
 .PHONY: all clean dist install uninstall
