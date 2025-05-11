@@ -27,6 +27,7 @@ static const char *colors[][3]      = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = { "#D8DEE9", "#2E3440", "#3B4252" },  /* normal */
 	[SchemeSel]  = { "#ECEFF4", "#81A1C1", "#5E81AC" },  /* selected */
+  [SchemeHid]  = { "#88C0D0", "#434C5E", "#3B4252" },  /* hidden */
 };
 
 typedef struct {
@@ -122,13 +123,15 @@ static const Key keys[] = {
 
   /* DWM Controls */
 	{ MODKEY|SHIFTKEY,              XK_b,      togglebar,      {0} },
-	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
+  { MODKEY,                       XK_j,      focusstackvis,  {.i = +1 } },
+  { MODKEY,                       XK_k,      focusstackvis,  {.i = -1 } },
+  { MODKEY|ShiftMask,             XK_j,      focusstackhid,  {.i = +1 } },
+  { MODKEY|ShiftMask,             XK_k,      focusstackhid,  {.i = -1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY|SHIFTKEY,              XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY|SHIFTKEY,              XK_d,      incnmaster,     {.i = -1 } },
-	{ MODKEY|SHIFTKEY,              XK_z, zoom,           {0} },
+	{ MODKEY|SHIFTKEY,              XK_z,      zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY,                       XK_q,      killclient,     {0} },
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_t,      setlayout,      {.v = &layouts[0]} },
@@ -142,6 +145,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	{ MODKEY|SHIFTKEY,              XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|SHIFTKEY,              XK_period, tagmon,         {.i = +1 } },
+  { MODKEY,                       XK_equal,  show,           {0} },
+  { MODKEY|ShiftMask,             XK_equal,  showall,        {0} },
+  { MODKEY,                       XK_minus,  hide,           {0} },
 	{ MODKEY|SHIFTKEY,              XK_q,      quit,           {0} },
 
 	TAGKEYS(                        XK_1,                      0)
@@ -202,6 +208,7 @@ static const Button buttons[] = {
 	/* click                event mask      button          function        argument */
 	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
 	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
+	{ ClkWinTitle,          0,              Button1,        togglewin,      {0} },
 	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
 	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
 	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
