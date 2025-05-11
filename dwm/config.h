@@ -33,14 +33,14 @@ typedef struct {
 	const char *name;
 	const void *cmd;
 } Sp;
-const char *spcmd1[] = {"alacritty", "--class", "termsc,Termsc", NULL };
-const char *spcmd2[] = {"alacritty", "--class", "yazisc,Yazisc",  "-e", "yazi",       NULL };
-const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",   "-e", "qalc",       NULL };
-const char *spcmd4[] = {"alacritty", "--class", "pulsesc,Pulsesc", "-e", "pulsemixer", NULL };
-const char *spcmd5[] = {"alacritty", "--class", "notesc,Notesc",  "-e", "zsh", "-c", "notes",  NULL };
-const char *spcmd6[] = {"alacritty", "--class", "keymaps,Keymaps",  "-e", "zsh", "-c", "keymaps",  NULL };
-const char *spcmd7[] = {"qutebrowser",  NULL };
-const char *spcmd8[] = {"alacritty", "--class", "discordo,Discordo",  "-e", "zsh", "-c", "discodio",  NULL };
+const char *spcmd1[] = {"st", "-c", "termsc", "-n", "Termsc", NULL };
+const char *spcmd2[] = {"st", "-c", "yazisc", "-n", "Yazisc", "-e", "zsh", "-c", "yazi",       NULL };
+const char *spcmd3[] = {"st", "-c", "qalsc", "-n", "Qalsc", "-e", "zsh", "-c", "qalc",      NULL };
+const char *spcmd4[] = {"st", "-c", "pulsesc", "-n", "Pulsesc", "-e", "zsh", "-c", "pulsemixer", NULL };
+const char *spcmd5[] = {"st", "-c", "notesc", "-n", "Notesc",  "-e", "zsh", "-c", "notes",  NULL };
+const char *spcmd6[] = {"st", "-c", "keymaps", "-n", "Keymaps",  "-e", "zsh", "-c", "keymaps",  NULL };
+const char *spcmd7[] = {"st", "-c", "discordo", "-n", "Discordo",  "-e", "zsh", "-c", "discodio",  NULL };
+const char *spcmd8[] = {"qutebrowser",  NULL };
 static Sp scratchpads[] = {
 	/* name          cmd  */
 	{"termsc",      spcmd1},
@@ -49,8 +49,8 @@ static Sp scratchpads[] = {
 	{"pulsesc",     spcmd4},
 	{"notesc",      spcmd5},
 	{"keymaps",     spcmd6},
-	{"qutebrowser", spcmd7},
-	{"discordo",    spcmd8},
+	{"discordo",    spcmd7},
+	{"qutebrowser", spcmd8},
 };
 
 /* tagging */
@@ -73,8 +73,8 @@ static const Rule rules[] = {
   { "pulsesc",	 NULL,        NULL,		        SPTAG(3),	 1,			                            -1 },
   { "notesc",		 NULL,        NULL,		        SPTAG(4),	 1,			                            -1 },
   { "keymaps",	 NULL,        NULL,   		    SPTAG(5),	 1,			                            -1 },
-  { "qutebrowser",	 NULL,    NULL,           SPTAG(6),	 1,			                            -1 },
-  { "discord",	 NULL,        NULL,           SPTAG(7),	 1,			                            -1 },
+  { "discord",	 NULL,        NULL,           SPTAG(6),	 1,			                            -1 },
+  { "qutebrowser",	 NULL,    NULL,           SPTAG(7),	 1,			                            -1 },
 };
 
 /* layout(s) */
@@ -86,9 +86,9 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[]=",      tile },    /* first entry is default */
-	{ "><>",      NULL },    /* no layout function means floating behavior */
-	{ "[M]",      monocle },
+	{ "",      tile },    /* first entry is default */
+	{ "",      NULL },    /* no layout function means floating behavior */
+	{ "󰊓",      monocle }, 
 };
 
 /* key definitions */
@@ -109,7 +109,7 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[]        = { "dmenu_run", NULL };
-static const char *termcmd[]         = { "alacritty", NULL };
+static const char *termcmd[]         = { "st", NULL };
 static const char *filemanager[]     = { "thunar", NULL };
 static const char *browser[]         = { "brave-browser", NULL };
 static const char *ssgui[]           = { "sstool", "--select", NULL };
@@ -135,7 +135,6 @@ static const Key keys[] = {
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY|ALTKEY|SHIFTKEY,       XK_m,      setlayout,      {.v = &layouts[2]} },
   { MODKEY|SHIFTKEY,              XK_f,      fullscreen,     {0} },
-	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|SHIFTKEY,              XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
 	{ MODKEY|SHIFTKEY,              XK_0,      tag,            {.ui = ~0 } },
@@ -160,8 +159,8 @@ static const Key keys[] = {
   { MODKEY,                 			XK_a,	     togglescratch,  {.ui = 3 } },
   { MODKEY,                 			XK_n,	     togglescratch,  {.ui = 4 } },
   { MODKEY|SHIFTKEY,         			XK_k,	     togglescratch,  {.ui = 5 } },
-  { MODKEY,         	        		XK_o,	     togglescratch,  {.ui = 6 } },
-  { MODKEY,         	        		XK_d,	     togglescratch,  {.ui = 7 } },
+  { MODKEY,         	        		XK_d,	     togglescratch,  {.ui = 6 } },
+  { MODKEY,         	        		XK_o,	     togglescratch,  {.ui = 7 } },
 
   /* Media Controls  */
 	{ 0,                            XF86XK_AudioMute,           spawn,          SHCMD("volumectrl --togglemute") },
