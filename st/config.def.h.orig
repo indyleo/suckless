@@ -99,30 +99,30 @@ float alpha = 0.85;
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
 	/* 8 normal colors */
-	"#3b4252", /* black   */
-	"#bf616a", /* red     */
-	"#a3be8c", /* green   */
-	"#ebcb8b", /* yellow  */
-	"#81a1c1", /* blue    */
-	"#b48ead", /* magenta */
-	"#88c0d0", /* cyan    */
-	"#e5e9f0", /* white   */
+	"#3B4252", /* black   */
+	"#BF616A", /* red     */
+	"#A3BE8C", /* green   */
+	"#EBCB8B", /* yellow  */
+	"#81A1C1", /* blue    */
+	"#B48EAD", /* magenta */
+	"#88C0D0", /* cyan    */
+	"#E5E9F0", /* white   */
 
 	/* 8 bright colors */
-	"#4c566a", /* black   */
-	"#bf616a", /* red     */
-	"#a3be8c", /* green   */
-	"#ebcb8b", /* yellow  */
-	"#81a1c1", /* blue    */
-	"#b48ead", /* magenta */
-	"#8fbcbb", /* cyan    */
-	"#eceff4", /* white   */
+	"#4C566A", /* black   */
+	"#BF616A", /* red     */
+	"#A3BE8C", /* green   */
+	"#EBCB8B", /* yellow  */
+	"#81A1C1", /* blue    */
+	"#B48EAD", /* magenta */
+	"#8FBCBB", /* cyan    */
+	"#ECEFF4", /* white   */
 
 	[255] = 0,
 
 	/* more colors can be added after 255 to use with DefaultXX */
-	"#d8dee9", /* default foreground colour */
-	"#2e3440", /* default background colour */
+	"#D8DEE9", /* default foreground colour */
+	"#2E3440", /* default background colour */
   "#000000",
   "#F0DFAF",
 };
@@ -135,8 +135,8 @@ unsigned int defaultfg = 256;
 unsigned int defaultbg = 257;
 unsigned int defaultcs = 256;
 static unsigned int defaultrcs = 256;
-unsigned int selectionbg = 257;
-unsigned int selectionfg = 7;
+unsigned int selectionbg = 258;
+unsigned int selectionfg = 259;
 /* If 0 use selectionfg as foreground in order to have a uniform foreground-color */
 /* Else if 1 keep original foreground-color of each cell => more colors :) */
 static int ignoreselfg = 1;
@@ -486,3 +486,14 @@ static char ascii_printable[] =
 	" !\"#$%&'()*+,-./0123456789:;<=>?"
 	"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
 	"`abcdefghijklmnopqrstuvwxyz{|}~";
+
+/*
+ * Open urls starting with urlprefixes, contatining urlchars
+ * by passing as ARG1 to urlhandler.
+ */
+char* urlhandler = "xdg-open";
+char urlchars[] =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	"abcdefghijklmnopqrstuvwxyz"
+	"0123456789-._~:/?#@!$&'*+,;=%";
+char* urlprefixes[] = {"http://", "https://", NULL};
