@@ -104,6 +104,7 @@ static const Layout layouts[] = {
 };
 
 /* key definitions */
+#include "selfrestart.c"
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define ALTKEY Mod1Mask
@@ -164,6 +165,7 @@ static const Key keys[] = {
     {MODKEY | ShiftMask, XK_equal, showall, {0}},
     {MODKEY, XK_minus, hide, {0}},
     {MODKEY | SHIFTKEY, XK_q, quit, {0}},
+    {MODKEY | SHIFTKEY, XK_r, self_restart, {0}},
 
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
         TAGKEYS(XK_5, 4) TAGKEYS(XK_6, 5) TAGKEYS(XK_7, 6)
