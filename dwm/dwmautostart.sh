@@ -89,4 +89,6 @@ StartProc
 ArgStart
 StartFlat
 
-exec dwm
+while true; do
+    dwm 2> ~/.cache/dwm.log
+done
