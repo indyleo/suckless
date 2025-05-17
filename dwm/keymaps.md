@@ -28,6 +28,7 @@ Mod+Shift+Period Send to next monitor
 Mod+= show hidden window thats focused
 Mod+Shift+= show all hidden windows
 Mod+- hide focused window
+Mod+Shift+R Restart dwm
 Mod+Shift+Q Quit dwm
 
 ## Tags
