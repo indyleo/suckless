@@ -104,7 +104,7 @@ static const Layout layouts[] = {
 };
 
 /* key definitions */
-#include "selfrestart.c"
+#include "movestack.c"
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define ALTKEY Mod1Mask
@@ -133,6 +133,7 @@ static const char *ssgui[] = {"sstool", "--select", NULL};
 static const char *ssscreen[] = {"sstool", "--screen", NULL};
 static const char *ssfull[] = {"sstool", "--full", NULL};
 static const char *guieditor[] = {"neovide", NULL};
+static const char *Gquit[] = {"qquit", NULL};
 
 static const Key keys[] = {
     /* modifier                     key        function        argument */
@@ -145,6 +146,8 @@ static const Key keys[] = {
     {MODKEY | ShiftMask, XK_k, focusstackhid, {.i = -1}},
     {MODKEY, XK_h, setmfact, {.f = -0.05}},
     {MODKEY, XK_l, setmfact, {.f = +0.05}},
+    {MODKEY | ShiftMask, XK_j, movestack, {.i = +1}},
+    {MODKEY | ShiftMask, XK_k, movestack, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_i, incnmaster, {.i = +1}},
     {MODKEY | SHIFTKEY, XK_d, incnmaster, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_z, zoom, {0}},
@@ -164,8 +167,8 @@ static const Key keys[] = {
     {MODKEY, XK_equal, show, {0}},
     {MODKEY | ShiftMask, XK_equal, showall, {0}},
     {MODKEY, XK_minus, hide, {0}},
-    {MODKEY | SHIFTKEY, XK_q, quit, {0}},
-    {MODKEY | SHIFTKEY, XK_r, self_restart, {0}},
+    {MODKEY | SHIFTKEY, XK_r, quit, {0}},
+    {MODKEY | SHIFTKEY, XK_q, spawn, {.v = Gquit}},
 
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
         TAGKEYS(XK_5, 4) TAGKEYS(XK_6, 5) TAGKEYS(XK_7, 6)
