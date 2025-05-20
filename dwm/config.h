@@ -21,18 +21,25 @@ static const int topbar = 1;  /* 0 means bottom bar */
 static const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
+/* Nord theme refined colors */
 static const char normbordercolor[] = "#3B4252";
 static const char normbgcolor[] = "#2E3440";
 static const char normfgcolor[] = "#D8DEE9";
-static const char selbordercolor[] = "#434C5E";
-static const char selbgcolor[] = "#434C5E";
+
+static const char selbordercolor[] = "#5E81AC";
+static const char selbgcolor[] = "#81A1C1";
 static const char selfgcolor[] = "#ECEFF4";
-/* Colors based on Nord theme */
+
+static const char hidbordercolor[] = "#2E3440";
+static const char hidbgcolor[] = "#3B4252";
+static const char hidfgcolor[] = "#88C0D0";
+
+/* Color scheme table */
 static const char *colors[][3] = {
-    /*               fg         bg         border   */
-    [SchemeNorm] = {"#D8DEE9", "#2E3440", "#3B4252"}, /* normal */
-    [SchemeSel] = {"#ECEFF4", "#81A1C1", "#5E81AC"},  /* selected */
-    [SchemeHid] = {"#88C0D0", "#434C5E", "#3B4252"},  /* hidden */
+    /*               fg           bg          border         */
+    [SchemeNorm] = {normfgcolor, normbgcolor, normbordercolor}, /* normal */
+    [SchemeSel] = {selfgcolor, selbgcolor, selbordercolor},     /* selected */
+    [SchemeHid] = {hidfgcolor, hidbgcolor, hidbordercolor},     /* hidden */
 };
 
 typedef struct {
