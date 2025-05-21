@@ -34,7 +34,7 @@ static const char nord_hidbordercolor[] = "#2E3440";
 static const char nord_hidbgcolor[] = "#3B4252";
 static const char nord_hidfgcolor[] = "#88C0D0";
 
-/* Color scheme table */
+/* Nord color scheme table */
 static const char *colors[][3] = {
     /*               fg           bg          border         */
     [SchemeNorm] = {nord_normfgcolor, nord_normbgcolor,
