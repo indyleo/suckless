@@ -30,6 +30,7 @@ Mod+Shift+= show all hidden windows
 Mod+- hide focused window
 Mod+Shift+R Restart dwm
 Mod+Shift+Q Quit dwm
+Mod+Shift+Ctrl+Alt+P (So Restart just makes nm-applet die for some reason, and to make quit used in dwm)
 
 ## Tags
 

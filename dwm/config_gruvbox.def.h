@@ -21,28 +21,30 @@ static const int topbar = 1;  /* 0 means bottom bar */
 static const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
-/* Nord theme refined colors */
-static const char nord_normbordercolor[] = "#3B4252";
-static const char nord_normbgcolor[] = "#2E3440";
-static const char nord_normfgcolor[] = "#D8DEE9";
+/* Gruvbox color variables */
+static const char gruvbox_normfgcolor[] = "#ebdbb2"; // light fg
+static const char gruvbox_normbgcolor[] = "#282828"; // dark bg
+static const char gruvbox_normbordercolor[] =
+    "#3c3836"; // slightly lighter than bg
 
-static const char nord_selbordercolor[] = "#5E81AC";
-static const char nord_selbgcolor[] = "#81A1C1";
-static const char nord_selfgcolor[] = "#ECEFF4";
+static const char gruvbox_selfgcolor[] = "#282828"; // dark fg for contrast
+static const char gruvbox_selbgcolor[] = "#fabd2f"; // bright yellow
+static const char gruvbox_selbordercolor[] =
+    "#d79921"; // muted yellow for border
 
-static const char nord_hidbordercolor[] = "#2E3440";
-static const char nord_hidbgcolor[] = "#3B4252";
-static const char nord_hidfgcolor[] = "#88C0D0";
+static const char gruvbox_hidfgcolor[] = "#928374";     // gruvbox faded fg
+static const char gruvbox_hidbgcolor[] = "#1d2021";     // hard contrast bg
+static const char gruvbox_hidbordercolor[] = "#3c3836"; // same as norm border
 
-/* Nord color scheme table */
+/* Gruvbox color scheme table */
 static const char *colors[][3] = {
-    /*               fg           bg          border         */
-    [SchemeNorm] = {nord_normfgcolor, nord_normbgcolor,
-                    nord_normbordercolor}, /* normal */
-    [SchemeSel] = {nord_selfgcolor, nord_selbgcolor,
-                   nord_selbordercolor}, /* selected */
-    [SchemeHid] = {nord_hidfgcolor, nord_hidbgcolor,
-                   nord_hidbordercolor}, /* hidden */
+    /*               fg               bg                border               */
+    [SchemeNorm] = {gruvbox_normfgcolor, gruvbox_normbgcolor,
+                    gruvbox_normbordercolor}, /* normal */
+    [SchemeSel] = {gruvbox_selfgcolor, gruvbox_selbgcolor,
+                   gruvbox_selbordercolor}, /* selected */
+    [SchemeHid] = {gruvbox_hidfgcolor, gruvbox_hidbgcolor,
+                   gruvbox_hidbordercolor}, /* hidden */
 };
 
 typedef struct {

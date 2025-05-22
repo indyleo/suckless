@@ -34,29 +34,6 @@ static const char nord_hidbordercolor[] = "#2E3440";
 static const char nord_hidbgcolor[] = "#3B4252";
 static const char nord_hidfgcolor[] = "#88C0D0";
 
-/* Gruvbox color variables */
-static const char gruvbox_normfgcolor[] = "#ebdbb2";
-static const char gruvbox_normbgcolor[] = "#282828";
-static const char gruvbox_normbordercolor[] = "#3c3836";
-
-static const char gruvbox_selfgcolor[] = "#282828";
-static const char gruvbox_selbgcolor[] = "#d79921";
-static const char gruvbox_selbordercolor[] = "#fabd2f";
-
-static const char gruvbox_hidfgcolor[] = "#928374";
-static const char gruvbox_hidbgcolor[] = "#1d2021";
-static const char gruvbox_hidbordercolor[] = "#3c3836";
-
-/* Gruvbox color scheme table */
-static const char *colors_gruvbox[][3] = {
-    [SchemeNorm] = {gruvbox_normfgcolor, gruvbox_normbgcolor,
-                    gruvbox_normbordercolor},
-    [SchemeSel] = {gruvbox_selfgcolor, gruvbox_selbgcolor,
-                   gruvbox_selbordercolor},
-    [SchemeHid] = {gruvbox_hidfgcolor, gruvbox_hidbgcolor,
-                   gruvbox_hidbordercolor},
-};
-
 /* Nord color scheme table */
 static const char *colors[][3] = {
     /*               fg           bg          border         */
@@ -167,6 +144,7 @@ static const char *ssscreen[] = {"sstool", "--screen", NULL};
 static const char *ssfull[] = {"sstool", "--full", NULL};
 static const char *guieditor[] = {"neovide", NULL};
 static const char *Gquit[] = {"qquit", NULL};
+static const char *Grestart[] = {"qrestart", NULL};
 
 static const Key keys[] = {
     /* modifier                     key        function        argument */
@@ -200,7 +178,8 @@ static const Key keys[] = {
     {MODKEY, XK_equal, show, {0}},
     {MODKEY | SHIFTKEY, XK_equal, showall, {0}},
     {MODKEY, XK_minus, hide, {0}},
-    {MODKEY | SHIFTKEY, XK_r, quit, {0}},
+    {MODKEY | SHIFTKEY | CTRLKEY | ALTKEY, XK_p, quit, {0}},
+    {MODKEY | SHIFTKEY, XK_r, spawn, {.v = Grestart}},
     {MODKEY | SHIFTKEY, XK_q, spawn, {.v = Gquit}},
 
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
