@@ -34,6 +34,29 @@ static const char nord_hidbordercolor[] = "#2E3440";
 static const char nord_hidbgcolor[] = "#3B4252";
 static const char nord_hidfgcolor[] = "#88C0D0";
 
+/* Gruvbox color variables */
+static const char gruvbox_normfgcolor[] = "#ebdbb2";
+static const char gruvbox_normbgcolor[] = "#282828";
+static const char gruvbox_normbordercolor[] = "#3c3836";
+
+static const char gruvbox_selfgcolor[] = "#282828";
+static const char gruvbox_selbgcolor[] = "#d79921";
+static const char gruvbox_selbordercolor[] = "#fabd2f";
+
+static const char gruvbox_hidfgcolor[] = "#928374";
+static const char gruvbox_hidbgcolor[] = "#1d2021";
+static const char gruvbox_hidbordercolor[] = "#3c3836";
+
+/* Gruvbox color scheme table */
+static const char *colors_gruvbox[][3] = {
+    [SchemeNorm] = {gruvbox_normfgcolor, gruvbox_normbgcolor,
+                    gruvbox_normbordercolor},
+    [SchemeSel] = {gruvbox_selfgcolor, gruvbox_selbgcolor,
+                   gruvbox_selbordercolor},
+    [SchemeHid] = {gruvbox_hidfgcolor, gruvbox_hidbgcolor,
+                   gruvbox_hidbordercolor},
+};
+
 /* Nord color scheme table */
 static const char *colors[][3] = {
     /*               fg           bg          border         */
