@@ -2,6 +2,7 @@
 
 # Vars
 XRANDR_OUTPUT=$(xrandr -q)
+THEME_CURRENT="$(cat ${XDG_CACHE_HOME:-$HOME/.cache}/theme)"
 PROCS=(
     clipmenud
     flameshot
@@ -16,7 +17,7 @@ FLAT_PROCS=(
 )
 
 ARGS=(
-    timexwalr "${HOME}/Pictures/Wallpapers/nordtheme" 900
+    timexwalr "${HOME}/Pictures/Wallpapers/${THEME_CURRENT:-nord}" 900
 )
 
 ARG_PROCS=(

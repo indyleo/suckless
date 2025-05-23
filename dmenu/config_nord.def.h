@@ -12,12 +12,15 @@ static const char *fonts[] = {"FiraCode Nerd Font:pixelsize=12"};
 static const char *prompt =
     "What to Run > "; /* -p  option; prompt to the left of input field */
 static const char *colors[SchemeLast][2] = {
-    /*                         fg         bg          */
-    [SchemeNorm] = {"#ebdbb2", "#282828"},          // light fg, dark bg
-    [SchemeSel] = {"#282828", "#fabd2f"},           // dark fg, bright yellow bg
-    [SchemeSelHighlight] = {"#fe8019", "#fabd2f"},  // orange fg, yellow bg
-    [SchemeNormHighlight] = {"#fe8019", "#282828"}, // orange fg, dark bg
-    [SchemeOut] = {"#282828", "#8ec07c"},           // dark fg, soft cyan bg
+    /*     fg         bg       */
+    [SchemeNorm] = {"#D8DEE9",
+                    "#2E3440"}, // Light gray foreground, dark blue background
+    [SchemeSel] = {"#ECEFF4", "#5E81AC"}, // Lighter gray foreground, medium
+                                          // blue background for selected item
+    [SchemeSelHighlight] = {"#ebcb8b", "#5E81AC"},
+    [SchemeNormHighlight] = {"#ebcb8b", "#2E3440"},
+    [SchemeOut] = {"#2E3440",
+                   "#88C0D0"}, // Dark blue foreground, light blue background
 };
 
 static const unsigned int alphas[SchemeLast][2] = {
