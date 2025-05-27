@@ -147,6 +147,7 @@ static const char *ssfull[] = {"sstool", "--full", NULL};
 static const char *guieditor[] = {"neovide", NULL};
 static const char *Gquit[] = {"qquit", NULL};
 static const char *Grestart[] = {"qrestart", NULL};
+static const char *TRecord[] = {"record-toggle", NULL};
 
 static const Key keys[] = {
     /* modifier                     key        function        argument */
@@ -228,6 +229,7 @@ static const Key keys[] = {
     {MODKEY, XK_Return, spawn, {.v = termcmd}},
     {MODKEY | SHIFTKEY, XK_w, spawn,
      SHCMD("xwall xwalr ~/Pictures/Wallpapers/gruvbox")},
+    {MODKEY | ALTKEY, XK_r, spawn, {.v = TRecord}},
 
     /* Alt Tab */
     {ALTKEY, XK_Tab, spawn, SHCMD("dmenu_alttab")},

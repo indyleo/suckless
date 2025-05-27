@@ -83,6 +83,7 @@ Mod+R Run app (dmenu_run)
 Mod+P Flatpak launcher (dmenu_flatpak)
 Mod+Enter Launch terminal (alacritty)
 Mod+Shift+W Random wallpaper (xwalr)
+Mod+Alt+R Toggle Record (record-toggle)
 
 ## Alt Tab
 
