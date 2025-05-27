@@ -65,6 +65,8 @@ static const char unknown_str[] = "n/a";
  */
 static const struct arg args[] = {
     /* function format          argument */
+    {run_command, "%s", "isrec"},
+    {run_command, "%s", "echo ' || '"},
     {run_command, "%s", "brightnessctrl --get"},
     {run_command, "%s", "echo ' || '"},
     {run_command, "%s", "volumectrl --printvol"},
