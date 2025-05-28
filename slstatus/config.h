@@ -65,7 +65,7 @@ static const char unknown_str[] = "n/a";
  */
 static const struct arg args[] = {
     /* function format          argument turn signal */
-    {run_command, "%s", "cat /tmp/recordingicon", 0, 14},
+    {run_command, "%s", "isrec", 0, 14},
     {run_command, "%s", "echo ' || '", 4800, -1},
     {run_command, "%s", "brightnessctrl --get", 0, 15},
     {run_command, "%s", "echo ' || '", 4800, -1},
