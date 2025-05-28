@@ -66,12 +66,15 @@ static const char unknown_str[] = "n/a";
 static const struct arg args[] = {
     /* function format          argument turn signal */
     {run_command, "%s", "isrec", 0, 14},
-    {run_command, "%s", "echo ' || '", 4800, -1},
+    {run_command, "%s", "echo ' || '", 0, -1},
+    {run_command, "%s", "songctrl -ss Supersonic", 1, 13},
+    {run_command, " %s", "songctrl -st Supersonic 20", 1, 13},
+    {run_command, "%s", "echo ' || '", 0, -1},
     {run_command, "%s", "brightnessctrl --get", 0, 15},
-    {run_command, "%s", "echo ' || '", 4800, -1},
+    {run_command, "%s", "echo ' || '", 0, -1},
     {run_command, "%s", "volumectrl --printvol", 0, 16},
-    {run_command, "%s", "echo ' || '", 4800, -1},
+    {run_command, "%s", "echo ' || '", 0, -1},
     {run_command, "%s ", "battery", 60, -1},
-    {run_command, "%s", "echo ' || '", 4800, -1},
+    {run_command, "%s", "echo ' || '", 0, -1},
     {datetime, "%s", "󰥔  %I:%M %p |   %A %B %d %Y ", 60, -1},
 };
