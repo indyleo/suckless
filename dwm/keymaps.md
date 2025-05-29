@@ -9,8 +9,8 @@ Mod+Shift+J Focus next window (hidden)
 Mod+Shift+K Focus previous window (hidden)
 Mod+H Decrease master area size
 Mod+L Increase master area size
-Mod+Shift+I Increase number of master clients
-Mod+Shift+D Decrease number of master clients
+Mod+Shift+N Increase number of master clients
+Mod+Shift+M Decrease number of master clients
 Mod+Shift+Enter Zoom (promote to master)
 Mod+Tab View previous tag
 Mod+Q Close window
