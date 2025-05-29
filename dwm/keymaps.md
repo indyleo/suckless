@@ -48,7 +48,6 @@ Mod+A Toggle scratchpad 3 (Pulsemixer)
 Mod+N Toggle scratchpad 4 (Notes)
 Mod+Shift+K Toggle scratchpad 5 (Keymaps)
 Mod+D Toggle scratchpad 6 (Discordo)
-Mod+O Toggle scratchpad 7 (Qutebrowser)
 
 ## Media Keys
 
@@ -74,7 +73,7 @@ Mod+G Launch Signal (signal-desktop)
 Mod+M Launch Music Player (Supersonic)
 Mod+Shift+D Launch Discord (Vesktop)
 Mod+F Open File Manager (thunar)
-Mod+B Open Web Browser (brave-browser)
+Mod+B Open Web Browser (Qutebrowser)
 Print Screenshot (GUI selection)
 Mod+Print Screenshot (screen)
 Mod+Shift+Print Screenshot (fullscreen)

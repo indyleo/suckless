@@ -62,12 +62,11 @@ const char *spcmd6[] = {"st", "-c",  "keymaps", "-n",      "Keymaps",
                         "-e", "zsh", "-c",      "keymaps", NULL};
 const char *spcmd7[] = {"st", "-c",  "discordo", "-n",       "Discordo",
                         "-e", "zsh", "-c",       "discodio", NULL};
-const char *spcmd8[] = {"qutebrowser", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
-    {"termsc", spcmd1},   {"yazisc", spcmd2},      {"qalsc", spcmd3},
-    {"pulsesc", spcmd4},  {"notesc", spcmd5},      {"keymaps", spcmd6},
-    {"discordo", spcmd7}, {"qutebrowser", spcmd8},
+    {"termsc", spcmd1},   {"yazisc", spcmd2}, {"qalsc", spcmd3},
+    {"pulsesc", spcmd4},  {"notesc", spcmd5}, {"keymaps", spcmd6},
+    {"discordo", spcmd7},
 };
 
 /* tagging */
@@ -93,7 +92,6 @@ static const Rule rules[] = {
     {"notesc", NULL, NULL, SPTAG(4), 1, -1},
     {"keymaps", NULL, NULL, SPTAG(5), 1, -1},
     {"discord", NULL, NULL, SPTAG(6), 1, -1},
-    {"qutebrowser", NULL, NULL, SPTAG(7), 1, -1},
 };
 
 /* layout(s) */
@@ -138,7 +136,7 @@ static char dmenumon[2] =
 static const char *dmenucmd[] = {"dmenu_run", NULL};
 static const char *termcmd[] = {"st", NULL};
 static const char *filemanager[] = {"thunar", NULL};
-static const char *browser[] = {"brave-browser", NULL};
+static const char *browser[] = {"qutebrowser", NULL};
 static const char *ssgui[] = {"sstool", "--select", NULL};
 static const char *ssscreen[] = {"sstool", "--screen", NULL};
 static const char *ssfull[] = {"sstool", "--full", NULL};
@@ -194,7 +192,6 @@ static const Key keys[] = {
     {MODKEY, XK_n, togglescratch, {.ui = 4}},
     {MODKEY | SHIFTKEY, XK_k, togglescratch, {.ui = 5}},
     {MODKEY, XK_d, togglescratch, {.ui = 6}},
-    {MODKEY, XK_o, togglescratch, {.ui = 7}},
 
     /* Media Controls  */
     {0, XF86XK_AudioMute, spawn, SHCMD("volumectrl --togglemute")},
