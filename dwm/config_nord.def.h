@@ -137,9 +137,10 @@ static const char *dmenucmd[] = {"dmenu_run", NULL};
 static const char *termcmd[] = {"st", NULL};
 static const char *filemanager[] = {"thunar", NULL};
 static const char *browser[] = {"qutebrowser", NULL};
-static const char *ssgui[] = {"sstool", "--select", NULL};
-static const char *ssscreen[] = {"sstool", "--screen", NULL};
+static const char *ssel[] = {"sstool", "--select", NULL};
+static const char *sscreen[] = {"sstool", "--screen", NULL};
 static const char *ssfull[] = {"sstool", "--full", NULL};
+static const char *sswin[] = {"sstool", "--window", NULL};
 static const char *guieditor[] = {"neovide", NULL};
 static const char *Gquit[] = {"qquit", NULL};
 static const char *Grestart[] = {"qrestart", NULL};
@@ -215,9 +216,10 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
     {MODKEY, XK_f, spawn, {.v = filemanager}},
     {MODKEY, XK_b, spawn, {.v = browser}},
-    {0, XK_Print, spawn, {.v = ssgui}},
-    {MODKEY, XK_Print, spawn, {.v = ssscreen}},
+    {0, XK_Print, spawn, {.v = ssel}},
+    {MODKEY, XK_Print, spawn, {.v = sscreen}},
     {MODKEY | SHIFTKEY, XK_Print, spawn, {.v = ssfull}},
+    {MODKEY | CTRLKEY, XK_Print, spawn, {.v = sswin}},
     {MODKEY, XK_e, spawn, {.v = guieditor}},
     {MODKEY, XK_r, spawn, {.v = dmenucmd}},
     {MODKEY, XK_p, spawn, SHCMD("dmenu_flatpak")},

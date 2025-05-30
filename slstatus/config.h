@@ -76,5 +76,5 @@ static const struct arg args[] = {
     {run_command, "%s", "echo ' || '", 0, -1},
     {run_command, "%s ", "battery", 60, -1},
     {run_command, "%s", "echo ' || '", 0, -1},
-    {datetime, "%s", "󰥔  %I:%M %p |   %A %B %d %Y ", 60, -1},
+    {run_command, "%s", "sysstats date_time", 60, -1},
 };
