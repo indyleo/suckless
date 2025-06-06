@@ -7,7 +7,7 @@ const unsigned int interval = 1000;
 static const char unknown_str[] = "N/A";
 
 /* maximum command output length */
-#define CMDLEN 128
+#define CMDLEN 256
 
 /*
  * function            description                     argument (example)
