@@ -10,7 +10,7 @@ PROCS=(
     nm-applet
     lxpolkit
     udiskie
-    slstatus
+    dwmblocks
 )
 FLAT_PROCS=(
     org.fkoehler.KTailctl
