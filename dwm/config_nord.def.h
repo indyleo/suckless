@@ -135,16 +135,6 @@ static char dmenumon[2] =
     "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = {"dmenu_run", NULL};
 static const char *termcmd[] = {"st", NULL};
-static const char *filemanager[] = {"thunar", NULL};
-static const char *browser[] = {"qutebrowser", NULL};
-static const char *ssel[] = {"sstool", "--select", NULL};
-static const char *sscreen[] = {"sstool", "--screen", NULL};
-static const char *ssfull[] = {"sstool", "--full", NULL};
-static const char *sswin[] = {"sstool", "--window", NULL};
-static const char *guieditor[] = {"neovide", NULL};
-static const char *Gquit[] = {"qquit", NULL};
-static const char *Grestart[] = {"qrestart", NULL};
-static const char *TRecord[] = {"record-toggle", NULL};
 
 static const Key keys[] = {
     /* modifier                     key        function        argument */
@@ -179,8 +169,6 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_equal, showall, {0}},
     {MODKEY, XK_minus, hide, {0}},
     {MODKEY | SHIFTKEY | CTRLKEY | ALTKEY, XK_p, quit, {0}},
-    {MODKEY | SHIFTKEY, XK_r, spawn, {.v = Grestart}},
-    {MODKEY | SHIFTKEY, XK_q, spawn, {.v = Gquit}},
 
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
         TAGKEYS(XK_5, 4) TAGKEYS(XK_6, 5) TAGKEYS(XK_7, 6)
@@ -193,43 +181,6 @@ static const Key keys[] = {
     {MODKEY, XK_n, togglescratch, {.ui = 4}},
     {MODKEY | SHIFTKEY, XK_k, togglescratch, {.ui = 5}},
     {MODKEY, XK_d, togglescratch, {.ui = 6}},
-
-    /* Media Controls  */
-    {0, XF86XK_AudioMute, spawn, SHCMD("volumectrl --togglemute")},
-    {0, XF86XK_AudioLowerVolume, spawn, SHCMD("volumectrl --dec")},
-    {0, XF86XK_AudioRaiseVolume, spawn, SHCMD("volumectrl --inc")},
-    {MODKEY, XK_s, spawn, SHCMD("songctrl --togglepause Supersonic")},
-    {MODKEY | SHIFTKEY, XK_s, spawn, SHCMD("songctrl --skip Supersonic")},
-    {MODKEY | CTRLKEY, XK_s, spawn, SHCMD("songctrl --previous Supersonic")},
-
-    /* Brightness Controls */
-    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("brightnessctrl --inc 5")},
-    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("brightnessctrl --dec 5")},
-
-    /* Launchers */
-    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
-    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("dmenu_clip")},
-    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("dmenu_emoji")},
-    {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
-    {MODKEY, XK_g, spawn, SHCMD("signal-desktop")},
-    {MODKEY, XK_m, spawn, SHCMD("flatpak run io.github.dweymouth.supersonic")},
-    {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
-    {MODKEY, XK_f, spawn, {.v = filemanager}},
-    {MODKEY, XK_b, spawn, {.v = browser}},
-    {0, XK_Print, spawn, {.v = ssel}},
-    {MODKEY, XK_Print, spawn, {.v = sscreen}},
-    {MODKEY | SHIFTKEY, XK_Print, spawn, {.v = ssfull}},
-    {MODKEY | CTRLKEY, XK_Print, spawn, {.v = sswin}},
-    {MODKEY, XK_e, spawn, {.v = guieditor}},
-    {MODKEY, XK_r, spawn, {.v = dmenucmd}},
-    {MODKEY, XK_p, spawn, SHCMD("dmenu_flatpak")},
-    {MODKEY, XK_Return, spawn, {.v = termcmd}},
-    {MODKEY | SHIFTKEY, XK_w, spawn,
-     SHCMD("xwall xwalr ~/Pictures/Wallpapers/nord")},
-    {MODKEY | ALTKEY, XK_r, spawn, {.v = TRecord}},
-
-    /* Alt Tab */
-    {ALTKEY, XK_Tab, spawn, SHCMD("dmenu_alttab")},
 };
 
 /* button definitions */
