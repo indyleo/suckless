@@ -81,8 +81,8 @@ Mod+Ctrl+Print Screenshot (Window)
 Mod+E Launch Neovide
 Mod+R Run app (dmenu_run)
 Mod+P Flatpak launcher (dmenu_flatpak)
-Mod+Enter Launch terminal (alacritty)
-Mod+Shift+W Random wallpaper (xwalr)
+Mod+Enter Launch terminal (st)
+Mod+Shift+W Random wallpaper (xwall)
 Mod+Alt+R Toggle Record (record-toggle)
 
 ## Alt Tab
