@@ -52,8 +52,8 @@ typedef struct {
   const void *cmd;
 } Sp;
 const char *spcmd1[] = {"st", "-c", "termsc", "-n", "Termsc", NULL};
-const char *spcmd2[] = {"st", "-c",  "yazisc", "-n",   "Yazisc",
-                        "-e", "zsh", "-c",     "yazi", NULL};
+const char *spcmd2[] = {"st", "-c",  "lfsc", "-n", "Lfsc",
+                        "-e", "zsh", "-c",   "lf", NULL};
 const char *spcmd3[] = {"st", "-c",  "qalsc", "-n",   "Qalsc",
                         "-e", "zsh", "-c",    "qalc", NULL};
 const char *spcmd4[] = {"st", "-c",  "pulsesc", "-n",         "Pulsesc",
@@ -66,7 +66,7 @@ const char *spcmd7[] = {"st", "-c",  "discordo", "-n",       "Discordo",
                         "-e", "zsh", "-c",       "discodio", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
-    {"termsc", spcmd1},   {"yazisc", spcmd2}, {"qalsc", spcmd3},
+    {"termsc", spcmd1},   {"lfsc", spcmd2},   {"qalsc", spcmd3},
     {"pulsesc", spcmd4},  {"notesc", spcmd5}, {"keymaps", spcmd6},
     {"discordo", spcmd7},
 };
@@ -88,7 +88,7 @@ static const Rule rules[] = {
     {"Alacritty", NULL, NULL, 0, 0, 1, 0, -1},
     {NULL, NULL, "Event Tester", 0, 0, 0, 1, -1}, /* xev */
     {"termsc", NULL, NULL, SPTAG(0), 1, -1},
-    {"yazisc", NULL, NULL, SPTAG(1), 1, -1},
+    {"lfsc", NULL, NULL, SPTAG(1), 1, -1},
     {"qalsc", NULL, NULL, SPTAG(2), 1, -1},
     {"pulsesc", NULL, NULL, SPTAG(3), 1, -1},
     {"notesc", NULL, NULL, SPTAG(4), 1, -1},
