@@ -170,7 +170,6 @@ static const Key keys[] = {
     {MODKEY, XK_equal, show, {0}},
     {MODKEY | SHIFTKEY, XK_equal, showall, {0}},
     {MODKEY, XK_minus, hide, {0}},
-    {MODKEY | SHIFTKEY | CTRLKEY | ALTKEY, XK_p, quit, {0}},
 
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
         TAGKEYS(XK_5, 4) TAGKEYS(XK_6, 5) TAGKEYS(XK_7, 6)
