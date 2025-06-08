@@ -59,7 +59,7 @@ Alt+Tab Alt-tab menu (dmenu_alttab)
 Mod+Shift+L Lock screen (slock)
 Mod+Shift+Q Exit graphical session (Logout of session)
 Mod+Shift+R Restart graphical session (Reload config)
-Mod+Q Close window
+Mod+Q Close window (qkill)
 
 XF86MonBrightnessUp (Increase brightness)
 XF86MonBrightnessDown (Decrease brightness)
