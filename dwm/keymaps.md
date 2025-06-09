@@ -79,6 +79,7 @@ XF86AudioMute (Toggle Mute)
 Mod+Right (Skip song)
 Mod+Left (Previous song)
 Mod+Pause (Toggle Pause)
+Mod+s (Toggle pause)
 
 XF86AudioNext (Skip song)
 XF86AudioPrev (Previous song)
