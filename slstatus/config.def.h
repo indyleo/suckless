@@ -67,8 +67,8 @@ static const struct arg args[] = {
     /* function format          argument turn signal */
     {run_command, "%s", "isrec", 0, 12},
     {run_command, "%s", "echo ' || '", 0, -1},
-    // {run_command, " %s", "browserctrl -bst 20", 1, 13},
-    {run_command, " %s", "songctrl -sst Supersonic 20", 1, 14},
+    // {run_command, " %s", "browserctrl -bst 25", 0, 13},
+    {run_command, " %s", "songctrl -sst Supersonic 20", 0, 14},
     {run_command, "%s", "echo ' || '", 0, -1},
     {run_command, "%s", "brightnessctrl --get", 0, 15},
     {run_command, "%s", "echo ' || '", 0, -1},
