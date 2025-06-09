@@ -18,7 +18,7 @@ FLAT_PROCS=(
 )
 
 ARGS=(
-    timexwalr "${HOME}/Pictures/Wallpapers/${THEME_CURRENT:-nord}" 900
+    timexwalr "${HOME}/Pictures/Wallpapers/${THEME_CURRENT:-other}" 900
 )
 
 ARG_PROCS=(
