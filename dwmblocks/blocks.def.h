@@ -5,9 +5,9 @@ static const Block blocks[] = {
 
     {"", "isrec", 0, 12},
 
-    // {"", "browserctrl -bst 25", 0, 13},
+    // {"", "browserctrl -bst 25", 1, 13},
 
-    {"", "songctrl -sst Supersonic 20", 0, 14},
+    {"", "songctrl -sst Supersonic 20", 1, 14},
 
     {"", "brightnessctrl --get", 0, 15},
 
