@@ -58,17 +58,14 @@ const char *spcmd3[] = {"st", "-c",  "qalsc", "-n",   "Qalsc",
                         "-e", "zsh", "-c",    "qalc", NULL};
 const char *spcmd4[] = {"st", "-c",  "pulsesc", "-n",         "Pulsesc",
                         "-e", "zsh", "-c",      "pulsemixer", NULL};
-const char *spcmd5[] = {"st", "-c",  "notesc", "-n",    "Notesc",
-                        "-e", "zsh", "-c",     "notes", NULL};
-const char *spcmd6[] = {"st", "-c",  "keymaps", "-n",      "Keymaps",
+const char *spcmd5[] = {"st", "-c",  "keymaps", "-n",      "Keymaps",
                         "-e", "zsh", "-c",      "keymaps", NULL};
-const char *spcmd7[] = {"st", "-c",  "discordo", "-n",       "Discordo",
+const char *spcmd6[] = {"st", "-c",  "discordo", "-n",       "Discordo",
                         "-e", "zsh", "-c",       "discodio", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
-    {"termsc", spcmd1},   {"lfsc", spcmd2},   {"qalsc", spcmd3},
-    {"pulsesc", spcmd4},  {"notesc", spcmd5}, {"keymaps", spcmd6},
-    {"discordo", spcmd7},
+    {"termsc", spcmd1},  {"lfsc", spcmd2},    {"qalsc", spcmd3},
+    {"pulsesc", spcmd4}, {"keymaps", spcmd5}, {"discordo", spcmd6},
 };
 
 /* tagging */
@@ -91,7 +88,6 @@ static const Rule rules[] = {
     {"lfsc", NULL, NULL, SPTAG(1), 1, -1},
     {"qalsc", NULL, NULL, SPTAG(2), 1, -1},
     {"pulsesc", NULL, NULL, SPTAG(3), 1, -1},
-    {"notesc", NULL, NULL, SPTAG(4), 1, -1},
     {"keymaps", NULL, NULL, SPTAG(5), 1, -1},
     {"discord", NULL, NULL, SPTAG(6), 1, -1},
 };
@@ -178,9 +174,8 @@ static const Key keys[] = {
     {MODKEY, XK_y, togglescratch, {.ui = 1}},
     {MODKEY, XK_z, togglescratch, {.ui = 2}},
     {MODKEY, XK_a, togglescratch, {.ui = 3}},
-    {MODKEY, XK_n, togglescratch, {.ui = 4}},
-    {MODKEY | SHIFTKEY, XK_k, togglescratch, {.ui = 5}},
-    {MODKEY, XK_d, togglescratch, {.ui = 6}},
+    {MODKEY | SHIFTKEY, XK_k, togglescratch, {.ui = 4}},
+    {MODKEY, XK_d, togglescratch, {.ui = 5}},
 };
 
 /* button definitions */

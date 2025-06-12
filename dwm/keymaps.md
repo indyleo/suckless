@@ -41,9 +41,8 @@ Mod+T Toggle scratchpad 0 (Terminal)
 Mod+Y Toggle scratchpad 1 (Lf)
 Mod+Z Toggle scratchpad 2 (Qalc)
 Mod+A Toggle scratchpad 3 (Pulsemixer)
-Mod+N Toggle scratchpad 4 (Notes)
-Mod+Shift+K Toggle scratchpad 5 (Keymaps)
-Mod+D Toggle scratchpad 6 (Discordo)
+Mod+Shift+K Toggle scratchpad 4 (Keymaps)
+Mod+D Toggle scratchpad 5 (Discordo)
 
 ## Dmenu
 
@@ -52,6 +51,7 @@ Mod+Shift+C Clipboard manager (dmenu_clip)
 Mod+Shift+E Emoji picker (dmenu_emoji)
 Mod+R Run app (dmenu_run)
 Mod+P Flatpak launcher (dmenu_flatpak)
+Mod+N Notebook manager (dmenu_notebook)
 Alt+Tab Alt-tab menu (dmenu_alttab)
 
 ## System
