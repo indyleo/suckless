@@ -39,11 +39,14 @@ static Bool npisrelative = False;
 #define CTRLKEY ControlMask
 #define SHIFTKEY ShiftMask
 #define MODKEY CTRLKEY
+
+static const char *stcmd[] = {"tabbedtab", NULL};
+
 static const Key keys[] = {
     /* modifier             key        function     argument */
     {MODKEY | SHIFTKEY, XK_Return, focusonce, {0}},
     {MODKEY | SHIFTKEY, XK_Return, spawn, {0}},
-    {MODKEY, XK_Return, spawn, {.v = tabcmd}},
+    {MODKEY, XK_Return, spawn, {.v = stcmd}},
 
     {MODKEY | SHIFTKEY, XK_l, rotate, {.i = +1}},
     {MODKEY | SHIFTKEY, XK_h, rotate, {.i = -1}},
