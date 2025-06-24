@@ -86,8 +86,8 @@ static const Rule rules[] = {
     {"lfsc", NULL, NULL, SPTAG(1), 1, -1},
     {"qalsc", NULL, NULL, SPTAG(2), 1, -1},
     {"pulsesc", NULL, NULL, SPTAG(3), 1, -1},
-    {"keymaps", NULL, NULL, SPTAG(5), 1, -1},
-    {"discord", NULL, NULL, SPTAG(6), 1, -1},
+    {"keymaps", NULL, NULL, SPTAG(4), 1, -1},
+    {"discord", NULL, NULL, SPTAG(5), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
 };
 
