@@ -7,6 +7,8 @@ Mod+J Focus next window (visible)
 Mod+K Focus previous window (visible)
 Mod+Shift+J Focus next window (hidden)
 Mod+Shift+K Focus previous window (hidden)
+Mod+Alt+J Move stack next
+Mod+Alt+K Move stack previous
 Mod+H Decrease master area size
 Mod+L Increase master area size
 Mod+Shift+N Increase number of master clients
