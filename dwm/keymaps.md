@@ -43,7 +43,7 @@ Mod+T Toggle scratchpad 0 (Terminal)
 Mod+Y Toggle scratchpad 1 (Lf)
 Mod+Z Toggle scratchpad 2 (Qalc)
 Mod+A Toggle scratchpad 3 (Pulsemixer)
-Mod+Shift+K Toggle scratchpad 4 (Keymaps)
+Mod+Alt+Shift+K Toggle scratchpad 4 (Keymaps)
 Mod+D Toggle scratchpad 5 (Discordo)
 
 ## Dmenu

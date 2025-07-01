@@ -173,7 +173,7 @@ static const Key keys[] = {
     {MODKEY, XK_y, togglescratch, {.ui = 1}},
     {MODKEY, XK_z, togglescratch, {.ui = 2}},
     {MODKEY, XK_a, togglescratch, {.ui = 3}},
-    {MODKEY | SHIFTKEY, XK_k, togglescratch, {.ui = 4}},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_k, togglescratch, {.ui = 4}},
     {MODKEY, XK_d, togglescratch, {.ui = 5}},
 };
 
