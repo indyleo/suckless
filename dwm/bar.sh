@@ -1,4 +1,4 @@
-#!/bin/env dash
+#!/bin/env bash
 
 while true; do
     isrec=$(isrec)
