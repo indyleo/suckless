@@ -11,5 +11,5 @@ while true; do
 
     xsetroot -name " $isrec || $song || $bright || $vol || $bat || $datetime "
 
-    sleep 1
+    sleep 0.2
 done
