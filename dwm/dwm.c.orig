@@ -592,31 +592,46 @@ void buttonpress(XEvent *e) {
   XButtonPressedEvent *ev = &e->xbutton;
 
   click = ClkRootWin;
+
   /* focus monitor if necessary */
   if ((m = wintomon(ev->window)) && m != selmon) {
-    unfocus(selmon->sel, 1);
+    if (selmon && selmon->sel)
+      unfocus(selmon->sel, 1);
     selmon = m;
     focus(NULL);
   }
+  if (!m)
+    return; /* no monitor, nothing to do */
+  if (!selmon)
+    return; /* safety check */
+
+  /* click on bar */
   if (ev->window == selmon->barwin) {
     i = x = 0;
     unsigned int occ = 0;
+
+    /* calculate occupied tags */
     for (c = m->clients; c; c = c->next)
       occ |= c->tags == TAGMASK ? 0 : c->tags;
+
+    /* tag clicks */
     do {
-      /* Do not reserve space for vacant tags */
       if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
         continue;
       x += TEXTW(tags[i]);
     } while (ev->x >= x && ++i < LENGTH(tags));
+
     if (i < LENGTH(tags)) {
       click = ClkTagBar;
       arg.ui = 1 << i;
-    } else if (ev->x < x + TEXTW(selmon->ltsymbol))
+    }
+    /* layout symbol clicks */
+    else if (ev->x < x + TEXTW(selmon->ltsymbol))
       click = ClkLtSymbol;
-    /* 2px right padding */
+    /* status text clicks (rightmost area) */
     else if (ev->x > selmon->ww - TEXTW(stext) + lrpad - 2 - getsystraywidth())
-      click = ClkWinTitle;
+      click = ClkStatusText;
+    /* window title clicks */
     else {
       x += TEXTW(selmon->ltsymbol);
       c = m->clients;
@@ -625,20 +640,26 @@ void buttonpress(XEvent *e) {
         do {
           if (!ISVISIBLE(c))
             continue;
-          else
-            x += (1.0 / (double)m->bt) * m->btw;
+          x += (1.0 / (double)m->bt) * m->btw;
         } while (ev->x > x && (c = c->next));
 
         click = ClkWinTitle;
-        arg.v = c;
+        if (c)
+          arg.v = c;
+        else
+          return; /* nothing clicked, prevent crash */
       }
     }
-  } else if ((c = wintoclient(ev->window))) {
+  }
+  /* click on client window */
+  else if ((c = wintoclient(ev->window))) {
     focus(c);
     restack(selmon);
     XAllowEvents(dpy, ReplayPointer, CurrentTime);
     click = ClkClientWin;
   }
+
+  /* call button function */
   for (i = 0; i < LENGTH(buttons); i++)
     if (click == buttons[i].click && buttons[i].func &&
         buttons[i].button == ev->button &&
@@ -968,8 +989,6 @@ Monitor *dirtomon(int dir) {
 
 void drawbar(Monitor *m) {
   int x, w, tw = 0, stw = 0, n = 0, scm;
-  int boxs = drw->fonts->h / 9;
-  int boxw = drw->fonts->h / 6 + 2;
   unsigned int i, occ = 0, urg = 0;
   Client *c;
 
@@ -980,7 +999,7 @@ void drawbar(Monitor *m) {
     stw = getsystraywidth();
 
   /* draw status first so it can be overdrawn by tags later */
-  if (m == selmon) { /* status is only drawn on selected monitor */
+  if (m == selmon || 1) { /* status is only drawn on selected monitor */
     drw_setscheme(drw, scheme[SchemeNorm]);
     tw = TEXTW(stext) - lrpad / 2 + 2; /* 2px extra right padding */
     drw_text(drw, m->ww - tw - stw, 0, tw, bh, lrpad / 2 - 2, stext, 0);
@@ -1010,12 +1029,6 @@ void drawbar(Monitor *m) {
   x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
   if ((w = m->ww - tw - stw - x) > bh) {
-    /* if (m->sel) { */
-    /* 	drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]); */
-    /* 	drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0); */
-    /* 	if (m->sel->isfloating) */
-    /* 		drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
-     */
     if (n > 0) {
       int remainder = w % n;
       int tabw = (1.0 / (double)n) * w + 1;
@@ -1713,7 +1726,7 @@ void resizeclient(Client *c, int x, int y, int w, int h) {
     gapincr = gapoffset = 0;
   } else {
     /* Remove border and gap if layout is monocle or only one client */
-    if (c->mon->lt[c->mon->sellt]->arrange == monocle || n == 1) {
+    if (c->mon->lt[c->mon->sellt]->arrange == monocle) {
       gapoffset = 0;
       gapincr = -2 * borderpx;
       wc.border_width = 0;
@@ -2606,9 +2619,11 @@ void updatesizehints(Client *c) {
 }
 
 void updatestatus(void) {
+  Monitor *m;
   if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
     strcpy(stext, "dwm-" VERSION);
-  drawbar(selmon);
+  for (m = mons; m; m = m->next)
+    drawbar(m);
   updatesystray();
 }
 
