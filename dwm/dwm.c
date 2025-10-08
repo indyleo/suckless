@@ -592,31 +592,46 @@ void buttonpress(XEvent *e) {
   XButtonPressedEvent *ev = &e->xbutton;
 
   click = ClkRootWin;
+
   /* focus monitor if necessary */
   if ((m = wintomon(ev->window)) && m != selmon) {
-    unfocus(selmon->sel, 1);
+    if (selmon && selmon->sel)
+      unfocus(selmon->sel, 1);
     selmon = m;
     focus(NULL);
   }
+  if (!m)
+    return; /* no monitor, nothing to do */
+  if (!selmon)
+    return; /* safety check */
+
+  /* click on bar */
   if (ev->window == selmon->barwin) {
     i = x = 0;
     unsigned int occ = 0;
+
+    /* calculate occupied tags */
     for (c = m->clients; c; c = c->next)
       occ |= c->tags == TAGMASK ? 0 : c->tags;
+
+    /* tag clicks */
     do {
-      /* Do not reserve space for vacant tags */
       if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
         continue;
       x += TEXTW(tags[i]);
     } while (ev->x >= x && ++i < LENGTH(tags));
+
     if (i < LENGTH(tags)) {
       click = ClkTagBar;
       arg.ui = 1 << i;
-    } else if (ev->x < x + TEXTW(selmon->ltsymbol))
+    }
+    /* layout symbol clicks */
+    else if (ev->x < x + TEXTW(selmon->ltsymbol))
       click = ClkLtSymbol;
-    /* 2px right padding */
+    /* status text clicks (rightmost area) */
     else if (ev->x > selmon->ww - TEXTW(stext) + lrpad - 2 - getsystraywidth())
-      click = ClkWinTitle;
+      click = ClkStatusText;
+    /* window title clicks */
     else {
       x += TEXTW(selmon->ltsymbol);
       c = m->clients;
@@ -625,20 +640,26 @@ void buttonpress(XEvent *e) {
         do {
           if (!ISVISIBLE(c))
             continue;
-          else
-            x += (1.0 / (double)m->bt) * m->btw;
+          x += (1.0 / (double)m->bt) * m->btw;
         } while (ev->x > x && (c = c->next));
 
         click = ClkWinTitle;
-        arg.v = c;
+        if (c)
+          arg.v = c;
+        else
+          return; /* nothing clicked, prevent crash */
       }
     }
-  } else if ((c = wintoclient(ev->window))) {
+  }
+  /* click on client window */
+  else if ((c = wintoclient(ev->window))) {
     focus(c);
     restack(selmon);
     XAllowEvents(dpy, ReplayPointer, CurrentTime);
     click = ClkClientWin;
   }
+
+  /* call button function */
   for (i = 0; i < LENGTH(buttons); i++)
     if (click == buttons[i].click && buttons[i].func &&
         buttons[i].button == ev->button &&
