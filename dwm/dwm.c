@@ -968,8 +968,6 @@ Monitor *dirtomon(int dir) {
 
 void drawbar(Monitor *m) {
   int x, w, tw = 0, stw = 0, n = 0, scm;
-  int boxs = drw->fonts->h / 9;
-  int boxw = drw->fonts->h / 6 + 2;
   unsigned int i, occ = 0, urg = 0;
   Client *c;
 
@@ -1010,12 +1008,6 @@ void drawbar(Monitor *m) {
   x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
   if ((w = m->ww - tw - stw - x) > bh) {
-    /* if (m->sel) { */
-    /* 	drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]); */
-    /* 	drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0); */
-    /* 	if (m->sel->isfloating) */
-    /* 		drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
-     */
     if (n > 0) {
       int remainder = w % n;
       int tabw = (1.0 / (double)n) * w + 1;
