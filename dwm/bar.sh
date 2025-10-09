@@ -1,7 +1,7 @@
 #!/bin/env dash
 
 while true; do
-    isrec=$(isrec)
+    isrec=$(sysstats isrec)
     # browserctrl -bst 25   # disabled in your config
     song=$(songctrl -sst Supersonic 20)
     bright=$(brightnessctrl --get)
