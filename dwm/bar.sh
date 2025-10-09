@@ -5,7 +5,7 @@ while true; do
     # browsers=$(browserctrl -bst 25)   # disabled in your config
     song=$(songctrl -sst Supersonic 20)
     bright=$(brightnessctrl --get)
-    vol=$(volumectrl --printvol)
+    vol=$(sysstats volume)
     bat=$(sysstats battery)
     datetime=$(sysstats date_time)
 
