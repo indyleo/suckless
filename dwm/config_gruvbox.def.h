@@ -159,7 +159,7 @@ static const Key keys[] = {
     /* System Controls */
     {MODKEY | SHIFTKEY | ALTKEY | CTRLKEY, XK_q, quit, {0}},
     {MODKEY | SHIFTKEY, XK_r, spawn, SHCMD("kill -9 $(pidof dwm)")},
-    {MODKEY | SHIFTKEY, XK_q, spawn, SHCMD("kill -9 $(pidof Xorg)")},
+    {MODKEY | SHIFTKEY, XK_q, spawn, SHCMD("pkill -KILL -u $USER")},
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
     {MODKEY, XK_q, killclient, {0}},
 
