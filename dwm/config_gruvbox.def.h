@@ -158,6 +158,7 @@ static const Key keys[] = {
 
     /* System Controls */
     {MODKEY | SHIFTKEY, XK_q, quit, {0}},
+    {MODKEY | SHIFTKEY, XK_r, quit, {1}},
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
     {MODKEY, XK_q, killclient, {0}},
 
