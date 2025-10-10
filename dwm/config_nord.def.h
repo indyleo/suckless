@@ -50,10 +50,13 @@ const char *spcmd5[] = {"st", "-c",  "gurks", "-n",    "Gurks",
                         "-e", "zsh", "-c",    "gurks", NULL};
 const char *spcmd6[] = {"st", "-c",  "discordo", "-n",       "Discordo",
                         "-e", "zsh", "-c",       "discodio", NULL};
+const char *spcmd7[] = {"st", "-c",  "twitch-tui", "-n",  "Twitch-tui",
+                        "-e", "zsh", "-c",         "twt", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
-    {"termsc", spcmd1},  {"lfsc", spcmd2},  {"qalsc", spcmd3},
-    {"pulsesc", spcmd4}, {"gurks", spcmd5}, {"discordo", spcmd6},
+    {"termsc", spcmd1},     {"lfsc", spcmd2},  {"qalsc", spcmd3},
+    {"pulsesc", spcmd4},    {"gurks", spcmd5}, {"discordo", spcmd6},
+    {"twitch-tui", spcmd7},
 };
 
 /* tagging */
@@ -78,6 +81,7 @@ static const Rule rules[] = {
     {"pulsesc", NULL, NULL, SPTAG(3), 1, -1},
     {"gurks", NULL, NULL, SPTAG(4), 1, -1},
     {"discord", NULL, NULL, SPTAG(5), 1, -1},
+    {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
 };
 
@@ -170,6 +174,7 @@ static const Key keys[] = {
     {MODKEY, XK_a, togglescratch, {.ui = 3}},
     {MODKEY, XK_g, togglescratch, {.ui = 3}},
     {MODKEY, XK_d, togglescratch, {.ui = 5}},
+    {MODKEY, XK_c, togglescratch, {.ui = 6}},
 };
 
 /* button definitions */
