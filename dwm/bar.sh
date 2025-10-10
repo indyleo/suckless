@@ -3,7 +3,7 @@
 while true; do
     isrec=$(sysstats isrec)
     # browsers=$(browserctrl -bst 25)   # disabled in your config
-    song=$(songctrl -sst Supersonic 20)
+    song=$(songctrl -sst SubsonicTUI 20)
     bright=$(sysstats brightness)
     vol=$(sysstats volume)
     bat=$(sysstats battery)
