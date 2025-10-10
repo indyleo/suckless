@@ -54,16 +54,17 @@ const char *spcmd6[] = {"st", "-c",  "discordo", "-n",       "Discordo",
                         "-e", "zsh", "-c",       "discodio", NULL};
 const char *spcmd7[] = {"st", "-c",  "twitch-tui", "-n",  "Twitch-tui",
                         "-e", "zsh", "-c",         "twt", NULL};
+const char *spcmd8[] = {"st",  "-c", "subsonic-tui", "-n", "Subsonic-TUI", "-e",
+                        "zsh", "-c", "subsonic-tui", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
-    {"termsc", spcmd1},     {"lfsc", spcmd2},  {"qalsc", spcmd3},
-    {"pulsesc", spcmd4},    {"gurks", spcmd5}, {"discordo", spcmd6},
-    {"twitch-tui", spcmd7},
+    {"termsc", spcmd1},     {"lfsc", spcmd2},         {"qalsc", spcmd3},
+    {"pulsesc", spcmd4},    {"gurks", spcmd5},        {"discordo", spcmd6},
+    {"twitch-tui", spcmd7}, {"subsonic-tui", spcmd8},
 };
 
 /* tagging */
-static const char *tags[] = {"󰖟", "", "󰙯", "",
-                             "",  "", "󰨇"};
+static const char *tags[] = {"󰖟", "󰙯", "", "", "󰨇"};
 
 static const Rule rules[] = {
     /* xprop(1):
@@ -84,6 +85,7 @@ static const Rule rules[] = {
     {"gurks", NULL, NULL, SPTAG(4), 1, -1},
     {"discord", NULL, NULL, SPTAG(5), 1, -1},
     {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
+    {"subsonic-tui", NULL, NULL, SPTAG(7), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
 };
 
@@ -167,7 +169,7 @@ static const Key keys[] = {
     {MODKEY, XK_q, killclient, {0}},
 
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
-        TAGKEYS(XK_5, 4) TAGKEYS(XK_6, 5) TAGKEYS(XK_7, 6)
+        TAGKEYS(XK_5, 4)
 
     /* Scratch Pads */
     {MODKEY, XK_t, togglescratch, {.ui = 0}},
@@ -177,6 +179,7 @@ static const Key keys[] = {
     {MODKEY, XK_g, togglescratch, {.ui = 4}},
     {MODKEY, XK_d, togglescratch, {.ui = 5}},
     {MODKEY, XK_c, togglescratch, {.ui = 6}},
+    {MODKEY, XK_m, togglescratch, {.ui = 7}},
 };
 
 /* button definitions */
