@@ -10,7 +10,6 @@ PROCS=(
     lxpolkit
     udiskie
     bar.sh
-    sxhkd
 )
 ARG_PROCS=(
     xwall

@@ -127,7 +127,6 @@ static const Layout layouts[] = {
 static char dmenumon[2] =
     "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = {"dmenu_run", NULL};
-
 static const Key keys[] = {
     /* modifier                     key        function        argument */
 
@@ -142,7 +141,7 @@ static const Key keys[] = {
     {MODKEY | ALTKEY, XK_j, movestack, {.i = +1}},
     {MODKEY | ALTKEY, XK_k, movestack, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_a, incnmaster, {.i = +1}},
-    {MODKEY | SHIFTKEY, XK_d, incnmaster, {.i = -1}},
+    {MODKEY | SHIFTKEY, XK_m, incnmaster, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_z, zoom, {0}},
     {MODKEY, XK_Tab, view, {0}},
     {MODKEY | ALTKEY | SHIFTKEY, XK_t, setlayout, {.v = &layouts[0]}},
@@ -166,6 +165,69 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
     {MODKEY, XK_q, killclient, {0}},
 
+    /* Dmenu */
+    {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
+    {ALTKEY, XK_Tab, spawn, SHCMD("dmenu_alttab")},
+    {MODKEY, XK_p, spawn, SHCMD("dmenu_flatpak")},
+    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("dmenu_clip")},
+    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("dmenu_emoji")},
+    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont")},
+    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
+    {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
+    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("dmenu_menu")},
+
+    /* System */
+    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("brightnessctrl --inc 5")},
+    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("brightnessctrl --dec 5")},
+
+    /*  Media  */
+    {MODKEY, XK_Up, spawn, SHCMD("volumectrl --inc 5")},
+    {MODKEY, XK_Down, spawn, SHCMD("volumectrl --dec 5")},
+    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("volumectrl --togglemute")},
+
+    {0, XF86XK_AudioRaiseVolume, spawn, SHCMD("volumectrl --inc 5")},
+    {0, XF86XK_AudioLowerVolume, spawn, SHCMD("volumectrl --dec 5")},
+    {0, XF86XK_AudioMute, spawn, SHCMD("volumectrl --togglemute")},
+
+    /* Music player controls */
+    {MODKEY, XK_Right, spawn, SHCMD("songctrl --skip")},
+    {MODKEY, XK_Left, spawn, SHCMD("songctrl --previous")},
+    {MODKEY, XK_Pause, spawn, SHCMD("songctrl --togglepause")},
+    {MODKEY, XK_s, spawn, SHCMD("songctrl --togglepause")},
+    {0, XF86XK_AudioNext, spawn, SHCMD("songctrl --skip")},
+    {0, XF86XK_AudioPrev, spawn, SHCMD("songctrl --previous")},
+    {0, XF86XK_AudioPlay, spawn, SHCMD("songctrl --togglepause")},
+
+    /* Browser media controls */
+    {MODKEY | ALTKEY, XK_Right, spawn, SHCMD("browserctrl --skip")},
+    {MODKEY | ALTKEY, XK_Left, spawn, SHCMD("browserctrl --previous")},
+    {MODKEY | ALTKEY, XK_Pause, spawn, SHCMD("browserctrl --togglepause")},
+    {MODKEY | ALTKEY, XK_s, spawn, SHCMD("browserctrl --togglepause")},
+    {ALTKEY, XF86XK_AudioNext, spawn, SHCMD("browserctrl --skip")},
+    {ALTKEY, XF86XK_AudioPrev, spawn, SHCMD("browserctrl --previous")},
+    {ALTKEY, XF86XK_AudioPlay, spawn, SHCMD("browserctrl --togglepause")},
+
+    /*  Applications  */
+    {MODKEY, XK_Return, spawn, SHCMD("st")},
+    {MODKEY, XK_f, spawn, SHCMD("thunar")},
+    {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
+    {MODKEY, XK_e, spawn, SHCMD("neovide")},
+    {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
+    {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
+
+    /*  Recording / Screenshot  */
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("record-toggle")},
+    {0, XK_Print, spawn, SHCMD("sstool --select")},
+    {MODKEY, XK_Print, spawn, SHCMD("sstool --screen")},
+    {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("sstool --fullscreen")},
+    {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("sstool --window")},
+    {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("sstool --colorpicker")},
+
+    /*  Wallpaper  */
+    {MODKEY | SHIFTKEY, XK_w, spawn,
+     SHCMD("xwall themewall ~/Pictures/Wallpapers")},
+
+    /* Tags */
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
         TAGKEYS(XK_5, 4)
 
@@ -174,7 +236,7 @@ static const Key keys[] = {
     {MODKEY, XK_y, togglescratch, {.ui = 1}},
     {MODKEY, XK_z, togglescratch, {.ui = 2}},
     {MODKEY, XK_a, togglescratch, {.ui = 3}},
-    {MODKEY, XK_g, togglescratch, {.ui = 3}},
+    {MODKEY, XK_g, togglescratch, {.ui = 4}},
     {MODKEY, XK_d, togglescratch, {.ui = 5}},
     {MODKEY, XK_c, togglescratch, {.ui = 6}},
     {MODKEY, XK_m, togglescratch, {.ui = 7}},
