@@ -168,13 +168,13 @@
 
 ## Scratch Pads
 
-| Modifier | Key | Function      | Argument |
-| -------- | --- | ------------- | -------- |
-| MODKEY   | t   | togglescratch | 0        |
-| MODKEY   | y   | togglescratch | 1        |
-| MODKEY   | z   | togglescratch | 2        |
-| MODKEY   | a   | togglescratch | 3        |
-| MODKEY   | g   | togglescratch | 4        |
-| MODKEY   | d   | togglescratch | 5        |
-| MODKEY   | c   | togglescratch | 6        |
-| MODKEY   | m   | togglescratch | 7        |
+| Modifier | Key | Function      | Argument | Command                                                     |
+| -------- | --- | ------------- | -------- | ----------------------------------------------------------- |
+| MODKEY   | t   | togglescratch | 0        | `st -c termsc -n Termsc`                                    |
+| MODKEY   | y   | togglescratch | 1        | `st -c lfsc -n Lfsc -e zsh -c lf`                           |
+| MODKEY   | z   | togglescratch | 2        | `st -c qalsc -n Qalsc -e zsh -c qalc`                       |
+| MODKEY   | a   | togglescratch | 3        | `st -c gurks -n Gurks -e zsh -c gurks`                      |
+| MODKEY   | g   | togglescratch | 4        | `st -c pulsesc -n Pulsesc -e zsh -c pulsemixer`             |
+| MODKEY   | d   | togglescratch | 5        | `st -c discordo -n Discordo -e zsh -c discodio`             |
+| MODKEY   | c   | togglescratch | 6        | `st -c twitch-tui -n Twitch-tui -e zsh -c twt`              |
+| MODKEY   | m   | togglescratch | 7        | `st -c subsonic-tui -n Subsonic-TUI -e zsh -c subsonic-tui` |
