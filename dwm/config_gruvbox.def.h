@@ -217,6 +217,9 @@ static const Key keys[] = {
     {MODKEY, XK_e, spawn, SHCMD("neovide")},
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
     {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
+    {MODKEY, XK_i, spawn,
+     SHCMD("st -c keymaps -n Keymaps -e zsh -c 'batcat "
+           "\"$HOME/Github/suckless/dwm/keymaps.md\"'")},
 
     /*  Recording / Screenshot  */
     {MODKEY | ALTKEY, XK_r, spawn, SHCMD("record-toggle")},

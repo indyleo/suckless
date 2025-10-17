@@ -122,14 +122,15 @@
 
 ## Applications
 
-| Modifier           | Key    | Function | Argument                        |
-| ------------------ | ------ | -------- | ------------------------------- |
-| MODKEY             | Return | spawn    | st                              |
-| MODKEY             | f      | spawn    | thunar                          |
-| MODKEY             | b      | spawn    | qutebrowser                     |
-| MODKEY             | e      | spawn    | neovide                         |
-| MODKEY \| SHIFTKEY | d      | spawn    | flatpak run dev.vencord.Vesktop |
-| MODKEY \| SHIFTKEY | g      | spawn    | signal-desktop                  |
+| Modifier           | Key    | Function | Argument                                                                       |
+| ------------------ | ------ | -------- | ------------------------------------------------------------------------------ |
+| MODKEY             | Return | spawn    | st                                                                             |
+| MODKEY             | f      | spawn    | thunar                                                                         |
+| MODKEY             | b      | spawn    | qutebrowser                                                                    |
+| MODKEY             | e      | spawn    | neovide                                                                        |
+| MODKEY \| SHIFTKEY | d      | spawn    | flatpak run dev.vencord.Vesktop                                                |
+| MODKEY \| SHIFTKEY | g      | spawn    | signal-desktop                                                                 |
+| MODKEY             | i      | spawn    | `st -c keymaps -n Keymaps -e zsh -c moar $HOME/Github/suckless/dwm/keymaps.md` |
 
 ---
 
