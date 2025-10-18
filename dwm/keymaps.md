@@ -66,6 +66,7 @@
 | MODKEY \| ALTKEY   | e   | spawn    | dmenu_nerdfont |
 | MODKEY \| SHIFTKEY | p   | spawn    | dmenu_power    |
 | MODKEY             | n   | spawn    | dmenu_notebook |
+| MODKEY \| ALTKEY   | r   | spawn    | dmenu_screen   |
 | MODKEY \| ALTKEY   | m   | spawn    | dmenu_menu     |
 
 ---
@@ -134,11 +135,10 @@
 
 ---
 
-## Recording / Screenshot
+## Screenshot
 
 | Modifier           | Key   | Function | Argument             |
 | ------------------ | ----- | -------- | -------------------- |
-| MODKEY \| ALTKEY   | r     | spawn    | record-toggle        |
 | 0                  | Print | spawn    | sstool --select      |
 | MODKEY             | Print | spawn    | sstool --screen      |
 | MODKEY \| SHIFTKEY | Print | spawn    | sstool --fullscreen  |

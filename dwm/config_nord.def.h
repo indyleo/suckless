@@ -174,6 +174,7 @@ static const Key keys[] = {
     {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont")},
     {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
     {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
     {MODKEY | ALTKEY, XK_m, spawn, SHCMD("dmenu_menu")},
 
     /* System */

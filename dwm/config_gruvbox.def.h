@@ -177,6 +177,7 @@ static const Key keys[] = {
     {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont")},
     {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
     {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
     {MODKEY | ALTKEY, XK_m, spawn, SHCMD("dmenu_menu")},
 
     /* System */
@@ -221,8 +222,7 @@ static const Key keys[] = {
      SHCMD("st -c keymaps -n Keymaps -e zsh -c 'batcat "
            "\"$HOME/Github/suckless/dwm/keymaps.md\"'")},
 
-    /*  Recording / Screenshot  */
-    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("record-toggle")},
+    /*  Screenshot  */
     {0, XK_Print, spawn, SHCMD("sstool --select")},
     {MODKEY, XK_Print, spawn, SHCMD("sstool --screen")},
     {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("sstool --fullscreen")},
