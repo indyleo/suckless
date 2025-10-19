@@ -40,7 +40,7 @@ install: all
 	mkdir -pv ${DESTDIR}${PREFIX}/bin
 	cp -fv dwmautostart.sh ${DESTDIR}${PREFIX}/bin/dwmautostart.sh
 	chmod 755 ${DESTDIR}${PREFIX}/bin/dwmautostart.sh
-	cp -fv bar.py ${DESTDIR}${PREFIX}/bin/bar.py
+	cp -fv bars.py ${DESTDIR}${PREFIX}/bin/bar.py
 	chmod 755 ${DESTDIR}${PREFIX}/bin/bar.py
 	mkdir -pv ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/
 	cp -fv dwm.png ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png

@@ -17,12 +17,17 @@ MODULES = [
         "signal": "SIGUSR1",
     },
     {"name": "isrec", "cmd": "sysstats isrec", "interval": 0, "signal": "SIGUSR1"},
+    # {
+    #     "name": "browser",
+    #     "cmd": "browserctrl -bst 20",
+    #     "interval": 0,
+    #     "signal_offset": 4,
+    # },
     {
         "name": "song",
         "cmd": "songctrl -sst SubsonicTUI 20",
-        "interval": 3,
-        "signal": "SIGUSR2",
-        "signal_offset": 0,
+        "interval": 0,
+        "signal_offset": 3,
     },
     {
         "name": "bright",
