@@ -10,13 +10,7 @@ lock = threading.Lock()
 
 # ==== MODULE CONFIG ====
 MODULES = [
-    {
-        "name": "isstream",
-        "cmd": "sysstats isstream",
-        "interval": 0,
-        "signal": "SIGUSR1",
-    },
-    {"name": "isrec", "cmd": "sysstats isrec", "interval": 0, "signal": "SIGUSR1"},
+    {"name": "ismedia", "cmd": "sysstats ismedia", "interval": 0, "signal": "SIGUSR1"},
     {
         "name": "browser",
         # "cmd": "browserctrl -bst 20",
@@ -40,7 +34,6 @@ MODULES = [
         "name": "vol",
         "cmd": "sysstats volume",
         "interval": 0,
-        "signal": "SIGUSR1",
         "signal_offset": 1,
     },
     {"name": "bat", "cmd": "sysstats battery", "interval": 30},
