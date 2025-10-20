@@ -32,8 +32,14 @@ MODULES = [
         "enabled": True,
         "default_update": "songctrl -sst SubsonicTUI 20",
         "default_signal_offset": 22,
-        "cmds": {"left": "songctrl -sst SubsonicTUI 20"},
-        "signal_offsets": {"left": 3},
+        "cmds": {
+            "left": "songctrl --previous",
+            "right": "songctrl --skip",
+        },
+        "signal_offsets": {
+            "left": 3,
+            "right": 4,
+        },
     },
     {
         "name": "vol",
@@ -48,11 +54,11 @@ MODULES = [
             "scroll_down": "volumectrl --dec 5",
         },
         "signal_offsets": {
-            "left": 4,
-            "middle": 5,
-            "right": 6,
-            "scroll_up": 7,
-            "scroll_down": 8,
+            "left": 5,
+            "middle": 6,
+            "right": 7,
+            "scroll_up": 8,
+            "scroll_down": 9,
         },
     },
     {
@@ -66,9 +72,9 @@ MODULES = [
             "scroll_down": "brightnessctrl --dec 5",
         },
         "signal_offsets": {
-            "left": 9,
-            "scroll_up": 10,
-            "scroll_down": 11,
+            "left": 10,
+            "scroll_up": 11,
+            "scroll_down": 12,
         },
     },
     {
@@ -77,7 +83,7 @@ MODULES = [
         "default_update": "sysstats battery",
         "update_interval": 30,  # update every 30s automatically
         "cmds": {"left": "notify-send 'Battery' \"$(acpi -b)\""},
-        "signal_offsets": {"left": 12},
+        "signal_offsets": {"left": 13},
     },
     {
         "name": "datetime",
@@ -85,7 +91,7 @@ MODULES = [
         "default_update": "sysstats date_time",
         "update_interval": 60,  # update every 60s automatically
         "cmds": {"left": "notify-send 'Date & Time' \"$(date)\""},
-        "signal_offsets": {"left": 13},
+        "signal_offsets": {"left": 14},
     },
 ]
 
