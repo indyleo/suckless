@@ -10,39 +10,78 @@ lock = threading.Lock()
 
 # ==== MODULE CONFIG ====
 MODULES = [
-    {"name": "ismedia", "cmd": "sysstats ismedia", "interval": 0, "signal": "SIGUSR1"},
+    {
+        "name": "ismedia",
+        "enabled": True,
+        "cmds": {"left": "sysstats ismedia"},
+        "signal_offsets": {"left": 1},
+    },
     {
         "name": "browser",
-        # "cmd": "browserctrl -bst 20",
-        "cmd": "echo ''",
-        "interval": 0,
-        "signal_offset": 4,
+        "enabled": True,
+        "cmds": {"left": "browserctrl -bst 20"},
+        "signal_offsets": {"left": 2},
     },
     {
         "name": "song",
-        "cmd": "songctrl -sst SubsonicTUI 20",
-        "interval": 0,
-        "signal_offset": 3,
-    },
-    {
-        "name": "bright",
-        "cmd": "sysstats brightness",
-        "interval": 0,
-        "signal_offset": 2,
+        "enabled": True,
+        "cmds": {"left": "songctrl -sst SubsonicTUI 20"},
+        "signal_offsets": {"left": 3},
     },
     {
         "name": "vol",
-        "cmd": "sysstats volume",
-        "interval": 0,
-        "signal_offset": 1,
+        "enabled": True,
+        "cmds": {
+            "left": "sysstats volume",
+            "middle": "pavucontrol",
+            "right": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+            "scroll_up": "sysstats volume +5",
+            "scroll_down": "sysstats volume -5",
+        },
+        "signal_offsets": {
+            "left": 4,
+            "middle": 5,
+            "right": 6,
+            "scroll_up": 7,
+            "scroll_down": 8,
+        },
     },
-    {"name": "bat", "cmd": "sysstats battery", "interval": 30},
-    {"name": "datetime", "cmd": "sysstats date_time", "interval": 60},
+    {
+        "name": "bright",
+        "enabled": True,
+        "cmds": {
+            "left": "sysstats brightness",
+            "scroll_up": "sysstats brightness +5",
+            "scroll_down": "sysstats brightness -5",
+        },
+        "signal_offsets": {
+            "left": 9,
+            "scroll_up": 10,
+            "scroll_down": 11,
+        },
+    },
+    {
+        "name": "bat",
+        "enabled": True,
+        "cmds": {"left": "sysstats battery"},
+        "signal_offsets": {"left": 12},
+    },
+    {
+        "name": "datetime",
+        "enabled": True,
+        "cmds": {"left": "sysstats date_time"},
+        "signal_offsets": {"left": 13},
+    },
 ]
 
 MAIN_INTERVAL = 0.2
+
+# Shared data
 data = {mod["name"]: "" for mod in MODULES}
-events = {mod["name"]: threading.Event() for mod in MODULES}
+events = {}
+for mod in MODULES:
+    for btn in mod.get("signal_offsets", {}):
+        events[f"{mod['name']}_{btn}"] = threading.Event()
 
 
 # ==== FUNCTIONS ====
@@ -53,50 +92,41 @@ def run(cmd):
         return ""
 
 
-def updater(mod):
-    """Update the module on interval or when signal triggers"""
-    name, cmd, interval = mod["name"], mod["cmd"], mod.get("interval", 0)
+def updater(mod, btn):
+    """Thread per module/button"""
+    if not mod.get("enabled", True):
+        return  # skip disabled modules
 
-    # If interval == 0, run once at startup
-    if interval == 0:
+    name = mod["name"]
+    cmd = mod["cmds"][btn]
+    ev = events[f"{name}_{btn}"]
+
+    # Run once at startup if left click (update display)
+    if btn == "left":
         val = run(cmd)
         with lock:
             data[name] = val
 
     while running:
-        if interval > 0:
-            val = run(cmd)
-            with lock:
+        ev.wait()
+        if not running:
+            break
+        val = run(cmd)
+        with lock:
+            if btn == "left":
                 data[name] = val
-            time.sleep(interval)
-        else:
-            # wait for signal event
-            events[name].wait()
-            if not running:
-                break
-            val = run(cmd)
-            with lock:
-                data[name] = val
-            events[name].clear()
+        ev.clear()
 
 
 def handle_signal(signum, frame):
-    # Standard signals (SIGUSR1, SIGUSR2, etc.)
-    if signum < signal.SIGRTMIN or signum > signal.SIGRTMAX:
-        try:
-            sig_name = signal.Signals(signum).name
-            for mod in MODULES:
-                if mod.get("signal") == sig_name:
-                    events[mod["name"]].set()
-        except ValueError:
-            # unknown signal, ignore
-            pass
-    else:
-        # Real-time signal
-        offset = signum - signal.SIGRTMIN
-        for mod in MODULES:
-            if mod.get("signal_offset") == offset:
-                events[mod["name"]].set()
+    """Map SIGRTMIN + offset -> module/button event"""
+    offset = signum - signal.SIGRTMIN
+    for mod in MODULES:
+        if not mod.get("enabled", True):
+            continue
+        for btn, btn_offset in mod.get("signal_offsets", {}).items():
+            if offset == btn_offset:
+                events[f"{mod['name']}_{btn}"].set()
 
 
 def handle_exit(signum, frame):
@@ -110,34 +140,44 @@ def handle_exit(signum, frame):
 
 
 # ==== SETUP SIGNALS ====
-handled_signals = set()
 for mod in MODULES:
-    # standard signals
-    sig_name = mod.get("signal")
-    if sig_name and sig_name not in handled_signals:
-        sig = getattr(signal, sig_name)
-        signal.signal(sig, handle_signal)
-        handled_signals.add(sig_name)
-    # real-time signals
-    if "signal_offset" in mod:
-        sig = signal.SIGRTMIN + mod["signal_offset"]
-        signal.signal(sig, handle_signal)
+    if not mod.get("enabled", True):
+        continue
+    for btn, offset in mod.get("signal_offsets", {}).items():
+        signal.signal(signal.SIGRTMIN + offset, handle_signal)
 
 signal.signal(signal.SIGINT, handle_exit)
 signal.signal(signal.SIGTERM, handle_exit)
 
 # ==== START THREADS ====
 for mod in MODULES:
-    t = threading.Thread(target=updater, args=(mod,))
-    t.daemon = True
-    t.start()
+    if not mod.get("enabled", True):
+        continue
+    for btn in mod.get("signal_offsets", {}):
+        t = threading.Thread(target=updater, args=(mod, btn))
+        t.daemon = True
+        t.start()
 
 # ==== MAIN LOOP ====
 while running:
     with lock:
-        fields = [v for v in data.values() if v]
-        s = " || ".join(fields)
-    subprocess.run(["xsetroot", "-name", s])
+        fields = []
+        for mod in MODULES:
+            if not mod.get("enabled", True):
+                continue
+            val = data[mod["name"]]
+            if val:
+                # append marker as hidden char (left click offset)
+                offset = mod.get("signal_offsets", {}).get("left", 1)
+                if offset == 0:
+                    offset = 1
+                fields.append(val + chr(offset))
+
+        # Display string without control chars
+        s_display = " || ".join([f[:-1] for f in fields])
+
+    subprocess.run(f"xsetroot -name '{s_display}'", shell=True)
+
     if MAIN_INTERVAL > 0:
         time.sleep(MAIN_INTERVAL)
     else:
