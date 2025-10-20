@@ -561,73 +561,83 @@ void buttonpress(XEvent *e) {
 
   click = ClkRootWin;
 
-  /* focus monitor if necessary */
   if ((m = wintomon(ev->window)) && m != selmon) {
     if (selmon && selmon->sel)
       unfocus(selmon->sel, 1);
     selmon = m;
     focus(NULL);
   }
-  if (!m)
-    return; /* no monitor, nothing to do */
-  if (!selmon)
-    return; /* safety check */
+  if (!m || !selmon)
+    return;
 
-  /* click on bar */
   if (ev->window == selmon->barwin) {
     i = x = 0;
     unsigned int occ = 0;
 
-    /* calculate occupied tags */
     for (c = m->clients; c; c = c->next)
       occ |= c->tags == TAGMASK ? 0 : c->tags;
 
-    /* tag clicks */
-    do {
+    /* --- tag area --- */
+    for (i = 0; i < LENGTH(tags); i++) {
       if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
         continue;
       x += TEXTW(tags[i]);
-    } while (ev->x >= x && ++i < LENGTH(tags));
-
-    if (i < LENGTH(tags)) {
-      click = ClkTagBar;
-      arg.ui = 1 << i;
-    }
-    /* layout symbol clicks */
-    else if (ev->x < x + TEXTW(selmon->ltsymbol))
-      click = ClkLtSymbol;
-    /* status text clicks (rightmost area) */
-    else if (ev->x > selmon->ww - (int)TEXTW(stext) + lrpad - 2)
-      click = ClkStatusText;
-    /* window title clicks */
-    else {
-      x += TEXTW(selmon->ltsymbol);
-      c = m->clients;
-
-      if (c) {
-        do {
-          if (!ISVISIBLE(c))
-            continue;
-          x += (1.0 / (double)m->bt) * m->btw;
-        } while (ev->x > x && (c = c->next));
-
-        click = ClkWinTitle;
-        if (c)
-          arg.v = c;
-        else
-          return; /* nothing clicked, prevent crash */
+      if (ev->x < x) {
+        click = ClkTagBar;
+        arg.ui = 1 << i;
+        goto clickfound;
       }
     }
-  }
-  /* click on client window */
-  else if ((c = wintoclient(ev->window))) {
+
+    /* --- layout symbol --- */
+    if (ev->x < x + TEXTW(selmon->ltsymbol)) {
+      click = ClkLtSymbol;
+      goto clickfound;
+    }
+    x += TEXTW(selmon->ltsymbol);
+
+    /* --- title area --- */
+    int title_start = x;
+    int title_end = m->ww - drawstatusbar(m, bh, stext);
+
+    if (m->bt > 0 && ev->x < title_end) {
+      int w = title_end - title_start;
+      int remainder = w % m->bt;
+      int tabw = (1.0 / (double)m->bt) * w + 1;
+      c = m->clients;
+      for (; c; c = c->next) {
+        if (!ISVISIBLE(c))
+          continue;
+        int thisw = tabw;
+        if (remainder >= 0) {
+          if (remainder == 0)
+            thisw--;
+          remainder--;
+        }
+        x += thisw;
+        if (ev->x < x) {
+          click = ClkWinTitle;
+          arg.v = c;
+          goto clickfound;
+        }
+      }
+      click = ClkWinTitle;
+      goto clickfound;
+    }
+
+    /* --- status text --- */
+    if (ev->x > title_end) {
+      click = ClkStatusText;
+      goto clickfound;
+    }
+  } else if ((c = wintoclient(ev->window))) {
     focus(c);
     restack(selmon);
     XAllowEvents(dpy, ReplayPointer, CurrentTime);
     click = ClkClientWin;
   }
 
-  /* call button function */
+clickfound:
   for (i = 0; i < LENGTH(buttons); i++)
     if (click == buttons[i].click && buttons[i].func &&
         buttons[i].button == ev->button &&
