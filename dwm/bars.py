@@ -12,6 +12,16 @@ MAIN_INTERVAL = 0.0  # interval for modules without their own update_interval
 # ==== MODULE CONFIG ====
 MODULES = [
     {
+        "name": "chat",
+        "enabled": False,
+        "default_update": "tail -n 1 ~/.cache/twitch_chat.log 2>/dev/null || echo 'No chat yet'",
+        "default_signal_offset": 19,
+        "cmds": {
+            "left": "notify-send 'Twitch Chat' \"$(tail -n 3 ~/.cache/twitch_chat.log)\""
+        },
+        "signal_offsets": {"left": 0},
+    },
+    {
         "name": "ismedia",
         "enabled": True,
         "default_update": "sysstats ismedia",
