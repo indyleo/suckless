@@ -174,6 +174,7 @@ struct Monitor {
   Window barwin;
   const Layout *lt[2];
   Pertag *pertag;
+  int stw;
 };
 
 typedef struct {
@@ -577,7 +578,7 @@ void buttonpress(XEvent *e) {
     for (c = m->clients; c; c = c->next)
       occ |= c->tags == TAGMASK ? 0 : c->tags;
 
-    /* --- tag area --- */
+    /* tag area */
     for (i = 0; i < LENGTH(tags); i++) {
       if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
         continue;
@@ -589,43 +590,46 @@ void buttonpress(XEvent *e) {
       }
     }
 
-    /* --- layout symbol --- */
+    /* layout symbol */
     if (ev->x < x + TEXTW(selmon->ltsymbol)) {
       click = ClkLtSymbol;
       goto clickfound;
     }
     x += TEXTW(selmon->ltsymbol);
 
-    /* --- title area --- */
+    /* title area */
     int title_start = x;
-    int title_end = m->ww - drawstatusbar(m, bh, stext);
+    int title_end = m->ww - m->stw;
 
     if (m->bt > 0 && ev->x < title_end) {
       int w = title_end - title_start;
+      int tabw = w / m->bt;
       int remainder = w % m->bt;
-      int tabw = (1.0 / (double)m->bt) * w + 1;
-      c = m->clients;
-      for (; c; c = c->next) {
+
+      for (c = m->clients; c; c = c->next) {
         if (!ISVISIBLE(c))
           continue;
+
         int thisw = tabw;
-        if (remainder >= 0) {
-          if (remainder == 0)
-            thisw--;
+        if (remainder > 0) {
+          thisw++;
           remainder--;
         }
-        x += thisw;
-        if (ev->x < x) {
+
+        if (ev->x >= x && ev->x < x + thisw) {
           click = ClkWinTitle;
           arg.v = c;
           goto clickfound;
         }
+
+        x += thisw;
       }
+
       click = ClkWinTitle;
       goto clickfound;
     }
 
-    /* --- status text --- */
+    /* status text */
     if (ev->x > title_end) {
       click = ClkStatusText;
       goto clickfound;
@@ -1014,9 +1018,10 @@ void drawbar(Monitor *m) {
   if (!m->showbar)
     return;
 
-  if (m == selmon || 1) { /* status is only drawn on selected monitor */
-    tw = m->ww - drawstatusbar(m, bh, stext);
-  }
+  /* draw status bar and record its width */
+  int statusw = m->ww - drawstatusbar(m, bh, stext);
+  m->stw = statusw;
+  tw = m->ww - statusw;
 
   for (c = m->clients; c; c = c->next) {
     if (ISVISIBLE(c))
@@ -1025,50 +1030,69 @@ void drawbar(Monitor *m) {
     if (c->isurgent)
       urg |= c->tags;
   }
+
   x = 0;
   for (i = 0; i < LENGTH(tags); i++) {
-    /* Do not draw vacant tags */
     if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
       continue;
+
     w = TEXTW(tags[i]);
     drw_setscheme(
         drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
     drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
     x += w;
   }
+
+  /* layout symbol */
   w = TEXTW(m->ltsymbol);
   drw_setscheme(drw, scheme[SchemeNorm]);
   x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
-  if ((w = m->ww - tw - x) > bh) {
+  /* title area */
+  if ((w = tw - x) > bh) {
     if (n > 0) {
+      int tabw = w / n;
       int remainder = w % n;
-      int tabw = (1.0 / (double)n) * w + 1;
+
       for (c = m->clients; c; c = c->next) {
         if (!ISVISIBLE(c))
           continue;
+
+        int thisw = tabw;
+        if (remainder > 0) {
+          thisw++;
+          remainder--;
+        }
+
         if (m->sel == c)
           scm = SchemeSel;
         else if (HIDDEN(c))
           scm = SchemeHid;
         else
           scm = SchemeNorm;
-        drw_setscheme(drw, scheme[scm]);
 
-        if (remainder >= 0) {
-          if (remainder == 0) {
-            tabw--;
-          }
-          remainder--;
+        drw_setscheme(drw, scheme[scm]);
+        drw_text(drw, x, 0, thisw, bh, lrpad / 2, c->name, 0);
+        x += thisw;
+
+        /* clamp to avoid overlap with status bar */
+        if (x >= tw) {
+          x = tw;
+          break;
         }
-        drw_text(drw, x, 0, tabw, bh, lrpad / 2, c->name, 0);
-        x += tabw;
+      }
+
+      /* fill leftover space */
+      if (x < tw) {
+        drw_setscheme(drw, scheme[SchemeNorm]);
+        drw_rect(drw, x, 0, tw - x, bh, 1, 1);
       }
     } else {
       drw_setscheme(drw, scheme[SchemeNorm]);
       drw_rect(drw, x, 0, w, bh, 1, 1);
     }
   }
+
   m->bt = n;
   m->btw = w;
   drw_map(drw, m->barwin, 0, 0, m->ww, bh);
