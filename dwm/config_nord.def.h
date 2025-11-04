@@ -54,11 +54,14 @@ const char *spcmd7[] = {"st", "-c",  "twitch-tui", "-n",  "Twitch-tui",
                         "-e", "zsh", "-c",         "twt", NULL};
 const char *spcmd8[] = {"st",  "-c", "subsonic-tui", "-n", "Subsonic-TUI", "-e",
                         "zsh", "-c", "subsonic-tui", NULL};
+const char *spcmd9[] = {
+    "st",  "-c", "cheatsheet",      "-n", "CheatSheet", "-e",
+    "zsh", "-c", "dwm_keybinds.py", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
     {"termsc", spcmd1},     {"lfsc", spcmd2},         {"qalsc", spcmd3},
     {"pulsesc", spcmd4},    {"gurks", spcmd5},        {"discordo", spcmd6},
-    {"twitch-tui", spcmd7}, {"subsonic-tui", spcmd8},
+    {"twitch-tui", spcmd7}, {"subsonic-tui", spcmd8}, {"cheatsheet", spcmd9},
 };
 
 /* tagging */
@@ -84,6 +87,7 @@ static const Rule rules[] = {
     {"discord", NULL, NULL, SPTAG(5), 1, -1},
     {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
     {"subsonic-tui", NULL, NULL, SPTAG(7), 1, -1},
+    {"cheatsheet", NULL, NULL, SPTAG(8), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
 };
 
@@ -216,9 +220,6 @@ static const Key keys[] = {
     {MODKEY, XK_e, spawn, SHCMD("neovide")},
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
     {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
-    {MODKEY, XK_i, spawn,
-     SHCMD("st -c keymaps -n Keymaps -e zsh -c 'batcat "
-           "\"$HOME/Github/suckless/dwm/keymaps.md\"'")},
 
     /*  Recording / Screenshot  */
     {MODKEY | ALTKEY, XK_r, spawn, SHCMD("record-toggle")},
@@ -245,6 +246,7 @@ static const Key keys[] = {
     {MODKEY, XK_d, togglescratch, {.ui = 5}},
     {MODKEY, XK_c, togglescratch, {.ui = 6}},
     {MODKEY, XK_m, togglescratch, {.ui = 7}},
+    {MODKEY, XK_i, togglescratch, {.ui = 8}},
 };
 
 /* button definitions */
