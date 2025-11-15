@@ -40,8 +40,6 @@ install: all
 	mkdir -pv ${DESTDIR}${PREFIX}/bin
 	cp -fv dwmautostart.sh ${DESTDIR}${PREFIX}/bin/dwmautostart.sh
 	chmod 755 ${DESTDIR}${PREFIX}/bin/dwmautostart.sh
-	cp -fv bars.py ${DESTDIR}${PREFIX}/bin/bar.py
-	chmod 755 ${DESTDIR}${PREFIX}/bin/bar.py
 	mkdir -pv ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/
 	cp -fv dwm.png ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png
 	mkdir -pv ${DESTDIR}/usr/share/xsessions/
@@ -50,7 +48,6 @@ install: all
 uninstall:
 	rm -fv ${DESTDIR}${PREFIX}/bin/dwm \
 	${DESTDIR}${PREFIX}/bin/dwmautostart.sh \
-  ${DESTDIR}${PREFIX}/bin/bar.py \
   ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png \
   ${DESTDIR}/usr/share/xsessions/dwm.desktop \
 	${DESTDIR}${MANPREFIX}/man1/dwm.1
