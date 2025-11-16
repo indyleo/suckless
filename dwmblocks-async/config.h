@@ -18,7 +18,7 @@
 
 // Define blocks for the status feed as X(icon, cmd, interval, signal).
 #define BLOCKS(X)                           \
-    X("", "sysstats ismedia", 0, 20)        \
+    X("", "sysstats ismedia", 0, 21)        \
     X("", "mediactl state-title 35", 0, 22) \
     X("", "sysstats volume", 0, 23)         \
     X("", "sysstats brightness", 0, 24)     \
