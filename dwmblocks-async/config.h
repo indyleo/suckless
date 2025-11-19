@@ -20,8 +20,9 @@
 #define BLOCKS(X)                           \
     X("", "sysstats ismedia", 0, 21)        \
     X("", "mediactl state-title 35", 0, 22) \
-    X("", "sysstats volume", 0, 23)         \
-    X("", "sysstats brightness", 0, 24)     \
+    X("", "sysstats microphone", 0, 23)     \
+    X("", "sysstats volume", 0, 24)         \
+    X("", "sysstats brightness", 0, 25)     \
     X("", "sysstats battery", 15, 0)        \
     X("", "sysstats date_time", 30, 0)
 #endif  // CONFIG_H

@@ -75,7 +75,7 @@ static const Rule rules[] = {
      *	WM_NAME(STRING) = title
      */
     /* class     instance      title           tags mask  isfloating  isterminal
-       noswallow  monitor */
+                     noswallow  monitor */
     {"Gimp", NULL, NULL, 0, 1, 0, 0, -1},
     {"Firefox", NULL, NULL, 1 << 8, 0, 0, -1, -1},
     {"St", NULL, NULL, 0, 0, 1, 0, -1},
@@ -183,20 +183,29 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
     {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
     {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
-    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("dmenu_menu")},
 
     /* System */
-    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("brightnessctrl --inc 5")},
-    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("brightnessctrl --dec 5")},
+    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
+    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
+    {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
+    {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
 
     /*  Media  */
-    {MODKEY, XK_Up, spawn, SHCMD("volumectrl --inc 5")},
-    {MODKEY, XK_Down, spawn, SHCMD("volumectrl --dec 5")},
-    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("volumectrl --togglemute")},
+    {MODKEY | ALTKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
+    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
+    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("sysctl vol --toggle")},
 
-    {0, XF86XK_AudioRaiseVolume, spawn, SHCMD("volumectrl --inc 5")},
-    {0, XF86XK_AudioLowerVolume, spawn, SHCMD("volumectrl --dec 5")},
-    {0, XF86XK_AudioMute, spawn, SHCMD("volumectrl --togglemute")},
+    {ALTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
+    {ALTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
+    {ALTKEY, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
+
+    {SHIFTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl mic -i 5")},
+    {SHIFTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl mic -d 5")},
+    {SHIFTKEY, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
+
+    {MODKEY | SHIFTKEY, XK_Up, spawn, SHCMD("sysctl mic -i 5")},
+    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl mic -d 5")},
+    {MODKEY | SHIFTKEY, XK_m, spawn, SHCMD("sysctl mic --toggle")},
 
     /* Music player controls */
     {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},
@@ -225,6 +234,7 @@ static const Key keys[] = {
     {MODKEY, XK_e, spawn, SHCMD("neovide")},
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
     {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
+    {MODKEY | SHIFTKEY, XK_a, spawn, SHCMD("pavucontrol")},
 
     /*  Screenshot  */
     {0, XK_Print, spawn, SHCMD("sstool --select")},

@@ -186,17 +186,19 @@ static const Key keys[] = {
     {MODKEY | ALTKEY, XK_m, spawn, SHCMD("dmenu_menu")},
 
     /* System */
-    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("brightnessctrl --inc 5")},
-    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("brightnessctrl --dec 5")},
+    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
+    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
 
     /*  Media  */
-    {MODKEY, XK_Up, spawn, SHCMD("volumectrl --inc 5")},
-    {MODKEY, XK_Down, spawn, SHCMD("volumectrl --dec 5")},
-    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("volumectrl --togglemute")},
+    {MODKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
+    {MODKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
+    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl vol --toggle")},
+    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl mic --toggle")},
 
-    {0, XF86XK_AudioRaiseVolume, spawn, SHCMD("volumectrl --inc 5")},
-    {0, XF86XK_AudioLowerVolume, spawn, SHCMD("volumectrl --dec 5")},
-    {0, XF86XK_AudioMute, spawn, SHCMD("volumectrl --togglemute")},
+    {0, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
+    {0, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
+    {0, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
+    {0, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
 
     /* Music player controls */
     {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},
