@@ -2,7 +2,7 @@
 
 # Vars
 XRANDR_OUTPUT=$(xrandr -q)
-THEME_CURRENT="$(cat ${XDG_CACHE_HOME:-$HOME/.cache}/theme)"
+THEME_CURRENT="$(cat "${XDG_CACHE_HOME:-$HOME/.cache}"/theme)"
 PROCS=(
     dunst
     lxpolkit
@@ -25,6 +25,10 @@ ARG_LIST=(
 function command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
+
+if command_exists sunshine; then
+    PROCS+=("sunshine")
+fi
 
 if command_exists solaar; then
     ARG_PROCS+=("solaar")
@@ -80,7 +84,6 @@ picom -b
 systemctl --user import-environment DISPLAY
 StartProc
 ArgStart
-StartFlat
 
 exec dwm
 
