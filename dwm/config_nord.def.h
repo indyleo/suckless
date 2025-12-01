@@ -242,8 +242,7 @@ static const Key keys[] = {
     {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("sstool --colorpicker")},
 
     /*  Wallpaper  */
-    {MODKEY | SHIFTKEY, XK_w, spawn,
-     SHCMD("xwall themewall ~/Pictures/Wallpapers")},
+    {MODKEY | SHIFTKEY, XK_w, spawn, SHCMD("desktopctl wallpaper theme")},
 
     /* Tags */
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
