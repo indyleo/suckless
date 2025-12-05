@@ -41,24 +41,23 @@ typedef struct {
   const char *name;
   const void *cmd;
 } Sp;
-const char *spcmd1[] = {"st", "-c", "termsc", "-n", "Termsc", NULL};
-const char *spcmd2[] = {"st", "-c",  "lfsc", "-n", "Lfsc",
-                        "-e", "zsh", "-c",   "lf", NULL};
-const char *spcmd3[] = {"st", "-c",  "qalsc", "-n",   "Qalsc",
-                        "-e", "zsh", "-c",    "qalc", NULL};
-const char *spcmd4[] = {"st", "-c",  "pulsesc", "-n",         "Pulsesc",
-                        "-e", "zsh", "-c",      "pulsemixer", NULL};
-const char *spcmd5[] = {"st", "-c",  "gurks", "-n",    "Gurks",
-                        "-e", "zsh", "-c",    "gurks", NULL};
-const char *spcmd6[] = {"st", "-c",  "discordo", "-n",       "Discordo",
-                        "-e", "zsh", "-c",       "discodio", NULL};
-const char *spcmd7[] = {"st", "-c",  "twitch-tui", "-n",  "Twitch-tui",
-                        "-e", "zsh", "-c",         "twt", NULL};
-const char *spcmd8[] = {"st",  "-c", "subsonic-tui", "-n", "Subsonic-TUI", "-e",
-                        "zsh", "-c", "subsonic-tui", NULL};
-const char *spcmd9[] = {
-    "st",  "-c", "cheatsheet",      "-n", "CheatSheet", "-e",
-    "zsh", "-c", "dwm_keybinds.py", NULL};
+const char *spcmd1[] = {"alacritty", "--class", "termsc,Termsc", NULL};
+const char *spcmd2[] = {"alacritty", "--class", "lfsc,Lfsc", "-e", "lf", NULL};
+const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",
+                        "-e",        "qalc",    NULL};
+const char *spcmd4[] = {"alacritty", "--class",    "pulsesc,Pulsesc",
+                        "-e",        "pulsemixer", NULL};
+const char *spcmd5[] = {"alacritty", "--class", "gurks,Gurks",
+                        "-e",        "gurks",   NULL};
+const char *spcmd6[] = {"alacritty", "--class",  "discordo,Discordo",
+                        "-e",        "discodio", NULL};
+const char *spcmd7[] = {"alacritty", "--class", "twitch-tui,Twitch-tui",
+                        "-e",        "twt",     NULL};
+const char *spcmd8[] = {
+    "alacritty", "--class",      "subsonic-tui,Subsonic-TUI",
+    "-e",        "subsonic-tui", NULL};
+const char *spcmd9[] = {"alacritty", "--class",         "cheatsheet,CheatSheet",
+                        "-e",        "dwm_keybinds.py", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
     {"termsc", spcmd1},     {"lfsc", spcmd2},         {"qalsc", spcmd3},
@@ -229,7 +228,7 @@ static const Key keys[] = {
      SHCMD("mediactl --source browser play-pause")},
 
     /*  Applications  */
-    {MODKEY, XK_Return, spawn, SHCMD("st")},
+    {MODKEY, XK_Return, spawn, SHCMD("alacritty")},
     {MODKEY, XK_f, spawn, SHCMD("thunar")},
     {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
     {MODKEY, XK_e, spawn, SHCMD("neovide")},
@@ -273,7 +272,7 @@ static const Button buttons[] = {
     {ClkWinTitle, 0, Button1, togglewin, {0}},
     {ClkWinTitle, 0, Button2, zoom, {0}},
     {ClkStatusText, 0, Button1, spawn, SHCMD("dmenu_run")},
-    {ClkStatusText, 0, Button2, spawn, SHCMD("st")},
+    {ClkStatusText, 0, Button2, spawn, SHCMD("alacritty")},
     {ClkStatusText, 0, Button3, spawn, SHCMD("dmenu_power")},
     {ClkClientWin, MODKEY, Button1, movemouse, {0}},
     {ClkClientWin, MODKEY, Button2, togglefloating, {0}},
