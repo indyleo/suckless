@@ -1,1 +1,1 @@
-config_gruvbox.def.h
+config_nord.def.h

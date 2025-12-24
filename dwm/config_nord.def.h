@@ -164,83 +164,7 @@ static const Key keys[] = {
     /* System Controls */
     {MODKEY | SHIFTKEY, XK_q, quit, {0}},
     {MODKEY | SHIFTKEY, XK_r, quit, {1}},
-    {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
     {MODKEY, XK_q, killclient, {0}},
-
-    /* Dmenu */
-    {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
-    {ALTKEY, XK_Tab, spawn, SHCMD("dmenu_alttab")},
-    {MODKEY, XK_p, spawn, SHCMD("dmenu_flatpak")},
-    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clipmgr.py select")},
-    {MODKEY | SHIFTKEY, XK_v, spawn, SHCMD("clipmgr.py pin")},
-    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("dmenu_emoji.py")},
-    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont.py")},
-    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
-    {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
-    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
-
-    /* System */
-    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
-    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
-    {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
-    {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
-
-    /*  Media  */
-    {MODKEY | ALTKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
-    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
-    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("sysctl vol --toggle")},
-
-    {ALTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
-    {ALTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
-    {ALTKEY, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
-
-    {SHIFTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl mic -i 5")},
-    {SHIFTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl mic -d 5")},
-    {SHIFTKEY, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
-
-    {MODKEY | SHIFTKEY, XK_Up, spawn, SHCMD("sysctl mic -i 5")},
-    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl mic -d 5")},
-    {MODKEY | SHIFTKEY, XK_m, spawn, SHCMD("sysctl mic --toggle")},
-
-    /* Music player controls */
-    {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},
-    {MODKEY, XK_Left, spawn, SHCMD("mediactl --source song previous")},
-    {MODKEY, XK_s, spawn, SHCMD("mediactl --source song play-pause")},
-    {0, XF86XK_AudioNext, spawn, SHCMD("mediactl --source song next")},
-    {0, XF86XK_AudioPrev, spawn, SHCMD("mediactl --source song previous")},
-    {0, XF86XK_AudioPlay, spawn, SHCMD("mediactl --source song play-pause")},
-
-    /* Browser media controls */
-    {MODKEY | ALTKEY, XK_Right, spawn, SHCMD("mediactl --source browser next")},
-    {MODKEY | ALTKEY, XK_Left, spawn,
-     SHCMD("mediactl --source browser previous")},
-    {MODKEY | ALTKEY, XK_s, spawn,
-     SHCMD("mediactl --source browser play-pause")},
-    {ALTKEY, XF86XK_AudioNext, spawn, SHCMD("mediactl --source browser next")},
-    {ALTKEY, XF86XK_AudioPrev, spawn,
-     SHCMD("mediactl --source browser previous")},
-    {ALTKEY, XF86XK_AudioPlay, spawn,
-     SHCMD("mediactl --source browser play-pause")},
-
-    /*  Applications  */
-    {MODKEY, XK_Return, spawn, SHCMD("alacritty")},
-    {MODKEY, XK_f, spawn, SHCMD("thunar")},
-    {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
-    {MODKEY, XK_e, spawn, SHCMD("neovide")},
-    {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
-    {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
-    {MODKEY | SHIFTKEY, XK_a, spawn, SHCMD("pavucontrol")},
-
-    /*  Recording / Screenshot  */
-    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("record-toggle")},
-    {0, XK_Print, spawn, SHCMD("sstool --select")},
-    {MODKEY, XK_Print, spawn, SHCMD("sstool --screen")},
-    {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("sstool --fullscreen")},
-    {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("sstool --window")},
-    {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("sstool --colorpicker")},
-
-    /*  Wallpaper  */
-    {MODKEY | SHIFTKEY, XK_w, spawn, SHCMD("desktopctl wallpaper theme")},
 
     /* Tags */
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
@@ -267,9 +191,6 @@ static const Button buttons[] = {
     {ClkLtSymbol, 0, Button3, setlayout, {.v = &layouts[2]}},
     {ClkWinTitle, 0, Button1, togglewin, {0}},
     {ClkWinTitle, 0, Button2, zoom, {0}},
-    {ClkStatusText, 0, Button1, spawn, SHCMD("dmenu_run")},
-    {ClkStatusText, 0, Button2, spawn, SHCMD("alacritty")},
-    {ClkStatusText, 0, Button3, spawn, SHCMD("dmenu_power")},
     {ClkClientWin, MODKEY, Button1, movemouse, {0}},
     {ClkClientWin, MODKEY, Button2, togglefloating, {0}},
     {ClkClientWin, MODKEY, Button3, resizemouse, {0}},

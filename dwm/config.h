@@ -11,30 +11,28 @@ static const int topbar = 1;  /* 0 means bottom bar */
 static const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
-/* Gruvbox color variables */
-static const char gruvbox_normfgcolor[] = "#ebdbb2"; // light fg
-static const char gruvbox_normbgcolor[] = "#282828"; // dark bg
-static const char gruvbox_normbordercolor[] =
-    "#3c3836"; // slightly lighter than bg
+/* Nord theme refined colors */
+static const char nord_normbordercolor[] = "#3B4252";
+static const char nord_normbgcolor[] = "#2E3440";
+static const char nord_normfgcolor[] = "#D8DEE9";
 
-static const char gruvbox_selfgcolor[] = "#282828"; // dark fg for contrast
-static const char gruvbox_selbgcolor[] = "#fabd2f"; // bright yellow
-static const char gruvbox_selbordercolor[] =
-    "#d79921"; // muted yellow for border
+static const char nord_selbordercolor[] = "#5E81AC";
+static const char nord_selbgcolor[] = "#81A1C1";
+static const char nord_selfgcolor[] = "#ECEFF4";
 
-static const char gruvbox_hidfgcolor[] = "#928374";     // gruvbox faded fg
-static const char gruvbox_hidbgcolor[] = "#1d2021";     // hard contrast bg
-static const char gruvbox_hidbordercolor[] = "#3c3836"; // same as norm border
+static const char nord_hidbordercolor[] = "#2E3440";
+static const char nord_hidbgcolor[] = "#3B4252";
+static const char nord_hidfgcolor[] = "#88C0D0";
 
-/* Gruvbox color scheme table */
+/* Nord color scheme table */
 static const char *colors[][3] = {
-    /*               fg               bg                border               */
-    [SchemeNorm] = {gruvbox_normfgcolor, gruvbox_normbgcolor,
-                    gruvbox_normbordercolor}, /* normal */
-    [SchemeSel] = {gruvbox_selfgcolor, gruvbox_selbgcolor,
-                   gruvbox_selbordercolor}, /* selected */
-    [SchemeHid] = {gruvbox_hidfgcolor, gruvbox_hidbgcolor,
-                   gruvbox_hidbordercolor}, /* hidden */
+    /*               fg           bg          border         */
+    [SchemeNorm] = {nord_normfgcolor, nord_normbgcolor,
+                    nord_normbordercolor}, /* normal */
+    [SchemeSel] = {nord_selfgcolor, nord_selbgcolor,
+                   nord_selbordercolor}, /* selected */
+    [SchemeHid] = {nord_hidfgcolor, nord_hidbgcolor,
+                   nord_hidbordercolor}, /* hidden */
 };
 
 typedef struct {
@@ -74,7 +72,7 @@ static const Rule rules[] = {
      *	WM_NAME(STRING) = title
      */
     /* class     instance      title           tags mask  isfloating  isterminal
-                     noswallow  monitor */
+       noswallow  monitor */
     {"Gimp", NULL, NULL, 0, 1, 0, 0, -1},
     {"Firefox", NULL, NULL, 1 << 8, 0, 0, -1, -1},
     {"St", NULL, NULL, 0, 0, 1, 0, -1},
@@ -133,7 +131,6 @@ static const Layout layouts[] = {
 static char dmenumon[2] =
     "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = {"dmenu_run", NULL};
-
 static const Key keys[] = {
     /* modifier                     key        function        argument */
 
@@ -167,82 +164,7 @@ static const Key keys[] = {
     /* System Controls */
     {MODKEY | SHIFTKEY, XK_q, quit, {0}},
     {MODKEY | SHIFTKEY, XK_r, quit, {1}},
-    {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
     {MODKEY, XK_q, killclient, {0}},
-
-    /* Dmenu */
-    {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
-    {ALTKEY, XK_Tab, spawn, SHCMD("dmenu_alttab")},
-    {MODKEY, XK_p, spawn, SHCMD("dmenu_flatpak")},
-    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clipmgr.py select")},
-    {MODKEY | SHIFTKEY, XK_v, spawn, SHCMD("clipmgr.py pin")},
-    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("dmenu_emoji.py")},
-    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont.py")},
-    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
-    {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
-    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
-
-    /* System */
-    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
-    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
-    {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
-    {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
-
-    /*  Media  */
-    {MODKEY | ALTKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
-    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
-    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("sysctl vol --toggle")},
-
-    {ALTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
-    {ALTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
-    {ALTKEY, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
-
-    {SHIFTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl mic -i 5")},
-    {SHIFTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl mic -d 5")},
-    {SHIFTKEY, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
-
-    {MODKEY | SHIFTKEY, XK_Up, spawn, SHCMD("sysctl mic -i 5")},
-    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl mic -d 5")},
-    {MODKEY | SHIFTKEY, XK_m, spawn, SHCMD("sysctl mic --toggle")},
-
-    /* Music player controls */
-    {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},
-    {MODKEY, XK_Left, spawn, SHCMD("mediactl --source song previous")},
-    {MODKEY, XK_s, spawn, SHCMD("mediactl --source song play-pause")},
-    {0, XF86XK_AudioNext, spawn, SHCMD("mediactl --source song next")},
-    {0, XF86XK_AudioPrev, spawn, SHCMD("mediactl --source song previous")},
-    {0, XF86XK_AudioPlay, spawn, SHCMD("mediactl --source song play-pause")},
-
-    /* Browser media controls */
-    {MODKEY | ALTKEY, XK_Right, spawn, SHCMD("mediactl --source browser next")},
-    {MODKEY | ALTKEY, XK_Left, spawn,
-     SHCMD("mediactl --source browser previous")},
-    {MODKEY | ALTKEY, XK_s, spawn,
-     SHCMD("mediactl --source browser play-pause")},
-    {ALTKEY, XF86XK_AudioNext, spawn, SHCMD("mediactl --source browser next")},
-    {ALTKEY, XF86XK_AudioPrev, spawn,
-     SHCMD("mediactl --source browser previous")},
-    {ALTKEY, XF86XK_AudioPlay, spawn,
-     SHCMD("mediactl --source browser play-pause")},
-
-    /*  Applications  */
-    {MODKEY, XK_Return, spawn, SHCMD("alacritty")},
-    {MODKEY, XK_f, spawn, SHCMD("thunar")},
-    {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
-    {MODKEY, XK_e, spawn, SHCMD("neovide")},
-    {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("flatpak run dev.vencord.Vesktop")},
-    {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
-    {MODKEY | SHIFTKEY, XK_a, spawn, SHCMD("pavucontrol")},
-
-    /*  Screenshot  */
-    {0, XK_Print, spawn, SHCMD("sstool --select")},
-    {MODKEY, XK_Print, spawn, SHCMD("sstool --screen")},
-    {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("sstool --fullscreen")},
-    {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("sstool --window")},
-    {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("sstool --colorpicker")},
-
-    /*  Wallpaper  */
-    {MODKEY | SHIFTKEY, XK_w, spawn, SHCMD("desktopctl wallpaper theme")},
 
     /* Tags */
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
@@ -269,9 +191,6 @@ static const Button buttons[] = {
     {ClkLtSymbol, 0, Button3, setlayout, {.v = &layouts[2]}},
     {ClkWinTitle, 0, Button1, togglewin, {0}},
     {ClkWinTitle, 0, Button2, zoom, {0}},
-    {ClkStatusText, 0, Button1, spawn, SHCMD("dmenu_run")},
-    {ClkStatusText, 0, Button2, spawn, SHCMD("alacritty")},
-    {ClkStatusText, 0, Button3, spawn, SHCMD("dmenu_power")},
     {ClkClientWin, MODKEY, Button1, movemouse, {0}},
     {ClkClientWin, MODKEY, Button2, togglefloating, {0}},
     {ClkClientWin, MODKEY, Button3, resizemouse, {0}},
