@@ -2082,6 +2082,7 @@ static void setwallpaper(const char *path) {
   imlib_context_set_anti_alias(0);
   imlib_context_set_dither(0);
   imlib_context_set_blend(0);
+  imlib_context_set_dither_mask(0);
 
   Imlib_Image img = imlib_load_image(path);
   if (!img) {
@@ -2093,22 +2094,35 @@ static void setwallpaper(const char *path) {
   Imlib_Image scaled = imlib_create_cropped_scaled_image(
       0, 0, imlib_image_get_width(), imlib_image_get_height(), sw, sh);
   imlib_free_image();
-  if (!scaled)
+  if (!scaled) {
+    fprintf(stderr, "dwm: failed to scale wallpaper\n");
     return;
+  }
 
   imlib_context_set_image(scaled);
 
-  /* render to a pixmap then copy to root via GC */
   Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
   imlib_context_set_drawable(pm);
   imlib_render_image_on_drawable(0, 0);
   imlib_free_image();
 
+  /* set root atoms like feh does so X keeps the pixmap alive */
+  Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
+  Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
+  XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
+                  (unsigned char *)&pm, 1);
+  XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
+                  (unsigned char *)&pm, 1);
+
+  XSetWindowBackgroundPixmap(dpy, root, pm);
+  XClearWindow(dpy, root);
+
   GC gc = XCreateGC(dpy, root, 0, NULL);
   XCopyArea(dpy, pm, root, gc, 0, 0, sw, sh, 0, 0);
   XFreeGC(dpy, gc);
-  XFreePixmap(dpy, pm);
+
   XFlush(dpy);
+  /* intentionally not freeing pm — X needs it alive for redraws */
 }
 
 void show(const Arg *arg) {
