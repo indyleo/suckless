@@ -259,6 +259,7 @@ static void setfullscreen(Client *c, int fullscreen);
 static void fullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
+static void setwallpaper(const char *path);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void show(const Arg *arg);
@@ -1976,7 +1977,7 @@ void setmfact(const Arg *arg) {
   arrange(selmon);
 }
 
-void setwallpaper(const char *path) {
+static void setwallpaper(const char *path) {
   char fullpath[1024];
   if (path[0] == '~') {
     const char *home = getenv("HOME");
