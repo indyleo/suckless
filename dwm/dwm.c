@@ -2100,13 +2100,11 @@ static void setwallpaper(const char *path) {
   }
 
   imlib_context_set_image(scaled);
-
   Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
   imlib_context_set_drawable(pm);
   imlib_render_image_on_drawable(0, 0);
   imlib_free_image();
 
-  /* set root atoms like feh does so X keeps the pixmap alive */
   Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
   Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
   XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
@@ -2121,8 +2119,7 @@ static void setwallpaper(const char *path) {
   XCopyArea(dpy, pm, root, gc, 0, 0, sw, sh, 0, 0);
   XFreeGC(dpy, gc);
 
-  XFlush(dpy);
-  /* intentionally not freeing pm — X needs it alive for redraws */
+  XSync(dpy, False);
 }
 
 void show(const Arg *arg) {
