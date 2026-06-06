@@ -1986,18 +1986,26 @@ static void setwallpaper(const char *path) {
     snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
     path = fullpath;
   }
+
   Imlib_Image img = imlib_load_image(path);
-  if (!img)
+  if (!img) {
+    fprintf(stderr, "dwm: failed to load wallpaper: %s\n", path);
     return;
-  imlib_context_set_image(img);
-  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+  }
+
   imlib_context_set_display(dpy);
   imlib_context_set_visual(DefaultVisual(dpy, screen));
   imlib_context_set_colormap(DefaultColormap(dpy, screen));
+  imlib_context_set_image(img);
+
+  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
   imlib_context_set_drawable(pm);
   imlib_render_image_on_drawable_at_size(0, 0, sw, sh);
+
   XSetWindowBackgroundPixmap(dpy, root, pm);
   XClearWindow(dpy, root);
+  XFlush(dpy);
+
   XFreePixmap(dpy, pm);
   imlib_free_image();
 }
