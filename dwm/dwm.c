@@ -1976,6 +1976,31 @@ void setmfact(const Arg *arg) {
   arrange(selmon);
 }
 
+void setwallpaper(const char *path) {
+  char fullpath[1024];
+  if (path[0] == '~') {
+    const char *home = getenv("HOME");
+    if (!home)
+      return;
+    snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
+    path = fullpath;
+  }
+  Imlib_Image img = imlib_load_image(path);
+  if (!img)
+    return;
+  imlib_context_set_image(img);
+  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+  imlib_context_set_display(dpy);
+  imlib_context_set_visual(DefaultVisual(dpy, screen));
+  imlib_context_set_colormap(DefaultColormap(dpy, screen));
+  imlib_context_set_drawable(pm);
+  imlib_render_image_on_drawable_at_size(0, 0, sw, sh);
+  XSetWindowBackgroundPixmap(dpy, root, pm);
+  XClearWindow(dpy, root);
+  XFreePixmap(dpy, pm);
+  imlib_free_image();
+}
+
 void setup(void) {
   int i;
   XSetWindowAttributes wa;
@@ -2832,33 +2857,6 @@ void zoom(const Arg *arg) {
   if (c == nexttiled(selmon->clients) && !(c = nexttiled(c->next)))
     return;
   pop(c);
-}
-
-void setwallpaper(const char *path) {
-  char fullpath[1024];
-  if (path[0] == '~') {
-    const char *home = getenv("HOME");
-    if (!home)
-      return;
-    snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
-    path = fullpath;
-  }
-  Imlib_Image img = imlib_load_image(path);
-  if (!img)
-    return;
-  imlib_context_set_image(img);
-  int w = imlib_image_get_width();
-  int h = imlib_image_get_height();
-  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
-  imlib_context_set_display(dpy);
-  imlib_context_set_visual(DefaultVisual(dpy, screen));
-  imlib_context_set_colormap(DefaultColormap(dpy, screen));
-  imlib_context_set_drawable(pm);
-  imlib_render_image_on_drawable_at_size(0, 0, sw, sh);
-  XSetWindowBackgroundPixmap(dpy, root, pm);
-  XClearWindow(dpy, root);
-  XFreePixmap(dpy, pm);
-  imlib_free_image();
 }
 
 int main(int argc, char *argv[]) {
