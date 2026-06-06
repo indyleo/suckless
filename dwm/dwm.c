@@ -1975,51 +1975,6 @@ void setmfact(const Arg *arg) {
   arrange(selmon);
 }
 
-static void setwallpaper(const char *path) {
-  char fullpath[1024];
-  if (path[0] == '~') {
-    const char *home = getenv("HOME");
-    if (!home)
-      return;
-    snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
-    path = fullpath;
-  }
-
-  imlib_context_set_display(dpy);
-  imlib_context_set_visual(DefaultVisual(dpy, screen));
-  imlib_context_set_colormap(DefaultColormap(dpy, screen));
-  imlib_context_set_anti_alias(0);
-  imlib_context_set_dither(0);
-  imlib_context_set_blend(0);
-
-  Imlib_Image img = imlib_load_image(path);
-  if (!img) {
-    fprintf(stderr, "dwm: failed to load wallpaper: %s\n", path);
-    return;
-  }
-
-  imlib_context_set_image(img);
-  Imlib_Image scaled = imlib_create_cropped_scaled_image(
-      0, 0, imlib_image_get_width(), imlib_image_get_height(), sw, sh);
-  imlib_free_image();
-  if (!scaled)
-    return;
-
-  imlib_context_set_image(scaled);
-
-  /* render to a pixmap then copy to root via GC */
-  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
-  imlib_context_set_drawable(pm);
-  imlib_render_image_on_drawable(0, 0);
-  imlib_free_image();
-
-  GC gc = XCreateGC(dpy, root, 0, NULL);
-  XCopyArea(dpy, pm, root, gc, 0, 0, sw, sh, 0, 0);
-  XFreeGC(dpy, gc);
-  XFreePixmap(dpy, pm);
-  XFlush(dpy);
-}
-
 void setup(void) {
   int i;
   XSetWindowAttributes wa;
@@ -2109,6 +2064,51 @@ void seturgent(Client *c, int urg) {
   wmh->flags = urg ? (wmh->flags | XUrgencyHint) : (wmh->flags & ~XUrgencyHint);
   XSetWMHints(dpy, c->win, wmh);
   XFree(wmh);
+}
+
+static void setwallpaper(const char *path) {
+  char fullpath[1024];
+  if (path[0] == '~') {
+    const char *home = getenv("HOME");
+    if (!home)
+      return;
+    snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
+    path = fullpath;
+  }
+
+  imlib_context_set_display(dpy);
+  imlib_context_set_visual(DefaultVisual(dpy, screen));
+  imlib_context_set_colormap(DefaultColormap(dpy, screen));
+  imlib_context_set_anti_alias(0);
+  imlib_context_set_dither(0);
+  imlib_context_set_blend(0);
+
+  Imlib_Image img = imlib_load_image(path);
+  if (!img) {
+    fprintf(stderr, "dwm: failed to load wallpaper: %s\n", path);
+    return;
+  }
+
+  imlib_context_set_image(img);
+  Imlib_Image scaled = imlib_create_cropped_scaled_image(
+      0, 0, imlib_image_get_width(), imlib_image_get_height(), sw, sh);
+  imlib_free_image();
+  if (!scaled)
+    return;
+
+  imlib_context_set_image(scaled);
+
+  /* render to a pixmap then copy to root via GC */
+  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+  imlib_context_set_drawable(pm);
+  imlib_render_image_on_drawable(0, 0);
+  imlib_free_image();
+
+  GC gc = XCreateGC(dpy, root, 0, NULL);
+  XCopyArea(dpy, pm, root, gc, 0, 0, sw, sh, 0, 0);
+  XFreeGC(dpy, gc);
+  XFreePixmap(dpy, pm);
+  XFlush(dpy);
 }
 
 void show(const Arg *arg) {
