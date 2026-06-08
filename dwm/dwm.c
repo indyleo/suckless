@@ -1929,9 +1929,14 @@ void run(void) {
       wallpaperupdate = 0;
       setrandomwallpaper();
     }
-    if (!XNextEvent(dpy, &ev))
+    if (XPending(dpy)) {
+      XNextEvent(dpy, &ev);
       if (handler[ev.type])
         handler[ev.type](&ev);
+    } else {
+      struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000 }; /* 10ms */
+      nanosleep(&ts, NULL);
+    }
   }
 }
 
