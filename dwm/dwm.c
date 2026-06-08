@@ -341,6 +341,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [MotionNotify] = motionnotify,
     [PropertyNotify] = propertynotify,
     [UnmapNotify] = unmapnotify};
+static int wallpaperupdate = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
 static int running = 1;
@@ -1923,9 +1924,15 @@ void restack(Monitor *m) {
 void run(void) {
   XEvent ev;
   XSync(dpy, False);
-  while (running && !XNextEvent(dpy, &ev))
-    if (handler[ev.type])
-      handler[ev.type](&ev); /* call handler */
+  while (running) {
+    if (wallpaperupdate) {
+      wallpaperupdate = 0;
+      setrandomwallpaper();
+    }
+    if (!XNextEvent(dpy, &ev))
+      if (handler[ev.type])
+        handler[ev.type](&ev);
+  }
 }
 
 void scan(void) {
@@ -2368,7 +2375,7 @@ void sigterm(int unused) {
   quit(&a);
 }
 
-void sigalrm(int unused) { setrandomwallpaper(); }
+void sigalrm(int unused) { wallpaperupdate = 1; }
 
 void sigstatusbar(const Arg *arg) {
   union sigval sv;
