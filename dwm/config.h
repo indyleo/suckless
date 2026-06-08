@@ -57,13 +57,15 @@ const char *spcmd7[] = {"alacritty", "--class", "twitch-tui,Twitch-tui",
 const char *spcmd8[] = {
     "alacritty", "--class",      "subsonic-tui,Subsonic-TUI",
     "-e",        "subsonic-tui", NULL};
-const char *spcmd9[] = {"alacritty", "--class",         "cheatsheet,CheatSheet",
-                        "-e",        "dwm_keybinds.py", NULL};
 static Sp scratchpads[] = {
     /* name          cmd  */
     {"termsc", spcmd1},     {"lfsc", spcmd2},         {"qalsc", spcmd3},
     {"pulsesc", spcmd4},    {"gurks", spcmd5},        {"discordo", spcmd6},
-    {"twitch-tui", spcmd7}, {"subsonic-tui", spcmd8}, {"cheatsheet", spcmd9},
+    {"twitch-tui", spcmd7}, {"subsonic-tui", spcmd8},
+};
+
+static const char *const autostart[] = {
+    "/usr/local/bin/autostart.sh", NULL, NULL /* terminate */
 };
 
 /* tagging */
@@ -90,7 +92,6 @@ static const Rule rules[] = {
     {"discord", NULL, NULL, SPTAG(5), 1, -1},
     {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
     {"subsonic-tui", NULL, NULL, SPTAG(7), 1, -1},
-    {"cheatsheet", NULL, NULL, SPTAG(8), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
 };
 

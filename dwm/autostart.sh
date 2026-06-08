@@ -89,5 +89,3 @@ systemctl --user import-environment DISPLAY
 # Start all processes
 start_processes
 start_daemons
-
-exec dwm
