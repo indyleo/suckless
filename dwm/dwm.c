@@ -26,6 +26,7 @@
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
+#include <dirent.h>
 #include <errno.h>
 #include <locale.h>
 #include <signal.h>
@@ -33,8 +34,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
@@ -261,6 +264,7 @@ static void fullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setwallpaper(const char *path);
+static void setrandomwallpaper(void);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void show(const Arg *arg);
@@ -269,6 +273,8 @@ static void showwin(Client *c);
 static void showhide(Client *c);
 static void sighup(int unused);
 static void sigterm(int unused);
+static void sigusr1(int unused);
+static void sigalrm(int unused);
 static void sigstatusbar(const Arg *arg);
 static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
@@ -2097,7 +2103,16 @@ void setup(void) {
     }
   }
   signal(SIGHUP, sighup);
+  signal(SIGUSR1, sigusr1);
   signal(SIGTERM, sigterm);
+
+  if (wallpaperinterval > 0) {
+    signal(SIGALRM, sigalrm);
+    setitimer(ITIMER_REAL,
+              &(struct itimerval){.it_value.tv_sec = wallpaperinterval,
+                                  .it_interval.tv_sec = wallpaperinterval},
+              NULL);
+  }
 
   /* init screen */
   screen = DefaultScreen(dpy);
@@ -2229,6 +2244,64 @@ static void setwallpaper(const char *path) {
   XFreeGC(dpy, gc);
 
   XSync(dpy, False);
+  /* intentionally not freeing pm — X needs it alive for redraws */
+}
+
+static void setrandomwallpaper(void) {
+  char fulldir[1024];
+  const char *dir = wallpaperdir;
+
+  /* expand ~ */
+  if (dir[0] == '~') {
+    const char *home = getenv("HOME");
+    if (!home)
+      return;
+    snprintf(fulldir, sizeof(fulldir), "%s%s", home, dir + 1);
+    dir = fulldir;
+  }
+
+  /* collect all image filenames */
+  DIR *d = opendir(dir);
+  if (!d) {
+    fprintf(stderr, "dwm: cannot open wallpaper dir: %s\n", dir);
+    return;
+  }
+
+  char *files[1024];
+  int count = 0;
+  struct dirent *entry;
+  while ((entry = readdir(d)) != NULL && count < 1024) {
+    /* skip dotfiles */
+    if (entry->d_name[0] == '.')
+      continue;
+    /* basic image extension check */
+    const char *ext = strrchr(entry->d_name, '.');
+    if (!ext)
+      continue;
+    if (strcasecmp(ext, ".jpg") && strcasecmp(ext, ".jpeg") &&
+        strcasecmp(ext, ".png") && strcasecmp(ext, ".bmp") &&
+        strcasecmp(ext, ".webp"))
+      continue;
+    files[count++] = strdup(entry->d_name);
+  }
+  closedir(d);
+
+  if (count == 0) {
+    fprintf(stderr, "dwm: no images found in %s\n", dir);
+    return;
+  }
+
+  /* pick a random one */
+  srand(time(NULL));
+  int pick = rand() % count;
+  char filepath[2048];
+  snprintf(filepath, sizeof(filepath), "%s/%s", dir, files[pick]);
+
+  /* free the rest */
+  for (int i = 0; i < count; i++)
+    free(files[i]);
+
+  setwallpaper(filepath);
 }
 
 void show(const Arg *arg) {
@@ -2288,10 +2361,14 @@ void sighup(int unused) {
   quit(&a);
 }
 
+void sigusr1(int unused) { setrandomwallpaper(); }
+
 void sigterm(int unused) {
   Arg a = {.i = 0};
   quit(&a);
 }
+
+void sigalrm(int unused) { setrandomwallpaper(); }
 
 void sigstatusbar(const Arg *arg) {
   union sigval sv;
@@ -3024,7 +3101,7 @@ int main(int argc, char *argv[]) {
     die("pledge");
 #endif /* __OpenBSD__ */
   scan();
-  setwallpaper(wallpaper);
+  setrandomwallpaper();
   run();
   if (restart)
     execvp(argv[0], argv);
