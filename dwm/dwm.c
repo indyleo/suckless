@@ -345,6 +345,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
 static int wallpaperupdate = 0;
 static Pixmap currentwallpaper[32] = {0};
 static char lastwallpaper[32][2048] = {{0}};
+static Pixmap rootwallpaper = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
 static int running = 1;
@@ -2301,6 +2302,26 @@ static void setrandomwallpaper(void) {
              files[pick]);
     setwallpaper(m, filepath);
   }
+
+  /* build full root pixmap for picom */
+  if (rootwallpaper)
+    XFreePixmap(dpy, rootwallpaper);
+  rootwallpaper = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+  GC gc = XCreateGC(dpy, root, 0, NULL);
+  for (Monitor *m = mons; m; m = m->next)
+    XCopyArea(dpy, currentwallpaper[m->num], rootwallpaper, gc, 0, 0, m->mw,
+              m->mh, m->mx, m->my);
+  XFreeGC(dpy, gc);
+  Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
+  Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
+  XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
+                  (unsigned char *)&rootwallpaper, 1);
+  XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
+                  (unsigned char *)&rootwallpaper, 1);
+  XSetWindowBackgroundPixmap(dpy, root, rootwallpaper);
+  XClearWindow(dpy, root);
+  XSync(dpy, False);
+
   for (int i = 0; i < count; i++)
     free(files[i]);
 }
