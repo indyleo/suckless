@@ -2317,7 +2317,11 @@ static void setrandomwallpaper(void) {
   setwallpaper(filepath);
 }
 
-static void nextwallpaper(const Arg *arg) { setrandomwallpaper(); }
+static void nextwallpaper(const Arg *arg) {
+  fprintf(stderr, "dwm: nextwallpaper called\n");
+  setrandomwallpaper();
+  fprintf(stderr, "dwm: nextwallpaper done\n");
+}
 
 void show(const Arg *arg) {
   if (selmon->hidsel)
@@ -2376,7 +2380,7 @@ void sighup(int unused) {
   quit(&a);
 }
 
-void sigusr1(int unused) { setrandomwallpaper(); }
+void sigusr1(int unused) { wallpaperupdate = 1; }
 
 void sigterm(int unused) {
   Arg a = {.i = 0};
