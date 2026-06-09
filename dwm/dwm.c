@@ -263,7 +263,7 @@ static void setfullscreen(Client *c, int fullscreen);
 static void fullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
-static void setwallpaper(const char *path);
+static void setwallpaper(Monitor *m, const char *path);
 static void setrandomwallpaper(void);
 static void nextwallpaper(const Arg *arg);
 static void setup(void);
@@ -343,7 +343,8 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [PropertyNotify] = propertynotify,
     [UnmapNotify] = unmapnotify};
 static int wallpaperupdate = 0;
-static Pixmap currentwallpaper = 0;
+static Pixmap currentwallpaper[32] = {0};
+static char lastwallpaper[32][2048] = {{0}};
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
 static int running = 1;
@@ -2204,7 +2205,7 @@ void seturgent(Client *c, int urg) {
   XFree(wmh);
 }
 
-static void setwallpaper(const char *path) {
+static void setwallpaper(Monitor *m, const char *path) {
   char fullpath[1024];
   if (path[0] == '~') {
     const char *home = getenv("HOME");
@@ -2213,7 +2214,6 @@ static void setwallpaper(const char *path) {
     snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
     path = fullpath;
   }
-
   imlib_context_set_display(dpy);
   imlib_context_set_visual(DefaultVisual(dpy, screen));
   imlib_context_set_colormap(DefaultColormap(dpy, screen));
@@ -2221,54 +2221,38 @@ static void setwallpaper(const char *path) {
   imlib_context_set_dither(0);
   imlib_context_set_blend(0);
   imlib_context_set_dither_mask(0);
-
   Imlib_Image img = imlib_load_image(path);
   if (!img) {
     fprintf(stderr, "dwm: failed to load wallpaper: %s\n", path);
     return;
   }
-
   imlib_context_set_image(img);
   Imlib_Image scaled = imlib_create_cropped_scaled_image(
-      0, 0, imlib_image_get_width(), imlib_image_get_height(), sw, sh);
+      0, 0, imlib_image_get_width(), imlib_image_get_height(), m->mw, m->mh);
   imlib_free_image();
   if (!scaled) {
     fprintf(stderr, "dwm: failed to scale wallpaper\n");
     return;
   }
-
   imlib_context_set_image(scaled);
-  Pixmap pm = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+  Pixmap pm = XCreatePixmap(dpy, root, m->mw, m->mh, DefaultDepth(dpy, screen));
   imlib_context_set_drawable(pm);
   imlib_render_image_on_drawable(0, 0);
   imlib_free_image();
 
-  Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
-  Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
-  XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
-                  (unsigned char *)&pm, 1);
-  XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
-                  (unsigned char *)&pm, 1);
-
-  if (currentwallpaper)
-    XFreePixmap(dpy, currentwallpaper);
-  currentwallpaper = pm;
-  XSetWindowBackgroundPixmap(dpy, root, pm);
-  XClearWindow(dpy, root);
+  if (currentwallpaper[m->num])
+    XFreePixmap(dpy, currentwallpaper[m->num]);
+  currentwallpaper[m->num] = pm;
 
   GC gc = XCreateGC(dpy, root, 0, NULL);
-  XCopyArea(dpy, pm, root, gc, 0, 0, sw, sh, 0, 0);
+  XCopyArea(dpy, pm, root, gc, 0, 0, m->mw, m->mh, m->mx, m->my);
   XFreeGC(dpy, gc);
-
   XSync(dpy, False);
-  /* intentionally not freeing pm — X needs it alive for redraws */
 }
 
 static void setrandomwallpaper(void) {
   char fulldir[1024];
   const char *dir = wallpaperdir;
-
-  /* expand ~ */
   if (dir[0] == '~') {
     const char *home = getenv("HOME");
     if (!home)
@@ -2276,22 +2260,17 @@ static void setrandomwallpaper(void) {
     snprintf(fulldir, sizeof(fulldir), "%s%s", home, dir + 1);
     dir = fulldir;
   }
-
-  /* collect all image filenames */
   DIR *d = opendir(dir);
   if (!d) {
     fprintf(stderr, "dwm: cannot open wallpaper dir: %s\n", dir);
     return;
   }
-
   char *files[1024];
   int count = 0;
   struct dirent *entry;
   while ((entry = readdir(d)) != NULL && count < 1024) {
-    /* skip dotfiles */
     if (entry->d_name[0] == '.')
       continue;
-    /* basic image extension check */
     const char *ext = strrchr(entry->d_name, '.');
     if (!ext)
       continue;
@@ -2302,23 +2281,28 @@ static void setrandomwallpaper(void) {
     files[count++] = strdup(entry->d_name);
   }
   closedir(d);
-
   if (count == 0) {
     fprintf(stderr, "dwm: no images found in %s\n", dir);
     return;
   }
-
-  /* pick a random one */
   srand(time(NULL));
-  int pick = rand() % count;
-  char filepath[2048];
-  snprintf(filepath, sizeof(filepath), "%s/%s", dir, files[pick]);
-
-  /* free the rest */
+  for (Monitor *m = mons; m; m = m->next) {
+    int pick;
+    if (count == 1) {
+      pick = 0;
+    } else {
+      do {
+        pick = rand() % count;
+      } while (strcmp(files[pick], lastwallpaper[m->num]) == 0);
+    }
+    char filepath[2048];
+    snprintf(filepath, sizeof(filepath), "%s/%s", dir, files[pick]);
+    snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
+             files[pick]);
+    setwallpaper(m, filepath);
+  }
   for (int i = 0; i < count; i++)
     free(files[i]);
-
-  setwallpaper(filepath);
 }
 
 static void nextwallpaper(const Arg *arg) {
