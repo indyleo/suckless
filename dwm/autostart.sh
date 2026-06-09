@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # Vars
-XRANDR_OUTPUT=$(xrandr -q)
 PROCS=(
     dunst
     lxpolkit
