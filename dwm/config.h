@@ -47,22 +47,20 @@ const char *spcmd1[] = {"alacritty", "--class", "termsc,Termsc", NULL};
 const char *spcmd2[] = {"alacritty", "--class", "lfsc,Lfsc", "-e", "lf", NULL};
 const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",
                         "-e",        "qalc",    NULL};
-const char *spcmd4[] = {"alacritty", "--class",    "pulsesc,Pulsesc",
-                        "-e",        "pulsemixer", NULL};
+const char *spcmd4[] = {"alacritty", "--class", "wiremixsc,Wiremixsc",
+                        "-e",        "wiremix", NULL};
 const char *spcmd5[] = {"alacritty", "--class", "gurks,Gurks",
                         "-e",        "gurks",   NULL};
 const char *spcmd6[] = {"alacritty", "--class",  "discordo,Discordo",
                         "-e",        "discodio", NULL};
 const char *spcmd7[] = {"alacritty", "--class", "twitch-tui,Twitch-tui",
                         "-e",        "twt",     NULL};
-const char *spcmd8[] = {
-    "alacritty", "--class",      "subsonic-tui,Subsonic-TUI",
-    "-e",        "subsonic-tui", NULL};
+const char *spcmd8[] = {"alacritty", "--class",      "musicsc,Musicsc",
+                        "-e",        "subsonic-tui", NULL};
 static Sp scratchpads[] = {
-    /* name          cmd  */
-    {"termsc", spcmd1},     {"lfsc", spcmd2},         {"qalsc", spcmd3},
-    {"pulsesc", spcmd4},    {"gurks", spcmd5},        {"discordo", spcmd6},
-    {"twitch-tui", spcmd7}, {"subsonic-tui", spcmd8},
+    {"termsc", spcmd1},     {"lfsc", spcmd2},    {"qalsc", spcmd3},
+    {"wiremixsc", spcmd4},  {"gurks", spcmd5},   {"discordo", spcmd6},
+    {"twitch-tui", spcmd7}, {"musicsc", spcmd8},
 };
 
 static const char *const autostart[] = {
@@ -88,11 +86,11 @@ static const Rule rules[] = {
     {"termsc", NULL, NULL, SPTAG(0), 1, -1},
     {"lfsc", NULL, NULL, SPTAG(1), 1, -1},
     {"qalsc", NULL, NULL, SPTAG(2), 1, -1},
-    {"pulsesc", NULL, NULL, SPTAG(3), 1, -1},
+    {"wiremixsc", NULL, NULL, SPTAG(3), 1, -1},
     {"gurks", NULL, NULL, SPTAG(4), 1, -1},
     {"discord", NULL, NULL, SPTAG(5), 1, -1},
     {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
-    {"subsonic-tui", NULL, NULL, SPTAG(7), 1, -1},
+    {"musicsc", NULL, NULL, SPTAG(7), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
 };
 
@@ -183,16 +181,90 @@ static const Key keys[] = {
     /* Wallpaper */
     {MODKEY | SHIFTKEY, XK_w, nextwallpaper, {0}},
 
+    /* Applications */
+    {MODKEY, XK_Return, spawn, SHCMD("alacritty")},
+    {MODKEY, XK_f, spawn, SHCMD("thunar")},
+    {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
+    {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("vesktop")},
+    {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
+
+    /* Launchers */
+    {MODKEY, XK_r, spawn, SHCMD("rofi -show run")},
+    {MODKEY, XK_w, spawn, SHCMD("wikibook")},
+    {MODKEY, XK_n, spawn, SHCMD("rofi_notebook")},
+    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("wayclip.py select")},
+    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("rofi_emoji.py")},
+    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("rofi_nerdfont.py")},
+    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("rofi_power")},
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("rofi_screen")},
+
+    /* System */
+    {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
+    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
+    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
+    {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
+    {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
+
+    /* Volume */
+    {MODKEY | ALTKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
+    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
+    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("sysctl vol --toggle")},
+    {ALTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
+    {ALTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
+    {ALTKEY, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
+
+    /* Microphone */
+    {MODKEY | SHIFTKEY, XK_Up, spawn, SHCMD("sysctl mic -i 5")},
+    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl mic -d 5")},
+    {MODKEY | SHIFTKEY, XK_m, spawn, SHCMD("sysctl mic --toggle")},
+    {SHIFTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl mic -i 5")},
+    {SHIFTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl mic -d 5")},
+    {0, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
+
+    /* Media - Song */
+    {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},
+    {MODKEY, XK_Left, spawn, SHCMD("mediactl --source song previous")},
+    {MODKEY, XK_s, spawn, SHCMD("mediactl --source song play-pause")},
+    {MODKEY | SHIFTKEY, XK_Right, spawn,
+     SHCMD("mediactl --source song skip 10")},
+    {MODKEY | SHIFTKEY, XK_Left, spawn,
+     SHCMD("mediactl --source song back 10")},
+    {0, XF86XK_AudioNext, spawn, SHCMD("mediactl --source song next")},
+    {0, XF86XK_AudioPrev, spawn, SHCMD("mediactl --source song previous")},
+    {0, XF86XK_AudioPlay, spawn, SHCMD("mediactl --source song play-pause")},
+
+    /* Media - Browser */
+    {MODKEY | ALTKEY, XK_Right, spawn, SHCMD("mediactl --source browser next")},
+    {MODKEY | ALTKEY, XK_Left, spawn,
+     SHCMD("mediactl --source browser previous")},
+    {MODKEY | ALTKEY, XK_s, spawn,
+     SHCMD("mediactl --source browser play-pause")},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_Right, spawn,
+     SHCMD("mediactl --source browser skip 10")},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_Left, spawn,
+     SHCMD("mediactl --source browser back 10")},
+    {ALTKEY, XF86XK_AudioNext, spawn, SHCMD("mediactl --source browser next")},
+    {ALTKEY, XF86XK_AudioPrev, spawn,
+     SHCMD("mediactl --source browser previous")},
+    {ALTKEY, XF86XK_AudioPlay, spawn,
+     SHCMD("mediactl --source browser play-pause")},
+
+    /* Screenshots */
+    {0, XK_Print, spawn, SHCMD("sstool --select")},
+    {MODKEY, XK_Print, spawn, SHCMD("sstool --screen")},
+    {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("sstool --fullscreen")},
+    {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("sstool --window")},
+    {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("sstool --colorpicker")},
+
     /* Scratch Pads */
-    {MODKEY, XK_t, togglescratch, {.ui = 0}},
-    {MODKEY, XK_y, togglescratch, {.ui = 1}},
-    {MODKEY, XK_z, togglescratch, {.ui = 2}},
-    {MODKEY, XK_a, togglescratch, {.ui = 3}},
-    {MODKEY, XK_g, togglescratch, {.ui = 4}},
-    {MODKEY, XK_d, togglescratch, {.ui = 5}},
-    {MODKEY, XK_c, togglescratch, {.ui = 6}},
-    {MODKEY, XK_m, togglescratch, {.ui = 7}},
-    {MODKEY, XK_i, togglescratch, {.ui = 8}},
+    {MODKEY, XK_t, togglescratch, {.ui = 0}}, /* termsc */
+    {MODKEY, XK_y, togglescratch, {.ui = 1}}, /* lfsc */
+    {MODKEY, XK_z, togglescratch, {.ui = 2}}, /* qalsc */
+    {MODKEY, XK_a, togglescratch, {.ui = 3}}, /* wiremixsc */
+    {MODKEY, XK_g, togglescratch, {.ui = 4}}, /* gurks */
+    {MODKEY, XK_d, togglescratch, {.ui = 5}}, /* discordo */
+    {MODKEY, XK_c, togglescratch, {.ui = 6}}, /* twitch-tui */
+    {MODKEY, XK_m, togglescratch, {.ui = 7}}, /* musicsc */
 };
 
 /* button definitions */
