@@ -8,7 +8,6 @@ PROCS=(
     udiskie
     medianotify
     dwmblocks
-    sxhkd
 )
 DAEMON_PROCS=(
     "clipmgr.py daemon"
