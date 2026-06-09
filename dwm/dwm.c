@@ -343,6 +343,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [PropertyNotify] = propertynotify,
     [UnmapNotify] = unmapnotify};
 static int wallpaperupdate = 0;
+static Pixmap currentwallpaper = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
 static int running = 1;
@@ -2249,6 +2250,9 @@ static void setwallpaper(const char *path) {
   XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
                   (unsigned char *)&pm, 1);
 
+  if (currentwallpaper)
+    XFreePixmap(dpy, currentwallpaper);
+  currentwallpaper = pm;
   XSetWindowBackgroundPixmap(dpy, root, pm);
   XClearWindow(dpy, root);
 
