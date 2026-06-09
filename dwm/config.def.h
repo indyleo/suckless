@@ -180,6 +180,9 @@ static const Key keys[] = {
     TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
         TAGKEYS(XK_5, 4)
 
+    /* Wallpaper */
+    {MODKEY | SHIFTKEY, XK_w, nextwallpaper, {0}},
+
     /* Scratch Pads */
     {MODKEY, XK_t, togglescratch, {.ui = 0}},
     {MODKEY, XK_y, togglescratch, {.ui = 1}},

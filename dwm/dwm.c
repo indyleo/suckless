@@ -265,6 +265,7 @@ static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setwallpaper(const char *path);
 static void setrandomwallpaper(void);
+static void nextwallpaper(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void show(const Arg *arg);
@@ -1934,7 +1935,7 @@ void run(void) {
       if (handler[ev.type])
         handler[ev.type](&ev);
     } else {
-      struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000 }; /* 10ms */
+      struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000}; /* 10ms */
       nanosleep(&ts, NULL);
     }
   }
@@ -2315,6 +2316,8 @@ static void setrandomwallpaper(void) {
 
   setwallpaper(filepath);
 }
+
+static void nextwallpaper(const Arg *arg) { setrandomwallpaper(); }
 
 void show(const Arg *arg) {
   if (selmon->hidsel)
