@@ -220,6 +220,7 @@ static int drawstatusbar(Monitor *m, int bh, char *text);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
 static void focus(Client *c);
+static void switchcol(const Arg *arg);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstackvis(const Arg *arg);
@@ -1243,6 +1244,29 @@ void focus(Client *c) {
   }
   selmon->sel = c;
   drawbars();
+}
+
+void switchcol(const Arg *arg) {
+  Client *c;
+  int col = 0, i = 0;
+  if (!selmon->sel)
+    return;
+  /* figure out which column the selected window is in */
+  for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next), i++) {
+    if (c == selmon->sel) {
+      col = (i >= selmon->nmaster);
+      break;
+    }
+  }
+  /* focus first window in the other column */
+  i = 0;
+  for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next), i++) {
+    if ((i >= selmon->nmaster) != col) {
+      focus(c);
+      restack(selmon);
+      break;
+    }
+  }
 }
 
 /* there are some broken focus acquiring clients needing extra handling */

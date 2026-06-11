@@ -146,6 +146,7 @@ static const Key keys[] = {
     {MODKEY, XK_k, focusstackvis, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_j, focusstackhid, {.i = +1}},
     {MODKEY | SHIFTKEY, XK_k, focusstackhid, {.i = -1}},
+    {MODKEY, XK_space, switchcol, {0}},
     {MODKEY, XK_h, setmfact, {.f = -0.05}},
     {MODKEY, XK_l, setmfact, {.f = +0.05}},
     {MODKEY | ALTKEY, XK_j, movestack, {.i = +1}},
