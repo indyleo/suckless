@@ -189,14 +189,14 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
 
     /* Launchers */
-    {MODKEY, XK_r, spawn, SHCMD("rofi -show run")},
+    {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
     {MODKEY, XK_w, spawn, SHCMD("wikibook")},
-    {MODKEY, XK_n, spawn, SHCMD("rofi_notebook")},
-    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("wayclip.py select")},
-    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("rofi_emoji.py")},
-    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("rofi_nerdfont.py")},
-    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("rofi_power")},
-    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("rofi_screen")},
+    {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
+    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clipmgr.py select")},
+    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("dmenu_emoji.py")},
+    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont.py")},
+    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
 
     /* System */
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},

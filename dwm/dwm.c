@@ -1235,7 +1235,8 @@ void focus(Client *c) {
     grabbuttons(c, 1);
     XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
     setfocus(c);
-    XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w / 2, c->h / 2);
+    XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w / 2,
+                 c->h / 2); /* warp cursor to focused window */
   } else {
     XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
     XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
