@@ -3,7 +3,7 @@
 dmenu \- dynamic menu
 .SH SYNOPSIS
 .B dmenu
-.RB [ \-bFfsv ]
+.RB [ \-bFfivPx ]
 .RB [ \-l
 .IR lines ]
 .RB [ \-m
@@ -30,6 +30,8 @@ dmenu \- dynamic menu
 .IR color ]
 .RB [ \-w
 .IR windowid ]
+.RB [ \-n
+.IR number ]
 .P
 .BR dmenu_run " ..."
 .SH DESCRIPTION
@@ -57,6 +59,12 @@ is faster, but will lock up X until stdin reaches end\-of\-file.
 .TP
 .B \-s
 dmenu matches menu items case sensitively.
+.TP
+.B \-P
+dmenu will not directly display the keyboard input, but instead replace it with dots. All data from stdin will be ignored.
+.TP
+.B \-x
+Invert prefix matching setting.
 .TP
 .BI \-l " lines"
 dmenu lists items vertically, with the given number of lines.
@@ -103,6 +111,9 @@ prints version information to stdout, then exits.
 .TP
 .BI \-w " windowid"
 embed into windowid.
+.TP
+.BI \-n " number"
+preselected item starting from 0.
 .SH USAGE
 dmenu is completely controlled by the keyboard.  Items are selected using the
 arrow keys, page up, page down, home, and end.

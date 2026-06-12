@@ -37,3 +37,11 @@ static unsigned int lines = 0;
  * for example: " /?\"&[]"
  */
 static const char worddelimiters[] = " ";
+
+/* -n option; preselected item starting from 0 */
+static unsigned int preselected = 0;
+
+/*
+ * Use prefix matching by default; can be inverted with the -x flag.
+ */
+static int use_prefix = 1;

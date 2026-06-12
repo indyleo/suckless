@@ -402,7 +402,13 @@ static void match(void) {
   len = tokc ? strlen(tokv[0]) : 0;
 
   matches = lprefix = lsubstr = matchend = prefixend = substrend = NULL;
-  textsize = strlen(text) + 1;
+  if (use_prefix) {
+    matches = lprefix = matchend = prefixend = NULL;
+    textsize = strlen(text);
+  } else {
+    matches = lprefix = lsubstr = matchend = prefixend = substrend = NULL;
+    textsize = strlen(text) + 1;
+  }
   for (item = items; item && item->text; item++) {
     for (i = 0; i < tokc; i++)
       if (!fstrstr(item->text, tokv[i]))
@@ -414,7 +420,7 @@ static void match(void) {
       appenditem(item, &matches, &matchend);
     else if (!fstrncmp(tokv[0], item->text, len))
       appenditem(item, &lprefix, &prefixend);
-    else
+    else if (!use_prefix)
       appenditem(item, &lsubstr, &substrend);
   }
   if (lprefix) {
@@ -425,7 +431,7 @@ static void match(void) {
       matches = lprefix;
     matchend = prefixend;
   }
-  if (lsubstr) {
+  if (!use_prefix && lsubstr) {
     if (matches) {
       matchend->right = lsubstr;
       lsubstr->left = matchend;
@@ -708,11 +714,21 @@ static void keypress(XKeyEvent *ev) {
     }
     break;
   case XK_Tab:
-    if (!sel)
-      return;
-    cursor = strnlen(sel->text, sizeof text - 1);
-    memcpy(text, sel->text, cursor);
-    text[cursor] = '\0';
+    if (!matches)
+      break; /* cannot complete no matches */
+    strncpy(text, matches->text, sizeof text - 1);
+    text[sizeof text - 1] = '\0';
+    {
+      int len2 = cursor = strlen(text);
+      struct item *item;
+      for (item = matches; item && item->text; item = item->right) {
+        cursor = 0;
+        while (cursor < len2 && text[cursor] == item->text[cursor])
+          cursor++;
+        len2 = cursor;
+      }
+      memset(text + len2, '\0', strlen(text) - len2);
+    }
     match();
     break;
   }
@@ -825,8 +841,19 @@ static void readflatpak(void) {
 
 static void run(void) {
   XEvent ev;
+  int i;
 
   while (!XNextEvent(dpy, &ev)) {
+    if (preselected) {
+      for (i = 0; i < preselected; i++) {
+        if (sel && sel->right && (sel = sel->right) == next) {
+          curr = next;
+          calcoffsets();
+        }
+      }
+      drawmenu();
+      preselected = 0;
+    }
     if (XFilterEvent(&ev, win))
       continue;
     switch (ev.type) {
@@ -968,10 +995,10 @@ static void setup(void) {
 }
 
 static void usage(void) {
-  die("usage: dmenu [-bFfivP] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
+  die("usage: dmenu [-bFfivPx] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
       "             [-nb color] [-nf color] [-sb color] [-sf color]\n"
       "             [-nhb color] [-nhf color] [-shb color] [-shf color] [-w "
-      "windowid]");
+      "windowid] [-n number]");
 }
 
 int main(int argc, char *argv[]) {
@@ -994,6 +1021,8 @@ int main(int argc, char *argv[]) {
       fstrstr = strstr;
     } else if (!strcmp(argv[i], "-P")) /* password mode */
       passwd = 1;
+    else if (!strcmp(argv[i], "-x")) /* invert use_prefix */
+      use_prefix = !use_prefix;
     else if (i + 1 == argc)
       usage();
     /* these options take one argument */
@@ -1023,6 +1052,8 @@ int main(int argc, char *argv[]) {
       colors[SchemeSelHighlight][ColFg] = argv[++i];
     else if (!strcmp(argv[i], "-w")) /* embedding window id */
       embed = argv[++i];
+    else if (!strcmp(argv[i], "-n")) /* preselected item */
+      preselected = atoi(argv[++i]);
     else
       usage();
 
