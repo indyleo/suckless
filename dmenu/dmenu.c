@@ -719,15 +719,16 @@ static void keypress(XKeyEvent *ev) {
     strncpy(text, matches->text, sizeof text - 1);
     text[sizeof text - 1] = '\0';
     {
-      int len2 = cursor = strlen(text);
+      int len2 = strlen(text);
       struct item *item;
       for (item = matches; item && item->text; item = item->right) {
-        cursor = 0;
-        while (cursor < len2 && text[cursor] == item->text[cursor])
-          cursor++;
-        len2 = cursor;
+        int c = 0;
+        while (c < len2 && text[c] == item->text[c])
+          c++;
+        len2 = c;
       }
       memset(text + len2, '\0', strlen(text) - len2);
+      cursor = len2;
     }
     match();
     break;
