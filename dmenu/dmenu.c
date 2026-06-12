@@ -39,6 +39,7 @@ enum {
   SchemeNormHighlight,
   SchemeSelHighlight,
   SchemeOut,
+  SchemePrompt,
   SchemeLast
 }; /* color schemes */
 
@@ -54,7 +55,7 @@ static char numbers[NUMBERSBUFSIZE] = "";
 static char text[BUFSIZ] = "";
 static char *embed;
 static int bh, mw, mh;
-static int inputw = 0, promptw;
+static int inputw = 0, promptw, passwd = 0;
 static int lrpad; /* sum of left and right padding */
 static size_t cursor;
 static struct item *items = NULL;
@@ -213,19 +214,30 @@ static void drawmenu(void) {
   drw_setscheme(drw, scheme[SchemeNorm]);
   drw_rect(drw, 0, 0, mw, mh, 1, 1);
 
-  if (prompt && *prompt) {
-    drw_setscheme(drw, scheme[SchemeSel]);
-    x = drw_text(drw, x, 0, promptw, bh, lrpad / 2, prompt, 0);
-  }
   /* draw input field */
   w = (lines > 0 || !matches) ? mw - x : inputw;
-  drw_setscheme(drw, scheme[SchemeNorm]);
-  drw_text(drw, x, 0, w, bh, lrpad / 2, text, 0);
 
-  curpos = TEXTW(text) - TEXTW(&text[cursor]);
-  if ((curpos += lrpad / 2 - 1) < w) {
+  if (passwd) {
+    char *censort = ecalloc(1, sizeof(text));
+    memset(censort, '.', strlen(text));
     drw_setscheme(drw, scheme[SchemeNorm]);
-    drw_rect(drw, x + curpos, 2, 2, bh - 4, 1, 0);
+    drw_text(drw, x, 0, w, bh, lrpad / 2, censort, 0);
+    free(censort);
+  } else if (text[0] == '\0' && prompt && *prompt) {
+    drw_setscheme(drw, scheme[SchemePrompt]);
+    /* If vertical list: use full width (w), else just promptw */
+    drw_text(drw, x, 0, (lines > 0 ? w : promptw), bh, lrpad / 2, prompt, 0);
+  } else {
+    drw_setscheme(drw, scheme[SchemeNorm]);
+    drw_text(drw, x, 0, w, bh, lrpad / 2, text, 0);
+  }
+
+  if (text[0] != '\0') {
+    curpos = TEXTW(text) - TEXTW(&text[cursor]);
+    if ((curpos += lrpad / 2 - 1) < w) {
+      drw_setscheme(drw, scheme[SchemeNorm]);
+      drw_rect(drw, x + curpos, 1, 2, bh - 4, 1, 0);
+    }
   }
 
   recalculatenumbers();
@@ -730,6 +742,11 @@ static void readstdin(void) {
   size_t i, itemsiz = 0, linesiz = 0;
   ssize_t len;
 
+  if (passwd) {
+    inputw = lines = 0;
+    return;
+  }
+
   /* read each line from stdin and add it to the item list */
   for (i = 0; (len = getline(&line, &linesiz, stdin)) != -1; i++) {
     if (i + 1 >= itemsiz) {
@@ -795,7 +812,6 @@ static void readflatpak(void) {
     if (!(items[i].flatpak_id = strdup(appid)))
       die("strdup:");
     items[i].out = 0;
-    items[i].flatpak_id = NULL;
     i++;
   }
   pclose(fp);
@@ -858,7 +874,7 @@ static void setup(void) {
 #endif
   /* init appearance */
   for (j = 0; j < SchemeLast; j++)
-    scheme[j] = drw_scm_create(drw, colors[j], alphas[j], 2);
+    scheme[j] = drw_scm_create(drw, colors[j], alphas[i], 2);
 
   clip = XInternAtom(dpy, "CLIPBOARD", False);
   utf8 = XInternAtom(dpy, "UTF8_STRING", False);
@@ -952,7 +968,7 @@ static void setup(void) {
 }
 
 static void usage(void) {
-  die("usage: dmenu [-bFfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
+  die("usage: dmenu [-bFfivP] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
       "             [-nb color] [-nf color] [-sb color] [-sf color]\n"
       "             [-nhb color] [-nhf color] [-shb color] [-shf color] [-w "
       "windowid]");
@@ -976,7 +992,9 @@ int main(int argc, char *argv[]) {
     else if (!strcmp(argv[i], "-s")) { /* case-sensitive item matching */
       fstrncmp = strncmp;
       fstrstr = strstr;
-    } else if (i + 1 == argc)
+    } else if (!strcmp(argv[i], "-P")) /* password mode */
+      passwd = 1;
+    else if (i + 1 == argc)
       usage();
     /* these options take one argument */
     else if (!strcmp(argv[i], "-l")) /* number of lines in vertical list */
