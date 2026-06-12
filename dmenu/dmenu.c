@@ -714,21 +714,31 @@ static void keypress(XKeyEvent *ev) {
     }
     break;
   case XK_Tab:
-    if (!matches)
-      break; /* cannot complete no matches */
-    strncpy(text, matches->text, sizeof text - 1);
-    text[sizeof text - 1] = '\0';
-    {
-      int len2 = strlen(text);
-      struct item *item;
-      for (item = matches; item && item->text; item = item->right) {
-        int c = 0;
-        while (c < len2 && text[c] == item->text[c])
-          c++;
-        len2 = c;
+    if (fuzzy) {
+      /* prefix completion doesn't make sense with fuzzy matching;
+       * fall back to copying the selected item */
+      if (!sel)
+        break;
+      cursor = strnlen(sel->text, sizeof text - 1);
+      memcpy(text, sel->text, cursor);
+      text[cursor] = '\0';
+    } else {
+      if (!matches)
+        break; /* cannot complete no matches */
+      strncpy(text, matches->text, sizeof text - 1);
+      text[sizeof text - 1] = '\0';
+      {
+        int len2 = strlen(text);
+        struct item *item;
+        for (item = matches; item && item->text; item = item->right) {
+          int c = 0;
+          while (c < len2 && text[c] == item->text[c])
+            c++;
+          len2 = c;
+        }
+        memset(text + len2, '\0', strlen(text) - len2);
+        cursor = len2;
       }
-      memset(text + len2, '\0', strlen(text) - len2);
-      cursor = len2;
     }
     match();
     break;
