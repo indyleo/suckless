@@ -192,12 +192,12 @@ static const Key keys[] = {
     /* Launchers */
     {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
     {MODKEY, XK_w, spawn, SHCMD("wikibook")},
-    {MODKEY, XK_n, spawn, SHCMD("dmenu_notebook")},
-    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clipmgr.py select")},
-    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("dmenu_emoji.py")},
-    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("dmenu_nerdfont.py")},
-    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("dmenu_power")},
-    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("dmenu_screen")},
+    {MODKEY, XK_n, spawn, SHCMD("notebook")},
+    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clip select")},
+    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("emoji")},
+    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("nerdfont")},
+    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("power")},
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("recorder")},
 
     /* System */
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
@@ -251,11 +251,11 @@ static const Key keys[] = {
      SHCMD("mediactl --source browser play-pause")},
 
     /* Screenshots */
-    {0, XK_Print, spawn, SHCMD("sstool --select")},
-    {MODKEY, XK_Print, spawn, SHCMD("sstool --screen")},
-    {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("sstool --fullscreen")},
-    {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("sstool --window")},
-    {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("sstool --colorpicker")},
+    {0, XK_Print, spawn, SHCMD("screenshot --select")},
+    {MODKEY, XK_Print, spawn, SHCMD("screenshot --screen")},
+    {MODKEY | SHIFTKEY, XK_Print, spawn, SHCMD("screenshot --full")},
+    {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("screenshot --window")},
+    {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("screenshot --colorpicker")},
 
     /* Scratch Pads */
     {MODKEY, XK_t, togglescratch, {.ui = 0}}, /* termsc */
