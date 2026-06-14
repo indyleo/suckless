@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include "sixel.h"
 
 /* macros */
 #define MIN(a, b)		((a) < (b) ? (a) : (b))
@@ -35,6 +36,7 @@ enum glyph_attribute {
 	ATTR_WIDE       = 1 << 9,
 	ATTR_WDUMMY     = 1 << 10,
   ATTR_URL        = 1 << 11,
+	ATTR_SIXEL      = 1 << 13,
 	ATTR_SELECTED   = 1 << 12,
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
 };
@@ -71,6 +73,24 @@ typedef struct {
 } Glyph;
 
 typedef Glyph *Line;
+
+typedef struct _ImageList {
+	struct _ImageList *next, *prev;
+	unsigned char *pixels;
+	void *pixmap;
+	int width;
+	int height;
+	int x;
+	int y;
+	int should_delete;
+} ImageList;
+
+typedef struct _SixelContext {
+	sixel_state_t state;
+	ImageList *images;     /* sixel images */
+	ImageList *images_alt; /* sixel images for alternate screen */
+} SixelContext;
+
 
 typedef union {
 	int i;

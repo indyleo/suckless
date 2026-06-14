@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <wchar.h>
 
+#include "sixel.h"
 #include "st.h"
 #include "win.h"
 
@@ -56,6 +57,7 @@ enum term_mode {
   MODE_ECHO = 1 << 4,
   MODE_PRINT = 1 << 5,
   MODE_UTF8 = 1 << 6,
+	MODE_SIXEL       = 1 << 7,
 };
 
 enum cursor_movement { CURSOR_SAVE, CURSOR_LOAD };
@@ -79,11 +81,12 @@ enum charset {
 enum escape_state {
   ESC_START = 1,
   ESC_CSI = 2,
-  ESC_STR = 4, /* DCS, OSC, PM, APC */
+	ESC_STR        = 4,  /* OSC, PM, APC */
   ESC_ALTCHARSET = 8,
   ESC_STR_END = 16, /* a final string was encountered */
   ESC_TEST = 32,    /* Enter in test mode */
   ESC_UTF8 = 64,
+	ESC_DCS        =128,
 };
 
 typedef struct {
@@ -133,6 +136,7 @@ typedef struct {
   int icharset;        /* selected charset for sequence */
   int *tabs;
   Rune lastc; /* last printed char outside of sequence, 0 if control */
+	SixelContext sixel;
 } Term;
 
 /* CSI Escape sequence structs */
@@ -163,6 +167,7 @@ static void sigchld(int);
 static void ttywriteraw(const char *, size_t);
 
 static void csidump(void);
+static void dcshandle(void);
 static void csihandle(void);
 static void csiparse(void);
 static void csireset(void);
@@ -1017,6 +1022,7 @@ void tcursor(int mode) {
 
 void treset(void) {
   uint i;
+	ImageList *im;
 
   term.c = (TCursor){{.mode = ATTR_NULL, .fg = defaultfg, .bg = defaultbg},
                      .x = 0,
@@ -1038,6 +1044,9 @@ void treset(void) {
     tclearregion(0, 0, term.col - 1, term.row - 1);
     tswapscreen();
   }
+
+	for (im = term.sixel.images; im; im = im->next)
+		im->should_delete = 1;
 }
 
 void tnew(int col, int row) {
@@ -1050,9 +1059,12 @@ int tisaltscr(void) { return IS_SET(MODE_ALTSCREEN); }
 
 void tswapscreen(void) {
   Line *tmp = term.line;
+	ImageList *im = term.sixel.images;
 
   term.line = term.alt;
   term.alt = tmp;
+	term.sixel.images = term.sixel.images_alt;
+	term.sixel.images_alt = im;
   term.mode ^= MODE_ALTSCREEN;
   tfulldirt();
 }
@@ -1098,6 +1110,8 @@ void tscrolldown(int orig, int n, int copyhist) {
     term.hist[term.histi] = term.line[term.bot];
     term.line[term.bot] = temp;
   }
+	/* process scrolldown */
+	xsixelscrolldown(&term.sixel, n, term.bot);
 
   tsetdirt(orig, term.bot - n);
   tclearregion(0, term.bot - n + 1, term.col - 1, term.bot);
@@ -1115,6 +1129,7 @@ void tscrolldown(int orig, int n, int copyhist) {
 void tscrollup(int orig, int n, int copyhist) {
   int i;
   Line temp;
+	ImageList *im;
 
   LIMIT(n, 0, term.bot - orig + 1);
 
@@ -1127,6 +1142,9 @@ void tscrollup(int orig, int n, int copyhist) {
 
   if (term.scr > 0 && term.scr < HISTSIZE)
     term.scr = MIN(term.scr + n, HISTSIZE - 1);
+	/* process scrollup */
+	xsixelscrollup(&term.sixel, n, term.top);
+
 
   tclearregion(0, orig, term.col - 1, orig + n - 1);
   tsetdirt(orig + n, term.bot);
@@ -1845,6 +1863,23 @@ void csihandle(void) {
   }
 }
 
+static void
+dcshandle(void)
+{
+	switch (csiescseq.mode[0]) {
+	default:
+		fprintf(stderr, "erresc: unknown csi ");
+		csidump();
+		/* die(""); */
+		break;
+	case 'q': /* DECSIXEL */
+		if (xsixelinit(&term.sixel) != 0)
+			perror("sixel_parser_init() failed");
+		term.mode |= MODE_SIXEL;
+		break;
+	}
+}
+
 void csidump(void) {
   size_t i;
   uint c;
@@ -1892,8 +1927,10 @@ void osc_color_response(int num, int index, int is_osc4) {
 }
 
 void strhandle(void) {
+    TermWindow win;
   char *p = NULL, *dec;
   int j, narg, par;
+	int i;
   const struct {
     int idx;
     char *str;
@@ -1975,12 +2012,27 @@ void strhandle(void) {
         tfulldirt();
       }
       return;
+    case 8: /* OSC 8 ; params ; uri - hyperlink */
+      return;
     }
     break;
   case 'k': /* old title set compatibility */
     xsettitle(strescseq.args[0], 0);
     return;
   case 'P': /* DCS -- Device Control String */
+		if (IS_SET(MODE_SIXEL)) {
+			term.mode &= ~MODE_SIXEL;
+			xsixelnewimage(&term.sixel, term.c.x, term.c.y);
+			win = gettermwindow();
+			for (i = 0; i < (term.sixel.state.image.height + win.ch-1)/win.ch; ++i) {
+				int x;
+				tclearregion(term.c.x, term.c.y, term.c.x+(term.sixel.state.image.width+win.cw-1)/win.cw, term.c.y);
+				for (x = term.c.x; x < MIN(term.col, term.c.x+(term.sixel.state.image.width+win.cw-1)/win.cw); x++)
+					term.line[term.c.y][x].mode |= ATTR_SIXEL;
+				tnewline(1);
+			}
+		}
+		return;
   case '_': /* APC -- Application Program Command */
   case '^': /* PM -- Privacy Message */
     return;
@@ -2266,6 +2318,7 @@ int eschandle(uchar ascii) {
     term.esc |= ESC_UTF8;
     return 0;
   case 'P': /* DCS -- Device Control String */
+		term.esc |= ESC_DCS;
   case '_': /* APC -- Application Program Command */
   case '^': /* PM -- Privacy Message */
   case ']': /* OSC -- Operating System Command */
@@ -2364,10 +2417,18 @@ void tputc(Rune u) {
    */
   if (term.esc & ESC_STR) {
     if (u == '\a' || u == 030 || u == 032 || u == 033 || ISCONTROLC1(u)) {
-      term.esc &= ~(ESC_START | ESC_STR);
+      term.esc &= ~(ESC_START|ESC_STR|ESC_DCS);
       term.esc |= ESC_STR_END;
       goto check_control_code;
     }
+
+    if (IS_SET(MODE_SIXEL)) {
+      if (xsixelparse(&term.sixel, (unsigned char *)&u, 1) != 0)
+        perror("sixel_parser_parse() failed");
+      return;
+    }
+    if (term.esc & ESC_DCS)
+      goto check_control_code;
 
     if (strescseq.len + len >= strescseq.siz) {
       /*
@@ -2421,6 +2482,15 @@ check_control_code:
         csihandle();
       }
       return;
+		} else if (term.esc & ESC_DCS) {
+			csiescseq.buf[csiescseq.len++] = u;
+			if (BETWEEN(u, 0x40, 0x7E)
+					|| csiescseq.len >= \
+					sizeof(csiescseq.buf)-1) {
+				csiparse();
+				dcshandle();
+			}
+			return;
     } else if (term.esc & ESC_UTF8) {
       tdefutf8(u);
     } else if (term.esc & ESC_ALTCHARSET) {
@@ -2629,6 +2699,7 @@ void draw(void) {
     term.ocx--;
   if (term.line[term.c.y][cx].mode & ATTR_WDUMMY)
     cx--;
+  xdrawsixel(&term.sixel, term.line, term.row, term.col);
 
   drawregion(0, 0, term.col, term.row);
   if (term.scr == 0)
