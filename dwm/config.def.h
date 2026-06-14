@@ -43,20 +43,17 @@ typedef struct {
   const char *name;
   const void *cmd;
 } Sp;
-const char *spcmd1[] = {"alacritty", "--class", "termsc,Termsc", NULL};
-const char *spcmd2[] = {"alacritty", "--class", "lfsc,Lfsc", "-e", "lf", NULL};
-const char *spcmd3[] = {"alacritty", "--class", "qalsc,Qalsc",
-                        "-e",        "qalc",    NULL};
-const char *spcmd4[] = {"alacritty", "--class", "wiremixsc,Wiremixsc",
-                        "-e",        "wiremix", NULL};
-const char *spcmd5[] = {"alacritty", "--class", "gurks,Gurks",
-                        "-e",        "gurks",   NULL};
-const char *spcmd6[] = {"alacritty", "--class",  "discordo,Discordo",
-                        "-e",        "discodio", NULL};
-const char *spcmd7[] = {"alacritty", "--class", "twitch-tui,Twitch-tui",
-                        "-e",        "twt",     NULL};
-const char *spcmd8[] = {"alacritty", "--class",      "musicsc,Musicsc",
-                        "-e",        "subsonic-tui", NULL};
+const char *spcmd1[] = {"st", "-c", "termsc,Termsc", NULL};
+const char *spcmd2[] = {"st", "-c", "lfsc,Lfsc", "-e", "lf", NULL};
+const char *spcmd3[] = {"st", "-c", "qalsc,Qalsc", "-e", "qalc", NULL};
+const char *spcmd4[] = {"st", "-c",      "wiremixsc,Wiremixsc",
+                        "-e", "wiremix", NULL};
+const char *spcmd5[] = {"st", "-c", "gurks,Gurks", "-e", "gurks", NULL};
+const char *spcmd6[] = {"st", "-c",       "discordo,Discordo",
+                        "-e", "discodio", NULL};
+const char *spcmd7[] = {"st", "-c", "twitch-tui,Twitch-tui", "-e", "twt", NULL};
+const char *spcmd8[] = {"st", "-c",           "musicsc,Musicsc",
+                        "-e", "subsonic-tui", NULL};
 static Sp scratchpads[] = {
     {"termsc", spcmd1},     {"lfsc", spcmd2},    {"qalsc", spcmd3},
     {"wiremixsc", spcmd4},  {"gurks", spcmd5},   {"discordo", spcmd6},
@@ -183,7 +180,7 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_w, nextwallpaper, {0}},
 
     /* Applications */
-    {MODKEY, XK_Return, spawn, SHCMD("alacritty")},
+    {MODKEY, XK_Return, spawn, SHCMD("st")},
     {MODKEY, XK_f, spawn, SHCMD("thunar")},
     {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("vesktop")},
