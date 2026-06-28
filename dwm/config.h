@@ -44,13 +44,14 @@ typedef struct {
   const void *cmd;
 } Sp;
 const char *spcmd1[] = {"st", "-c", "termsc,Termsc", NULL};
-const char *spcmd2[] = {"st", "-c", "lfsc,Lfsc", "-e", "lf", NULL};
+const char *spcmd2[] = {"st", "-c", "lfsc,Lfsc", "-e", "zsh", "-c", "lf", NULL};
 const char *spcmd3[] = {"st", "-c", "qalsc,Qalsc", "-e", "qalc", NULL};
 const char *spcmd4[] = {"st", "-c",      "wiremixsc,Wiremixsc",
                         "-e", "wiremix", NULL};
-const char *spcmd5[] = {"st", "-c", "gurks,Gurks", "-e", "gurks", NULL};
-const char *spcmd6[] = {"st", "-c",       "discordo,Discordo",
-                        "-e", "discodio", NULL};
+const char *spcmd5[] = {"st",  "-c", "gurks,Gurks", "-e",
+                        "zsh", "-c", "gurks",       NULL};
+const char *spcmd6[] = {"st",  "-c", "discordo,Discordo", "-e",
+                        "zsh", "-c", "discordo",          NULL};
 const char *spcmd7[] = {"st", "-c", "twitch-tui,Twitch-tui", "-e", "twt", NULL};
 const char *spcmd8[] = {"st", "-c",           "musicsc,Musicsc",
                         "-e", "subsonic-tui", NULL};
