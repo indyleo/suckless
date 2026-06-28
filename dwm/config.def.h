@@ -53,8 +53,8 @@ const char *spcmd5[] = {"st",  "-c", "gurks,Gurks", "-e",
 const char *spcmd6[] = {"st",  "-c", "discordo,Discordo", "-e",
                         "zsh", "-c", "discordo",          NULL};
 const char *spcmd7[] = {"st", "-c", "twitch-tui,Twitch-tui", "-e", "twt", NULL};
-const char *spcmd8[] = {"st", "-c",           "musicsc,Musicsc",
-                        "-e", "subsonic-tui", NULL};
+const char *spcmd8[] = {"st",  "-c", "musicsc,Musicsc", "-e",
+                        "zsh", "-c", "subsonic-tui",    NULL};
 static Sp scratchpads[] = {
     {"termsc", spcmd1},     {"lfsc", spcmd2},    {"qalsc", spcmd3},
     {"wiremixsc", spcmd4},  {"gurks", spcmd5},   {"discordo", spcmd6},
