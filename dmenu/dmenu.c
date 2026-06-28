@@ -1092,10 +1092,10 @@ int main(int argc, char *argv[]) {
   if (fast && !isatty(0)) {
     grabkeyboard();
     readstdin();
-    readflatpak();
   } else {
     readstdin();
-    readflatpak();
+    if (isatty(0))
+      readflatpak();
     grabkeyboard();
   }
   setup();
