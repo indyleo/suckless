@@ -368,7 +368,8 @@ sixel_parser_parse(sixel_state_t *st, unsigned char *p, size_t len)
 							sixel_vertical_mask = 0x01;
 							if (st->repeat_count <= 1) {
 								for (i = 0; i < 6; i++) {
-									if ((bits & sixel_vertical_mask) != 0) {
+									if ((bits & sixel_vertical_mask) != 0 &&
+									    st->pos_y + i < image->height) {
 										pos = image->width * (st->pos_y + i) + st->pos_x;
 										image->data[pos] = st->color_index;
 										if (st->max_x < st->pos_x)
@@ -388,7 +389,7 @@ sixel_parser_parse(sixel_state_t *st, unsigned char *p, size_t len)
 												break;
 											c <<= 1;
 										}
-										for (y = st->pos_y + i; y < st->pos_y + i + n; ++y) {
+										for (y = st->pos_y + i; y < st->pos_y + i + n && y < image->height; ++y) {
 											for (x = st->pos_x; x < st->pos_x + st->repeat_count; ++x)
 												image->data[image->width * y + x] = st->color_index;
 										}

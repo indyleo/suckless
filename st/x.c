@@ -1758,12 +1758,21 @@ xsixelnewimage(SixelContext *ctx, int tx, int ty)
 	int i;
 
 	new_image = malloc(sizeof(ImageList));
+	if (!new_image) {
+		sixel_parser_deinit(&ctx->state);
+		return;
+	}
 	memset(new_image, 0, sizeof(ImageList));
 	new_image->x = tx;
 	new_image->y = ty;
 	new_image->width = ctx->state.image.width;
 	new_image->height = ctx->state.image.height;
 	new_image->pixels = malloc(new_image->width * new_image->height * 4);
+	if (!new_image->pixels) {
+		sixel_parser_deinit(&ctx->state);
+		free(new_image);
+		return;
+	}
 	if (sixel_parser_finalize(&ctx->state, new_image->pixels) != 0) {
 		perror("sixel_parser_finalize() failed");
 		sixel_parser_deinit(&ctx->state);
