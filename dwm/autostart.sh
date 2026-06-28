@@ -3,15 +3,14 @@
 # Vars
 PROCS=(
     dunst
-    lxpolkit
+    lxqt-policykit-agent
     udiskie
     medianotify
     dwmblocks
 )
 DAEMON_PROCS=(
-    "clipmgr.py daemon"
+    "clip daemon"
     "organizer.py --daemon"
-    "desktopctl time ~/Pictures/Wallpapers/gruvbox 900"
     "python3 -m http.server 8080 --bind 127.0.0.1 --directory ~/.config/startpage"
 )
 
