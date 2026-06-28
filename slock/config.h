@@ -1,12 +1,13 @@
 /* user and group to drop privileges to */
 static const char *user = "nobody";
-static const char *group = "nogroup";
+static const char *group = "nobody";
 
 static const char *colorname[NUMCOLS] = {
-    [BACKGROUND] = "#d8dee9",
-    [INIT] = "#2e3440",   /* after initialization */
-    [INPUT] = "#5e81ac",  /* during input */
-    [FAILED] = "#bf616a", /* wrong password */
+    [BACKGROUND] =
+        "#ebdbb2",        // Gruvbox light text (used as background in slock)
+    [INIT] = "#282828",   // Gruvbox background (locked screen state)
+    [INPUT] = "#d79921",  // Gruvbox yellow (during password input)
+    [FAILED] = "#cc241d", // Gruvbox red (wrong password)
 };
 
 /* treat a cleared input like a wrong password (color) */
