@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <locale.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -195,6 +196,17 @@ typedef struct {
   int monitor;
 } Rule;
 
+typedef struct {
+  int num, mx, my, mw, mh;
+  char path[2048];
+} WallpaperJobSpec;
+
+typedef struct WallpaperResult {
+  int monnum, w, h;
+  uint32_t *data; /* raw ARGB pixel buffer, mallocd by worker */
+  struct WallpaperResult *next;
+} WallpaperResult;
+
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h,
@@ -267,9 +279,11 @@ static void setfullscreen(Client *c, int fullscreen);
 static void fullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
-static void setwallpaper(Monitor *m, const char *path);
 static void setrandomwallpaper(void);
 static void nextwallpaper(const Arg *arg);
+static void *wallpaperworker(void *arg);
+static void rebuildrootwallpaper(void);
+static void applywallpaperresult(WallpaperResult *res);
 static void fifoviewtag(const Arg *arg);
 static void fifotagtag(const Arg *arg);
 static void applygeomchange(void);
@@ -355,6 +369,10 @@ static int fifofd = -1;
 static int rrbase = -1;
 static Pixmap currentwallpaper[32] = {0};
 static char lastwallpaper[32][2048] = {{0}};
+static pthread_mutex_t wplock = PTHREAD_MUTEX_INITIALIZER;
+static WallpaperResult *wpqueue = NULL;
+static volatile int wallpaperready = 0;
+static volatile int wpthreadrunning = 0;
 static Pixmap rootwallpaper = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
@@ -2043,6 +2061,19 @@ void run(void) {
       wallpaperupdate = 0;
       setrandomwallpaper();
     }
+    if (wallpaperready) {
+      pthread_mutex_lock(&wplock);
+      WallpaperResult *res = wpqueue;
+      wpqueue = NULL;
+      wallpaperready = 0;
+      pthread_mutex_unlock(&wplock);
+      while (res) {
+        WallpaperResult *next = res->next;
+        applywallpaperresult(res);
+        free(res);
+        res = next;
+      }
+    }
     if (fifofd >= 0)
       readfifo();
     if (XPending(dpy)) {
@@ -2338,49 +2369,126 @@ void seturgent(Client *c, int urg) {
   XFree(wmh);
 }
 
-static void setwallpaper(Monitor *m, const char *path) {
-  char fullpath[1024];
-  if (path[0] == '~') {
-    const char *home = getenv("HOME");
-    if (!home)
-      return;
-    snprintf(fullpath, sizeof(fullpath), "%s%s", home, path + 1);
-    path = fullpath;
+static void *wallpaperworker(void *arg) {
+  WallpaperJobSpec *jobs = arg;
+
+  for (int i = 0; jobs[i].num != -1; i++) {
+    imlib_context_set_anti_alias(0);
+    imlib_context_set_dither(0);
+    imlib_context_set_blend(0);
+    imlib_context_set_dither_mask(0);
+
+    Imlib_Image img = imlib_load_image(jobs[i].path);
+    if (!img) {
+      fprintf(stderr, "dwm: failed to load wallpaper: %s\n", jobs[i].path);
+      continue;
+    }
+    imlib_context_set_image(img);
+    Imlib_Image scaled = imlib_create_cropped_scaled_image(
+        0, 0, imlib_image_get_width(), imlib_image_get_height(), jobs[i].mw,
+        jobs[i].mh);
+    imlib_free_image();
+    if (!scaled) {
+      fprintf(stderr, "dwm: failed to scale wallpaper\n");
+      continue;
+    }
+
+    /* copy raw pixels off the imlib image — no X calls in this thread */
+    imlib_context_set_image(scaled);
+    int w = imlib_image_get_width();
+    int h = imlib_image_get_height();
+    DATA32 *src = imlib_image_get_data_for_reading_only();
+    uint32_t *buf = malloc((size_t)w * h * sizeof(uint32_t));
+    if (!buf) {
+      imlib_free_image();
+      fprintf(stderr, "dwm: out of memory for wallpaper buffer\n");
+      continue;
+    }
+    memcpy(buf, src, (size_t)w * h * sizeof(uint32_t));
+    imlib_free_image();
+
+    WallpaperResult *res = ecalloc(1, sizeof(WallpaperResult));
+    res->monnum = jobs[i].num;
+    res->data = buf;
+    res->w = w;
+    res->h = h;
+
+    pthread_mutex_lock(&wplock);
+    res->next = wpqueue;
+    wpqueue = res;
+    wallpaperready = 1;
+    pthread_mutex_unlock(&wplock);
   }
-  imlib_context_set_display(dpy);
-  imlib_context_set_visual(DefaultVisual(dpy, screen));
-  imlib_context_set_colormap(DefaultColormap(dpy, screen));
-  imlib_context_set_anti_alias(0);
-  imlib_context_set_dither(0);
-  imlib_context_set_blend(0);
-  imlib_context_set_dither_mask(0);
-  Imlib_Image img = imlib_load_image(path);
-  if (!img) {
-    fprintf(stderr, "dwm: failed to load wallpaper: %s\n", path);
+
+  free(jobs);
+  wpthreadrunning = 0;
+  return NULL;
+}
+
+static void rebuildrootwallpaper(void) {
+  if (rootwallpaper)
+    XFreePixmap(dpy, rootwallpaper);
+  rootwallpaper = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+  GC gc = XCreateGC(dpy, root, 0, NULL);
+  for (Monitor *m = mons; m; m = m->next)
+    if (currentwallpaper[m->num])
+      XCopyArea(dpy, currentwallpaper[m->num], rootwallpaper, gc, 0, 0, m->mw,
+                m->mh, m->mx, m->my);
+  XFreeGC(dpy, gc);
+  Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
+  Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
+  XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
+                  (unsigned char *)&rootwallpaper, 1);
+  XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
+                  (unsigned char *)&rootwallpaper, 1);
+  XSetWindowBackgroundPixmap(dpy, root, rootwallpaper);
+  XClearWindow(dpy, root);
+  XSync(dpy, False);
+}
+
+static void applywallpaperresult(WallpaperResult *res) {
+  Monitor *m;
+  for (m = mons; m; m = m->next)
+    if (m->num == res->monnum)
+      break;
+  if (!m) {
+    /* monitor was unplugged while the job was in flight */
+    free(res->data);
     return;
   }
-  imlib_context_set_image(img);
-  Imlib_Image scaled = imlib_create_cropped_scaled_image(
-      0, 0, imlib_image_get_width(), imlib_image_get_height(), m->mw, m->mh);
-  imlib_free_image();
-  if (!scaled) {
-    fprintf(stderr, "dwm: failed to scale wallpaper\n");
+
+  /* build a Pixmap from the raw pixel buffer on the main thread/connection */
+  XImage *xi =
+      XCreateImage(dpy, DefaultVisual(dpy, screen), DefaultDepth(dpy, screen),
+                   ZPixmap, 0, (char *)res->data, res->w, res->h, 32, 0);
+  if (!xi) {
+    free(res->data);
+    fprintf(stderr, "dwm: XCreateImage failed\n");
     return;
   }
-  imlib_context_set_image(scaled);
-  Pixmap pm = XCreatePixmap(dpy, root, m->mw, m->mh, DefaultDepth(dpy, screen));
-  imlib_context_set_drawable(pm);
-  imlib_render_image_on_drawable(0, 0);
-  imlib_free_image();
+
+  Pixmap pm =
+      XCreatePixmap(dpy, root, res->w, res->h, DefaultDepth(dpy, screen));
+  GC gc = XCreateGC(dpy, pm, 0, NULL);
+  XPutImage(dpy, pm, gc, xi, 0, 0, 0, 0, res->w, res->h);
+  XFreeGC(dpy, gc);
+  /* XDestroyImage would free res->data — null it out first since we manage it
+   */
+  xi->data = NULL;
+  XDestroyImage(xi);
+  free(res->data);
+  res->data = NULL;
 
   if (currentwallpaper[m->num])
     XFreePixmap(dpy, currentwallpaper[m->num]);
   currentwallpaper[m->num] = pm;
 
-  GC gc = XCreateGC(dpy, root, 0, NULL);
-  XCopyArea(dpy, pm, root, gc, 0, 0, m->mw, m->mh, m->mx, m->my);
-  XFreeGC(dpy, gc);
+  GC gc2 = XCreateGC(dpy, root, 0, NULL);
+  XCopyArea(dpy, pm, root, gc2, 0, 0, res->w, res->h, m->mx, m->my);
+  XFreeGC(dpy, gc2);
   XSync(dpy, False);
+
+  rebuildrootwallpaper();
 }
 
 static void setrandomwallpaper(void) {
@@ -2393,6 +2501,12 @@ static void setrandomwallpaper(void) {
     snprintf(fulldir, sizeof(fulldir), "%s%s", home, dir + 1);
     dir = fulldir;
   }
+
+  if (wpthreadrunning) {
+    fprintf(stderr, "dwm: wallpaper change already in progress, skipping\n");
+    return;
+  }
+
   DIR *d = opendir(dir);
   if (!d) {
     fprintf(stderr, "dwm: cannot open wallpaper dir: %s\n", dir);
@@ -2418,44 +2532,47 @@ static void setrandomwallpaper(void) {
     fprintf(stderr, "dwm: no images found in %s\n", dir);
     return;
   }
+
+  int nmon = 0;
+  for (Monitor *m = mons; m; m = m->next)
+    nmon++;
+  WallpaperJobSpec *jobs = ecalloc(nmon + 1, sizeof(WallpaperJobSpec));
+
   srand(time(NULL));
+  int idx = 0;
   for (Monitor *m = mons; m; m = m->next) {
     int pick;
-    if (count == 1) {
+    if (count == 1)
       pick = 0;
-    } else {
+    else
       do {
         pick = rand() % count;
       } while (strcmp(files[pick], lastwallpaper[m->num]) == 0);
-    }
-    char filepath[2048];
-    snprintf(filepath, sizeof(filepath), "%s/%s", dir, files[pick]);
+
+    snprintf(jobs[idx].path, sizeof(jobs[idx].path), "%s/%s", dir, files[pick]);
     snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
              files[pick]);
-    setwallpaper(m, filepath);
+    jobs[idx].num = m->num;
+    jobs[idx].mx = m->mx;
+    jobs[idx].my = m->my;
+    jobs[idx].mw = m->mw;
+    jobs[idx].mh = m->mh;
+    idx++;
   }
-
-  /* build full root pixmap for picom */
-  if (rootwallpaper)
-    XFreePixmap(dpy, rootwallpaper);
-  rootwallpaper = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
-  GC gc = XCreateGC(dpy, root, 0, NULL);
-  for (Monitor *m = mons; m; m = m->next)
-    XCopyArea(dpy, currentwallpaper[m->num], rootwallpaper, gc, 0, 0, m->mw,
-              m->mh, m->mx, m->my);
-  XFreeGC(dpy, gc);
-  Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
-  Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
-  XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
-                  (unsigned char *)&rootwallpaper, 1);
-  XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
-                  (unsigned char *)&rootwallpaper, 1);
-  XSetWindowBackgroundPixmap(dpy, root, rootwallpaper);
-  XClearWindow(dpy, root);
-  XSync(dpy, False);
+  jobs[idx].num = -1; /* sentinel */
 
   for (int i = 0; i < count; i++)
     free(files[i]);
+
+  wpthreadrunning = 1;
+  pthread_t t;
+  if (pthread_create(&t, NULL, wallpaperworker, jobs) != 0) {
+    fprintf(stderr, "dwm: failed to spawn wallpaper thread\n");
+    wpthreadrunning = 0;
+    free(jobs);
+    return;
+  }
+  pthread_detach(t);
 }
 
 static void nextwallpaper(const Arg *arg) {

@@ -15,22 +15,22 @@ external IPC control.
 
 ## Feature summary
 
-| Category      | Feature                                           | Source              |
-| ------------- | ------------------------------------------------- | ------------------- |
-| Layout        | Per-tag layout/mfact/nmaster memory               | `pertag` patch      |
-| Layout        | Gaps between windows                              | `uselessgap` patch  |
-| Layout        | Move windows within the stack                     | `movestack` patch   |
-| Layout        | Attach new clients below the active one           | `attachbelow` patch |
-| Windows       | Terminal scratchpads (toggle-able floating apps)  | `scratchpads` patch |
-| Windows       | Terminal swallows GUI child windows               | `swallow` patch     |
-| Bar           | 2D-drawn status bar (icons/colors in status text) | `status2d` patch    |
-| Bar           | Clickable status segments                         | `statuscmd` patch   |
-| Wallpaper     | Imlib2-based wallpaper renderer, per-monitor      | custom              |
-| Wallpaper     | Random wallpaper rotation on a timer              | custom              |
-| Wallpaper     | Manual "next wallpaper" keybind                   | custom              |
-| IPC           | FIFO-based remote control (`/tmp/dwm.fifo`)       | custom              |
-| Multi-monitor | Automatic monitor hotplug detection via RandR     | custom              |
-| Session       | Custom autostart process management               | `autostart.sh`      |
+| Category      | Feature                                                      | Source              |
+| ------------- | ------------------------------------------------------------ | ------------------- |
+| Layout        | Per-tag layout/mfact/nmaster memory                          | `pertag` patch      |
+| Layout        | Gaps between windows                                         | `uselessgap` patch  |
+| Layout        | Move windows within the stack                                | `movestack` patch   |
+| Layout        | Attach new clients below the active one                      | `attachbelow` patch |
+| Windows       | Terminal scratchpads (toggle-able floating apps)             | `scratchpads` patch |
+| Windows       | Terminal swallows GUI child windows                          | `swallow` patch     |
+| Bar           | 2D-drawn status bar (icons/colors in status text)            | `status2d` patch    |
+| Bar           | Clickable status segments                                    | `statuscmd` patch   |
+| Wallpaper     | Async Imlib2 loader — no event loop blocking on image decode | custom              |
+| Wallpaper     | Random wallpaper rotation on a timer                         | custom              |
+| Wallpaper     | Manual "next wallpaper" keybind                              | custom              |
+| IPC           | FIFO-based remote control (`/tmp/dwm.fifo`)                  | custom              |
+| Multi-monitor | Automatic monitor hotplug detection via RandR                | custom              |
+| Session       | Custom autostart process management                          | `autostart.sh`      |
 
 See **[DOCS.md](DOCS.md)** for how the code is organized and **[WIKI.md](WIKI.md)**
 for how to configure it.

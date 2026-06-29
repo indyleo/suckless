@@ -100,6 +100,30 @@ Functions: `setwallpaper()`, `setrandomwallpaper()`, `nextwallpaper()`.
 - `~` in `wallpaperdir` is expanded against `$HOME` manually (X11/Imlib2
   don't do shell-style expansion).
 
+### Async loading
+
+The slow part of a wallpaper change — Imlib2 file decode and scale — runs
+in a detached `pthread` (`wallpaperworker`). The worker does **no X calls**:
+it produces a raw `uint32_t` pixel buffer (`DATA32 *`) and pushes it onto a
+mutex-protected `wpqueue` singly-linked list, then sets `wallpaperready = 1`.
+
+`run()` checks `wallpaperready` on every tick and drains the queue by calling
+`applywallpaperresult()` for each entry. `applywallpaperresult()` does all X
+work on the main thread: `XCreatePixmap` + `XPutImage` from the raw buffer,
+then `XCopyArea` to the root window, then `rebuildrootwallpaper()`.
+
+The reason X calls must stay off the worker thread: X11 ties all resources
+(Pixmaps, GCs, etc.) to the client connection that created them. If the
+worker created a Pixmap on its own `Display*` and then called
+`XCloseDisplay()`, the server would immediately free that Pixmap — leaving
+the main thread holding a dangling ID and crashing on the next `XCopyArea`.
+Passing raw pixel data instead of a Pixmap ID sidesteps this entirely.
+
+Only one worker job runs at a time — `wpthreadrunning` is checked before
+`pthread_create` and a new request is silently skipped if a job is already
+in flight. Given the 900s default interval this is never a practical
+constraint, but it keeps the queue logic simple and bounded.
+
 ## Monitor hotplug handling (custom, not a suckless patch)
 
 Functions: `applygeomchange()`, `rrscreenchangenotify()`, plus a small
