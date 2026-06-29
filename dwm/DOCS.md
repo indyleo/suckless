@@ -6,18 +6,18 @@ future-you) editing `dwm.c` directly. Configuration values live in
 
 ## File overview
 
-| File | Purpose |
-|---|---|
-| `dwm.c` | Everything: event loop, layouts, client management, wallpaper engine, FIFO IPC |
-| `drw.c` / `drw.h` | Drawing primitives (the "drw" library) — fonts, colors, the status bar surface |
-| `util.c` / `util.h` | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros) |
-| `movestack.c` | Implementation of the `movestack` patch, `#include`d directly into `config.h` |
-| `transient.c` | Transient-window handling helper, `#include`d where needed |
-| `config.def.h` | Upstream default config — **do not edit**, copy to `config.h` instead |
-| `config.h` | Your actual config — compiled directly into the binary |
-| `config.mk` | Build flags, install prefix, library paths |
-| `autostart.sh` | Shell script run once at dwm startup to launch background processes |
-| `patches/` | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading) |
+| File                | Purpose                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| `dwm.c`             | Everything: event loop, layouts, client management, wallpaper engine, FIFO IPC           |
+| `drw.c` / `drw.h`   | Drawing primitives (the "drw" library) — fonts, colors, the status bar surface           |
+| `util.c` / `util.h` | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)              |
+| `movestack.c`       | Implementation of the `movestack` patch, `#include`d directly into `config.h`            |
+| `transient.c`       | Transient-window handling helper, `#include`d where needed                               |
+| `config.def.h`      | Upstream default config — **do not edit**, copy to `config.h` instead                    |
+| `config.h`          | Your actual config — compiled directly into the binary                                   |
+| `config.mk`         | Build flags, install prefix, library paths                                               |
+| `autostart.sh`      | Shell script run once at dwm startup to launch background processes                      |
+| `patches/`          | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading) |
 
 ## Program flow
 
@@ -100,6 +100,63 @@ Functions: `setwallpaper()`, `setrandomwallpaper()`, `nextwallpaper()`.
 - `~` in `wallpaperdir` is expanded against `$HOME` manually (X11/Imlib2
   don't do shell-style expansion).
 
+## Monitor hotplug handling (custom, not a suckless patch)
+
+Functions: `applygeomchange()`, `rrscreenchangenotify()`, plus a small
+addition to `configurenotify()` and `setup()`.
+
+dwm's existing `updategeom()` (stock + Xinerama) already knows how to
+diff the current monitor list against a fresh Xinerama query and add/remove
+`Monitor`s accordingly — it was just never _triggered_ except by a root
+window resize (`configurenotify()`). Plugging/unplugging an external
+monitor doesn't always also resize the root window, depending on the
+driver, so hotplug events could be silently missed.
+
+- `setup()` calls `XRRQueryExtension()` to ask the X server for the RandR
+  extension's event base, stored in the `rrbase` global, then
+  `XRRSelectInput(dpy, root, RRScreenChangeNotifyMask)` to subscribe to
+  hotplug/resolution-change notifications on the root window.
+- RandR event types aren't fixed core-protocol constants — the server
+  reports the base at runtime, and the real event type is
+  `rrbase + RRScreenChangeNotify`. This number can fall outside the range
+  `handler[]` is indexed for, so it can't be dropped into that dispatch
+  table like ordinary events. Instead, `run()` checks for it explicitly
+  before falling back to `handler[ev.type]`.
+- `rrscreenchangenotify()` calls `XRRUpdateConfiguration()` first — this
+  refreshes Xlib's cached screen/rotation info, which Xinerama's query
+  depends on — then calls the existing `updategeom()`.
+- `applygeomchange()` is `configurenotify()`'s old "something changed,
+  now fix everything up" body (resize the bar/drw, reposition fullscreen
+  clients, move bar windows, refocus, rearrange), factored out so both
+  the resize path and the new hotplug path share one implementation
+  instead of duplicating it.
+
+No `config.h` setting controls this — it's always active once RandR is
+available, since there's no meaningful reason to disable monitor detection.
+
+### Known quirk: stale geometry immediately after hotplug
+
+On some GPU drivers, Xinerama's screen list lags a few milliseconds behind
+the RandR event that announces a hotplug — so `updategeom()` can fire
+_before_ Xinerama has actually updated, and report the old monitor count.
+
+If you notice a freshly plugged monitor not appearing until you trigger
+another event (e.g. resize a window, or unplug/replug again), add a short
+delay before the `updategeom()` call in `rrscreenchangenotify()`:
+
+```c
+void rrscreenchangenotify(XEvent *e) {
+  XRRUpdateConfiguration(e);
+  usleep(50000); /* 50ms — let Xinerama catch up to RandR */
+  if (updategeom())
+    applygeomchange();
+}
+```
+
+This isn't applied by default since it adds a small (if imperceptible)
+delay to every screen-change event, and most setups don't need it. Only
+add it if you actually observe the lag on your hardware.
+
 ## FIFO IPC layer (custom)
 
 Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table.
@@ -118,7 +175,7 @@ Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table.
   function with an `Arg` built according to that command's declared
   `argtype` (`int`/`uint`/`float`/none).
 - `fifoviewtag()` / `fifotagtag()` exist purely to translate a human-typed
-  tag *index* (`view 3`) into the bitmask dwm's `view()`/`tag()` actually
+  tag _index_ (`view 3`) into the bitmask dwm's `view()`/`tag()` actually
   expect (`1 << 3`) — every other FIFO command calls dwm's existing
   `Arg`-taking functions directly, no wrapper needed.
 - `cleanup()` closes the fd and `unlink()`s the FIFO path on exit/restart.

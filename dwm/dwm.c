@@ -43,6 +43,7 @@
 #include <unistd.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
+#include <X11/extensions/Xrandr.h>
 #endif /* XINERAMA */
 #include <Imlib2.h>
 #include <X11/Xft/Xft.h>
@@ -269,6 +270,10 @@ static void setmfact(const Arg *arg);
 static void setwallpaper(Monitor *m, const char *path);
 static void setrandomwallpaper(void);
 static void nextwallpaper(const Arg *arg);
+static void fifoviewtag(const Arg *arg);
+static void fifotagtag(const Arg *arg);
+static void applygeomchange(void);
+static void rrscreenchangenotify(XEvent *e);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void show(const Arg *arg);
@@ -347,6 +352,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [UnmapNotify] = unmapnotify};
 static int wallpaperupdate = 0;
 static int fifofd = -1;
+static int rrbase = -1;
 static Pixmap currentwallpaper[32] = {0};
 static char lastwallpaper[32][2048] = {{0}};
 static Pixmap rootwallpaper = 0;
@@ -828,30 +834,39 @@ void configure(Client *c) {
   XSendEvent(dpy, c->win, False, StructureNotifyMask, (XEvent *)&ce);
 }
 
-void configurenotify(XEvent *e) {
+void applygeomchange(void) {
   Monitor *m;
   Client *c;
+
+  drw_resize(drw, sw, bh);
+  updatebars();
+  for (m = mons; m; m = m->next) {
+    for (c = m->clients; c; c = c->next)
+      if (c->isfullscreen)
+        resizeclient(c, m->mx, m->my, m->mw, m->mh);
+    XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
+  }
+  focus(NULL);
+  arrange(NULL);
+}
+
+void configurenotify(XEvent *e) {
   XConfigureEvent *ev = &e->xconfigure;
   int dirty;
 
-  /* TODO: updategeom handling sucks, needs to be simplified */
   if (ev->window == root) {
     dirty = (sw != ev->width || sh != ev->height);
     sw = ev->width;
     sh = ev->height;
-    if (updategeom() || dirty) {
-      drw_resize(drw, sw, bh);
-      updatebars();
-      for (m = mons; m; m = m->next) {
-        for (c = m->clients; c; c = c->next)
-          if (c->isfullscreen)
-            resizeclient(c, m->mx, m->my, m->mw, m->mh);
-        XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
-      }
-      focus(NULL);
-      arrange(NULL);
-    }
+    if (updategeom() || dirty)
+      applygeomchange();
   }
+}
+
+void rrscreenchangenotify(XEvent *e) {
+  XRRUpdateConfiguration(e);
+  if (updategeom())
+    applygeomchange();
 }
 
 void configurerequest(XEvent *e) {
@@ -1963,9 +1978,6 @@ typedef struct {
   int argtype; /* 0 = none, 1 = int, 2 = uint, 3 = float */
 } FifoCmd;
 
-static void fifoviewtag(const Arg *arg);
-static void fifotagtag(const Arg *arg);
-
 static FifoCmd fifocmds[] = {
     /* cmd               function           argtype */
     {"view", fifoviewtag, 1},
@@ -2035,7 +2047,9 @@ void run(void) {
       readfifo();
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
-      if (handler[ev.type])
+      if (rrbase >= 0 && ev.type == rrbase + RRScreenChangeNotify)
+        rrscreenchangenotify(&ev);
+      else if (handler[ev.type])
         handler[ev.type](&ev);
     } else {
       struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
@@ -2255,6 +2269,9 @@ void setup(void) {
     die("no fonts could be loaded.");
   lrpad = drw->fonts->h;
   bh = drw->fonts->h + 2;
+  int rrerrbase;
+  if (XRRQueryExtension(dpy, &rrbase, &rrerrbase))
+    XRRSelectInput(dpy, root, RRScreenChangeNotifyMask);
   updategeom();
   /* init atoms */
   utf8string = XInternAtom(dpy, "UTF8_STRING", False);
