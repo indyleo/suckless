@@ -68,16 +68,16 @@ shown in the bar.
 
 Toggle-able floating terminal apps, bound via `togglescratch`:
 
-| Slot | Tag bind | Command |
-|---|---|---|
-| 0 `termsc` | `MODKEY+t` | `st` (plain scratch terminal) |
-| 1 `lfsc` | `MODKEY+y` | `st` running `lf` (file manager) |
-| 2 `qalsc` | `MODKEY+z` | `st` running `qalc` (calculator) |
-| 3 `wiremixsc` | `MODKEY+a` | `st` running `wiremix` (audio mixer) |
-| 4 `gurks` | `MODKEY+g` | `st` running `gurks` |
-| 5 `discordo` | `MODKEY+d` | `st` running `discordo` |
-| 6 `twitch-tui` | `MODKEY+c` | `st` running `twt` |
-| 7 `musicsc` | `MODKEY+m` | `st` running `subsonic-tui` |
+| Slot           | Tag bind   | Command                              |
+| -------------- | ---------- | ------------------------------------ |
+| 0 `termsc`     | `MODKEY+t` | `st` (plain scratch terminal)        |
+| 1 `lfsc`       | `MODKEY+y` | `st` running `lf` (file manager)     |
+| 2 `qalsc`      | `MODKEY+z` | `st` running `qalc` (calculator)     |
+| 3 `wiremixsc`  | `MODKEY+a` | `st` running `wiremix` (audio mixer) |
+| 4 `gurks`      | `MODKEY+g` | `st` running `gurks`                 |
+| 5 `discordo`   | `MODKEY+d` | `st` running `discordo`              |
+| 6 `twitch-tui` | `MODKEY+c` | `st` running `twt`                   |
+| 7 `musicsc`    | `MODKEY+m` | `st` running `subsonic-tui`          |
 
 To add a new scratchpad: add a `const char *spcmdN[]` array, add it to the
 `scratchpads[]` table, add a matching rule in `rules[]` using `SPTAG(N)`,
@@ -97,6 +97,7 @@ static const Rule rules[] = {
 
 Match by WM class/instance/title (any can be `NULL` = wildcard). Notable
 entries:
+
 - `Firefox` is forced to tag index 8 (a "hidden" tag beyond the 5 visible
   ones) — useful for keeping a browser parked off your main tags.
 - `St`, `Alacritty`, and WezTerm are marked `isterminal` so the `swallow`
@@ -168,18 +169,18 @@ for select/screen/full/window/colorpicker variants.
 
 ## Mouse bindings
 
-| Click target | Button | Action |
-|---|---|---|
-| Layout symbol | Left | Cycle to tile layout |
-| Layout symbol | Right | Cycle to monocle |
-| Window title | Left | Toggle window (scratchpad-style) |
-| Window title | Middle | Zoom |
-| Status text | Left/Middle/Right | Sent to status script via `sigstatusbar` |
-| Client window | `MODKEY`+Left | Move (drag) |
-| Client window | `MODKEY`+Middle | Toggle floating |
-| Client window | `MODKEY`+Right | Resize (drag) |
-| Tag bar | Left/Right | View / toggle-view tag |
-| Tag bar | `MODKEY`+Left/Middle | Tag / toggle-tag window |
+| Click target  | Button               | Action                                   |
+| ------------- | -------------------- | ---------------------------------------- |
+| Layout symbol | Left                 | Cycle to tile layout                     |
+| Layout symbol | Right                | Cycle to monocle                         |
+| Window title  | Left                 | Toggle window (scratchpad-style)         |
+| Window title  | Middle               | Zoom                                     |
+| Status text   | Left/Middle/Right    | Sent to status script via `sigstatusbar` |
+| Client window | `MODKEY`+Left        | Move (drag)                              |
+| Client window | `MODKEY`+Middle      | Toggle floating                          |
+| Client window | `MODKEY`+Right       | Resize (drag)                            |
+| Tag bar       | Left/Right           | View / toggle-view tag                   |
+| Tag bar       | `MODKEY`+Left/Middle | Tag / toggle-tag window                  |
 
 ## FIFO commands (IPC)
 
@@ -190,18 +191,31 @@ event loop tick (~10ms latency). Send a command by writing a line to it:
 echo "<command> [arg]" > /tmp/dwm.fifo
 ```
 
-| Command | Arg | Effect |
-|---|---|---|
-| `view` | tag index (0–4) | Switch to that tag |
-| `tag` | tag index (0–4) | Move focused window to that tag |
-| `togglebar` | — | Show/hide the bar |
-| `killclient` | — | Close the focused window |
-| `zoom` | — | Swap focused window with master |
-| `setmfact` | float (e.g. `0.6`) | Set master area fraction directly |
-| `nextwallpaper` | — | Force a new random wallpaper |
-| `quit` | — | Quit dwm |
+| Command            | Arg              | Effect                           |
+| ------------------ | ---------------- | -------------------------------- |
+| `view`             | 0–4              | Switch to tag                    |
+| `tag`              | 0–4              | Move window to tag               |
+| `toggleview`       | 0–4              | Add/remove tag from current view |
+| `toggletag`        | 0–4              | Toggle tag on focused window     |
+| `setmfact`         | float e.g. `0.6` | Set master area size             |
+| `incnmaster`       | `1` or `-1`      | Add/remove master client         |
+| `zoom`             | —                | Swap focused window with master  |
+| `togglefloating`   | —                | Toggle float on focused window   |
+| `togglefullscreen` | —                | Toggle fullscreen                |
+| `focusstackvis`    | `1` or `-1`      | Focus next/prev visible window   |
+| `focusmon`         | `1` or `-1`      | Focus next/prev monitor          |
+| `tagmon`           | `1` or `-1`      | Send window to next/prev monitor |
+| `show`             | —                | Show focused window              |
+| `hide`             | —                | Hide focused window              |
+| `showall`          | —                | Show all hidden windows          |
+| `killclient`       | —                | Close focused window             |
+| `togglescratch`    | 0–7              | Toggle scratchpad by index       |
+| `togglebar`        | —                | Show/hide bar                    |
+| `nextwallpaper`    | —                | Load new random wallpaper        |
+| `quit`             | —                | Quit dwm (`1` = restart)         |
 
 Examples:
+
 ```sh
 echo "view 2" > /tmp/dwm.fifo
 echo "setmfact 0.65" > /tmp/dwm.fifo

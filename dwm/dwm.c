@@ -286,6 +286,9 @@ static void rebuildrootwallpaper(void);
 static void applywallpaperresult(WallpaperResult *res);
 static void fifoviewtag(const Arg *arg);
 static void fifotagtag(const Arg *arg);
+static void fifotoggletag(const Arg *arg);
+static void fifotogglewintag(const Arg *arg);
+static void fifotogglescratch(const Arg *arg);
 static void applygeomchange(void);
 static void rrscreenchangenotify(XEvent *e);
 static void setup(void);
@@ -1997,19 +2000,48 @@ typedef struct {
 } FifoCmd;
 
 static FifoCmd fifocmds[] = {
-    /* cmd               function           argtype */
-    {"view", fifoviewtag, 1},
-    {"tag", fifotagtag, 1},
-    {"togglebar", togglebar, 0},
-    {"killclient", killclient, 0},
+    /* cmd                function              argtype */
+    /* tag/view */
+    {"view", fifoviewtag, 1},           /* view 0-4          */
+    {"tag", fifotagtag, 1},             /* tag 0-4           */
+    {"toggleview", fifotoggletag, 1},   /* toggleview 0-4    */
+    {"toggletag", fifotogglewintag, 1}, /* toggletag 0-4     */
+    /* layout */
+    {"setmfact", setmfact, 3},     /* setmfact 0.6      */
+    {"incnmaster", incnmaster, 1}, /* incnmaster 1/-1   */
     {"zoom", zoom, 0},
-    {"setmfact", setmfact, 3},
+    {"togglefloating", togglefloating, 0},
+    {"togglefullscreen", fullscreen, 0},
+    /* focus / stack */
+    {"focusstackvis", focusstackvis, 1}, /* focusstackvis 1/-1 */
+    {"focusmon", focusmon, 1},           /* focusmon 1/-1     */
+    {"tagmon", tagmon, 1},               /* tagmon 1/-1       */
+    /* window visibility */
+    {"show", show, 0},
+    {"hide", hide, 0},
+    {"showall", showall, 0},
+    {"killclient", killclient, 0},
+    /* scratchpads */
+    {"togglescratch", fifotogglescratch, 1}, /* togglescratch 0-7 */
+    /* bar */
+    {"togglebar", togglebar, 0},
+    /* wallpaper */
     {"nextwallpaper", nextwallpaper, 0},
-    {"quit", quit, 0},
+    /* session */
+    {"quit", quit, 0}, /* quit 1 = restart  */
 };
 
+/* tag index → bitmask wrappers */
 void fifoviewtag(const Arg *arg) { view(&((Arg){.ui = 1u << arg->i})); }
 void fifotagtag(const Arg *arg) { tag(&((Arg){.ui = 1u << arg->i})); }
+void fifotoggletag(const Arg *arg) { toggleview(&((Arg){.ui = 1u << arg->i})); }
+void fifotogglewintag(const Arg *arg) {
+  toggletag(&((Arg){.ui = 1u << arg->i}));
+}
+/* scratchpad index → ui wrapper */
+void fifotogglescratch(const Arg *arg) {
+  togglescratch(&((Arg){.ui = (unsigned int)arg->i}));
+}
 
 void readfifo(void) {
   static char buf[256];
