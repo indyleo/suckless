@@ -28,12 +28,14 @@
 #include <X11/keysym.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <locale.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -344,6 +346,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [PropertyNotify] = propertynotify,
     [UnmapNotify] = unmapnotify};
 static int wallpaperupdate = 0;
+static int fifofd = -1;
 static Pixmap currentwallpaper[32] = {0};
 static char lastwallpaper[32][2048] = {{0}};
 static Pixmap rootwallpaper = 0;
@@ -756,6 +759,9 @@ void cleanup(void) {
     drw_cur_free(drw, cursor[i]);
   for (i = 0; i < LENGTH(colors) + 1; i++)
     free(scheme[i]);
+  if (fifofd >= 0)
+    close(fifofd);
+  unlink(fifopath);
   free(scheme);
   XDestroyWindow(dpy, wmcheckwin);
   drw_free(drw);
@@ -1951,6 +1957,72 @@ void restack(Monitor *m) {
     ;
 }
 
+typedef struct {
+  const char *cmd;
+  void (*func)(const Arg *);
+  int argtype; /* 0 = none, 1 = int, 2 = uint, 3 = float */
+} FifoCmd;
+
+static void fifoviewtag(const Arg *arg);
+static void fifotagtag(const Arg *arg);
+
+static FifoCmd fifocmds[] = {
+    /* cmd               function           argtype */
+    {"view", fifoviewtag, 1},
+    {"tag", fifotagtag, 1},
+    {"togglebar", togglebar, 0},
+    {"killclient", killclient, 0},
+    {"zoom", zoom, 0},
+    {"setmfact", setmfact, 3},
+    {"nextwallpaper", nextwallpaper, 0},
+    {"quit", quit, 0},
+};
+
+void fifoviewtag(const Arg *arg) { view(&((Arg){.ui = 1u << arg->i})); }
+void fifotagtag(const Arg *arg) { tag(&((Arg){.ui = 1u << arg->i})); }
+
+void readfifo(void) {
+  static char buf[256];
+  static size_t buflen = 0;
+  ssize_t n;
+  char *nl;
+  Arg arg;
+  unsigned int i;
+
+  n = read(fifofd, buf + buflen, sizeof(buf) - buflen - 1);
+  if (n <= 0)
+    return;
+  buflen += n;
+  buf[buflen] = '\0';
+
+  while ((nl = strchr(buf, '\n'))) {
+    *nl = '\0';
+    char cmd[64], param[64];
+    int items = sscanf(buf, "%63s %63s", cmd, param);
+
+    for (i = 0; i < LENGTH(fifocmds); i++) {
+      if (strcmp(cmd, fifocmds[i].cmd) != 0)
+        continue;
+      arg = (Arg){0};
+      if (fifocmds[i].argtype == 1 && items == 2)
+        arg.i = atoi(param);
+      else if (fifocmds[i].argtype == 2 && items == 2)
+        arg.ui = (unsigned int)atoi(param);
+      else if (fifocmds[i].argtype == 3 && items == 2)
+        arg.f = atof(param);
+      fifocmds[i].func(&arg);
+      break;
+    }
+    if (i == LENGTH(fifocmds))
+      fprintf(stderr, "dwm: unknown fifo command '%s'\n", cmd);
+
+    /* shift remaining buffer down past this line */
+    size_t consumed = (nl - buf) + 1;
+    memmove(buf, nl + 1, buflen - consumed + 1);
+    buflen -= consumed;
+  }
+}
+
 void run(void) {
   XEvent ev;
   XSync(dpy, False);
@@ -1959,12 +2031,14 @@ void run(void) {
       wallpaperupdate = 0;
       setrandomwallpaper();
     }
+    if (fifofd >= 0)
+      readfifo();
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       if (handler[ev.type])
         handler[ev.type](&ev);
     } else {
-      struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000}; /* 10ms */
+      struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
       nanosleep(&ts, NULL);
     }
   }
@@ -2118,6 +2192,21 @@ void setmfact(const Arg *arg) {
     return;
   selmon->mfact = selmon->pertag->mfacts[selmon->pertag->curtag] = f;
   arrange(selmon);
+}
+
+void setupfifo(void) {
+  struct stat st;
+  if (stat(fifopath, &st) != 0) {
+    if (mkfifo(fifopath, 0600) != 0) {
+      fprintf(stderr, "dwm: could not create fifo %s\n", fifopath);
+      return;
+    }
+  }
+  /* O_RDWR (not O_RDONLY) so we never block waiting for a writer,
+   * and never get POLLHUP'd when the last writer closes */
+  fifofd = open(fifopath, O_RDWR | O_NONBLOCK);
+  if (fifofd < 0)
+    fprintf(stderr, "dwm: could not open fifo %s\n", fifopath);
 }
 
 void setup(void) {
@@ -3150,6 +3239,7 @@ int main(int argc, char *argv[]) {
   checkotherwm();
   autostart_exec();
   setup();
+  setupfifo();
 #ifdef __OpenBSD__
   if (pledge("stdio rpath proc exec ps", NULL) == -1)
     die("pledge");

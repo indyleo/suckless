@@ -10,6 +10,7 @@ static const int showbar = 1; /* 0 means no bar */
 static const int topbar = 1;  /* 0 means bottom bar */
 static const char *wallpaperdir = "~/Pictures/Wallpapers/gruvbox";
 static const int wallpaperinterval = 900; /* seconds, 0 to disable timer */
+static const char *fifopath = "/tmp/dwm.fifo";
 static const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
