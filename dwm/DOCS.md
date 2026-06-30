@@ -220,6 +220,4 @@ Patches in `patches/` were merged by hand into `dwm.c`/`config.h` rather
 than applied with `patch(1)` against a clean tree, since several interact
 (e.g. `pertag` + `uselessgap` + `attachbelow` all touch `arrange()`/`attach()`).
 If you add a new upstream patch, expect to merge it manually against the
-current `dwm.c` rather than apply it blind — diff against `dwm.c.orig` /
-`config.def.h.orig` if you need to see what stock dwm looked like before
-any patches were applied.
+current `dwm.c` rather than automaticly apply the patch.
