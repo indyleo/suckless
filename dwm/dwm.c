@@ -293,6 +293,8 @@ static void nextwallpaper(const Arg *arg);
 static void *wallpaperworker(void *arg);
 static void rebuildrootwallpaper(void);
 static void applywallpaperresult(WallpaperResult *res);
+static void dispatchwallpaperjobs(Monitor **list, const char **paths, int n);
+static void refreshdamagedwallpapers(void);
 static Pixmap wallpapercache_lookup(const char *path, int w, int h);
 static void wallpapercache_store(const char *path, int w, int h, Pixmap pm);
 static void wallpapercache_evict_lru(void);
@@ -385,6 +387,8 @@ static int fifofd = -1;
 static int rrbase = -1;
 static Pixmap currentwallpaper[32] = {0};
 static char lastwallpaper[32][2048] = {{0}};
+static int wprenderw[32] = {0};
+static int wprenderh[32] = {0};
 static pthread_mutex_t wplock = PTHREAD_MUTEX_INITIALIZER;
 static WallpaperResult *wpqueue = NULL;
 static volatile int wallpaperready = 0;
@@ -884,6 +888,7 @@ void applygeomchange(void) {
         resizeclient(c, m->mx, m->my, m->mw, m->mh);
     XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
   }
+  refreshdamagedwallpapers();
   focus(NULL);
   arrange(NULL);
 }
@@ -2582,6 +2587,8 @@ static void applywallpaperresult(WallpaperResult *res) {
    */
   wallpapercache_store(res->path, res->w, res->h, pm);
   currentwallpaper[m->num] = pm;
+  wprenderw[m->num] = res->w;
+  wprenderh[m->num] = res->h;
 
   GC gc2 = XCreateGC(dpy, root, 0, NULL);
   XCopyArea(dpy, pm, root, gc2, 0, 0, res->w, res->h, m->mx, m->my);
@@ -2589,6 +2596,161 @@ static void applywallpaperresult(WallpaperResult *res) {
   XSync(dpy, False);
 
   rebuildrootwallpaper();
+}
+
+/* Shared dispatcher: given a list of monitors and the wallpaper file each
+ * should show, serve cache hits immediately and spawn one worker thread for
+ * whatever's left. Used by both setrandomwallpaper() (new random pick per
+ * monitor) and refreshdamagedwallpapers() (re-render the *same* image at a
+ * new resolution after a hotplug/resize). */
+static void dispatchwallpaperjobs(Monitor **list, const char **paths, int n) {
+  if (n == 0)
+    return;
+
+  if (wpthreadrunning) {
+    fprintf(stderr, "dwm: wallpaper change already in progress, skipping\n");
+    return;
+  }
+
+  WallpaperJobSpec *jobs = ecalloc(n + 1, sizeof(WallpaperJobSpec));
+  int idx = 0;
+  int cachehits = 0;
+
+  for (int i = 0; i < n; i++) {
+    Monitor *m = list[i];
+    Pixmap cached = wallpapercache_lookup(paths[i], m->mw, m->mh);
+    if (cached != None) {
+      /* already rendered at this exact resolution — skip the worker entirely */
+      currentwallpaper[m->num] = cached;
+      wprenderw[m->num] = m->mw;
+      wprenderh[m->num] = m->mh;
+      GC gc = XCreateGC(dpy, root, 0, NULL);
+      XCopyArea(dpy, cached, root, gc, 0, 0, m->mw, m->mh, m->mx, m->my);
+      XFreeGC(dpy, gc);
+      cachehits++;
+      continue;
+    }
+
+    snprintf(jobs[idx].path, sizeof(jobs[idx].path), "%s", paths[i]);
+    jobs[idx].num = m->num;
+    jobs[idx].mx = m->mx;
+    jobs[idx].my = m->my;
+    jobs[idx].mw = m->mw;
+    jobs[idx].mh = m->mh;
+    idx++;
+  }
+  jobs[idx].num = -1; /* sentinel */
+
+  if (cachehits > 0) {
+    XSync(dpy, False);
+    rebuildrootwallpaper();
+  }
+
+  if (idx == 0) {
+    /* every monitor was served from cache — nothing left for the worker */
+    free(jobs);
+    return;
+  }
+
+  wpthreadrunning = 1;
+  pthread_t t;
+  if (pthread_create(&t, NULL, wallpaperworker, jobs) != 0) {
+    fprintf(stderr, "dwm: failed to spawn wallpaper thread\n");
+    wpthreadrunning = 0;
+    free(jobs);
+    return;
+  }
+  pthread_detach(t);
+}
+
+/* Damage-aware refresh: called after monitor geometry changes (hotplug,
+ * resolution change). Re-renders the *current* wallpaper image for any
+ * monitor whose resolution doesn't match what's actually cached/displayed
+ * — new monitors (never rendered) and monitors whose resolution changed.
+ * Monitors that are unaffected are left completely untouched: no cache
+ * lookup, no X calls, no thread spawn. */
+static void refreshdamagedwallpapers(void) {
+  char fulldir[1024];
+  const char *dir = wallpaperdir;
+  if (dir[0] == '~') {
+    const char *home = getenv("HOME");
+    if (!home)
+      return;
+    snprintf(fulldir, sizeof(fulldir), "%s%s", home, dir + 1);
+    dir = fulldir;
+  }
+
+  int nmon = 0;
+  for (Monitor *m = mons; m; m = m->next)
+    nmon++;
+  if (nmon == 0)
+    return;
+
+  Monitor **list = ecalloc(nmon, sizeof(Monitor *));
+  char **paths = ecalloc(nmon, sizeof(char *));
+  int n = 0;
+
+  for (Monitor *m = mons; m; m = m->next) {
+    int damaged = (currentwallpaper[m->num] == None) ||
+                  (wprenderw[m->num] != m->mw) || (wprenderh[m->num] != m->mh);
+    if (!damaged)
+      continue;
+
+    char *path = ecalloc(1, 2048);
+    if (lastwallpaper[m->num][0] != '\0') {
+      /* re-render the same image this monitor was already showing */
+      snprintf(path, 2048, "%s/%s", dir, lastwallpaper[m->num]);
+    } else {
+      /* brand-new monitor with no prior wallpaper — nothing to re-render,
+       * fall back to a fresh random pick for this monitor only */
+      DIR *d = opendir(dir);
+      if (!d) {
+        free(path);
+        continue;
+      }
+      char *files[1024];
+      int count = 0;
+      struct dirent *entry;
+      while ((entry = readdir(d)) != NULL && count < 1024) {
+        if (entry->d_name[0] == '.')
+          continue;
+        const char *ext = strrchr(entry->d_name, '.');
+        if (!ext)
+          continue;
+        if (strcasecmp(ext, ".jpg") && strcasecmp(ext, ".jpeg") &&
+            strcasecmp(ext, ".png") && strcasecmp(ext, ".bmp") &&
+            strcasecmp(ext, ".webp"))
+          continue;
+        files[count++] = strdup(entry->d_name);
+      }
+      closedir(d);
+      if (count == 0) {
+        free(path);
+        for (int i = 0; i < count; i++)
+          free(files[i]);
+        continue;
+      }
+      srand(time(NULL) ^ (unsigned)m->num);
+      int pick = rand() % count;
+      snprintf(path, 2048, "%s/%s", dir, files[pick]);
+      snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
+               files[pick]);
+      for (int i = 0; i < count; i++)
+        free(files[i]);
+    }
+
+    list[n] = m;
+    paths[n] = path;
+    n++;
+  }
+
+  if (n > 0)
+    dispatchwallpaperjobs(list, (const char **)paths, n);
+
+  for (int i = 0; i < n; i++)
+    free(paths[i]);
+  free(list);
+  free(paths);
 }
 
 static void setrandomwallpaper(void) {
@@ -2636,11 +2798,12 @@ static void setrandomwallpaper(void) {
   int nmon = 0;
   for (Monitor *m = mons; m; m = m->next)
     nmon++;
-  WallpaperJobSpec *jobs = ecalloc(nmon + 1, sizeof(WallpaperJobSpec));
+
+  Monitor **list = ecalloc(nmon, sizeof(Monitor *));
+  char **paths = ecalloc(nmon, sizeof(char *));
+  int n = 0;
 
   srand(time(NULL));
-  int idx = 0;
-  int cachehits = 0;
   for (Monitor *m = mons; m; m = m->next) {
     int pick;
     if (count == 1)
@@ -2650,55 +2813,25 @@ static void setrandomwallpaper(void) {
         pick = rand() % count;
       } while (strcmp(files[pick], lastwallpaper[m->num]) == 0);
 
-    char fullpath[2048];
-    snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, files[pick]);
+    char *path = ecalloc(1, 2048);
+    snprintf(path, 2048, "%s/%s", dir, files[pick]);
     snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
              files[pick]);
 
-    Pixmap cached = wallpapercache_lookup(fullpath, m->mw, m->mh);
-    if (cached != None) {
-      /* already rendered at this exact resolution — skip the worker entirely */
-      currentwallpaper[m->num] = cached;
-      GC gc = XCreateGC(dpy, root, 0, NULL);
-      XCopyArea(dpy, cached, root, gc, 0, 0, m->mw, m->mh, m->mx, m->my);
-      XFreeGC(dpy, gc);
-      cachehits++;
-      continue;
-    }
-
-    snprintf(jobs[idx].path, sizeof(jobs[idx].path), "%s", fullpath);
-    jobs[idx].num = m->num;
-    jobs[idx].mx = m->mx;
-    jobs[idx].my = m->my;
-    jobs[idx].mw = m->mw;
-    jobs[idx].mh = m->mh;
-    idx++;
+    list[n] = m;
+    paths[n] = path;
+    n++;
   }
-  jobs[idx].num = -1; /* sentinel */
 
   for (int i = 0; i < count; i++)
     free(files[i]);
 
-  if (cachehits > 0) {
-    XSync(dpy, False);
-    rebuildrootwallpaper();
-  }
+  dispatchwallpaperjobs(list, (const char **)paths, n);
 
-  if (idx == 0) {
-    /* every monitor was served from cache — nothing left for the worker */
-    free(jobs);
-    return;
-  }
-
-  wpthreadrunning = 1;
-  pthread_t t;
-  if (pthread_create(&t, NULL, wallpaperworker, jobs) != 0) {
-    fprintf(stderr, "dwm: failed to spawn wallpaper thread\n");
-    wpthreadrunning = 0;
-    free(jobs);
-    return;
-  }
-  pthread_detach(t);
+  for (int i = 0; i < n; i++)
+    free(paths[i]);
+  free(list);
+  free(paths);
 }
 
 static void nextwallpaper(const Arg *arg) {
