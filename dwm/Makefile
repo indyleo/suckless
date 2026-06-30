@@ -6,50 +6,69 @@ include config.mk
 SRC = drw.c dwm.c util.c
 OBJ = ${SRC:.c=.o}
 
+VERBOSE := 0
+PRINTF := @printf "%-8s %s\n"
+ifeq ($(VERBOSE), 0)
+	Q := @
+endif
+
 all: dwm
+	@size=$$(du -h dwm 2>/dev/null | cut -f1); \
+	printf "%-8s dwm (%s)\n" "DONE" "$$size"
 
 .c.o:
-	${CC} -c ${CFLAGS} $<
+	$(PRINTF) "CC" $@
+	$Q${CC} -c ${CFLAGS} -o $@ $<
 
 ${OBJ}: config.h config.mk
 
 config.h:
-	cp -fv config.def.h $@
+	$(PRINTF) "GEN" $@
+	$Qcp config.def.h $@
 
 dwm: ${OBJ}
-	${CC} -o $@ ${OBJ} ${LDFLAGS}
+	$(PRINTF) "LD" $@
+	$Q${CC} -o $@ ${OBJ} ${LDFLAGS}
 
 clean:
-	rm -fv dwm ${OBJ} dwm-${VERSION}.tar.gz
+	$(PRINTF) "CLEAN" "binary + objects"
+	$Qrm -f dwm ${OBJ} dwm-${VERSION}.tar.gz
 
 dist: clean
-	mkdir -pv dwm-${VERSION}
-	cp -Rv LICENSE Makefile README config.def.h config.mk\
+	$(PRINTF) "DIST" dwm-${VERSION}.tar.gz
+	$Qmkdir -p dwm-${VERSION}
+	$Qcp -R LICENSE Makefile README config.def.h config.mk\
 		dwm.1 drw.h util.h ${SRC} dwm.png transient.c dwm-${VERSION}
-	tar -cfv dwm-${VERSION}.tar dwm-${VERSION}
-	gzip dwm-${VERSION}.tar
-	rm -rfv dwm-${VERSION}
+	$Qtar -cf dwm-${VERSION}.tar dwm-${VERSION}
+	$Qgzip dwm-${VERSION}.tar
+	$Qrm -rf dwm-${VERSION}
 
 install: all
-	mkdir -pv ${DESTDIR}${PREFIX}/bin
-	cp -fv dwm ${DESTDIR}${PREFIX}/bin
-	chmod 755 ${DESTDIR}${PREFIX}/bin/dwm
-	mkdir -pv ${DESTDIR}${MANPREFIX}/man1
-	sed "s/VERSION/${VERSION}/g" < dwm.1 > ${DESTDIR}${MANPREFIX}/man1/dwm.1
-	chmod 644 ${DESTDIR}${MANPREFIX}/man1/dwm.1
-	mkdir -pv ${DESTDIR}${PREFIX}/bin
-	cp -fv autostart.sh ${DESTDIR}${PREFIX}/bin/autostart.sh
-	chmod 755 ${DESTDIR}${PREFIX}/bin/autostart.sh
-	mkdir -pv ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/
-	cp -fv dwm.png ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png
-	mkdir -pv ${DESTDIR}/usr/share/xsessions/
-	cp -fv dwm.desktop ${DESTDIR}/usr/share/xsessions/dwm.desktop
+	$(PRINTF) "INSTALL" "${DESTDIR}${PREFIX}/bin/dwm"
+	$Qmkdir -p ${DESTDIR}${PREFIX}/bin
+	$Qcp -f dwm ${DESTDIR}${PREFIX}/bin
+	$Qchmod 755 ${DESTDIR}${PREFIX}/bin/dwm
+	$(PRINTF) "MAN" "${DESTDIR}${MANPREFIX}/man1/dwm.1"
+	$Qmkdir -p ${DESTDIR}${MANPREFIX}/man1
+	$Qsed "s/VERSION/${VERSION}/g" < dwm.1 > ${DESTDIR}${MANPREFIX}/man1/dwm.1
+	$Qchmod 644 ${DESTDIR}${MANPREFIX}/man1/dwm.1
+	$(PRINTF) "INSTALL" "${DESTDIR}${PREFIX}/bin/autostart.sh"
+	$Qmkdir -p ${DESTDIR}${PREFIX}/bin
+	$Qcp -f autostart.sh ${DESTDIR}${PREFIX}/bin/autostart.sh
+	$Qchmod 755 ${DESTDIR}${PREFIX}/bin/autostart.sh
+	$(PRINTF) "ICON" "${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png"
+	$Qmkdir -p ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/
+	$Qcp -f dwm.png ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png
+	$(PRINTF) "DESKTOP" "${DESTDIR}/usr/share/xsessions/dwm.desktop"
+	$Qmkdir -p ${DESTDIR}/usr/share/xsessions/
+	$Qcp -f dwm.desktop ${DESTDIR}/usr/share/xsessions/dwm.desktop
 
 uninstall:
-	rm -fv ${DESTDIR}${PREFIX}/bin/dwm \
-	${DESTDIR}${PREFIX}/bin/autostart.sh \
-  ${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png \
-  ${DESTDIR}/usr/share/xsessions/dwm.desktop \
-	${DESTDIR}${MANPREFIX}/man1/dwm.1
+	$(PRINTF) "RM" "dwm + autostart.sh + icon + desktop entry + man page"
+	$Qrm -f ${DESTDIR}${PREFIX}/bin/dwm \
+		${DESTDIR}${PREFIX}/bin/autostart.sh \
+		${DESTDIR}/usr/share/icons/hicolor/48x48/apps/dwm.png \
+		${DESTDIR}/usr/share/xsessions/dwm.desktop \
+		${DESTDIR}${MANPREFIX}/man1/dwm.1
 
 .PHONY: all clean dist install uninstall

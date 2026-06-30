@@ -1,3 +1,4 @@
+
 .POSIX:
 
 BIN := dwmblocks
@@ -32,6 +33,7 @@ ifeq ($(DEBUG), 1)
 endif
 
 all: $(BUILD_DIR)/$(BIN)
+	$Q$(MAKE) --no-print-directory summary
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c config.h
 	$Qmkdir -p $(@D)
@@ -42,16 +44,20 @@ $(BUILD_DIR)/$(BIN): $(OBJS)
 	$(PRINTF) "LD" $@
 	$Q$(LINK.o) $^ $(LDLIBS) -o $@
 
+summary:
+	$Qsize=$$(du -h $(BUILD_DIR)/$(BIN) 2>/dev/null | cut -f1); \
+	printf "%-8s %s built (%s)\n" "DONE" "$(BIN)" "$$size"
+
 clean:
 	$(PRINTF) "CLEAN" $(BUILD_DIR)
-	$Q$(RM) $(BUILD_DIR)/*
+	$Q$(RM) -r $(BUILD_DIR)
 
-install: $(BUILD_DIR)/$(BIN)
+install: all
 	$(PRINTF) "INSTALL" $(INSTALL_DIR)/$(BIN)
-	$Qinstall -D -m 755 $< $(INSTALL_DIR)/$(BIN)
+	$Qinstall -D -m 755 $(BUILD_DIR)/$(BIN) $(INSTALL_DIR)/$(BIN)
 
 uninstall:
 	$(PRINTF) "RM" $(INSTALL_DIR)/$(BIN)
 	$Q$(RM) $(INSTALL_DIR)/$(BIN)
 
-.PHONY: all clean install uninstall
+.PHONY: all clean install uninstall summary
