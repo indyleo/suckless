@@ -159,8 +159,6 @@ static const Key keys[] = {
     {MODKEY | ALTKEY | SHIFTKEY, XK_m, setlayout, {.v = &layouts[2]}},
     {MODKEY | SHIFTKEY, XK_f, fullscreen, {0}},
     {MODKEY | SHIFTKEY, XK_space, togglefloating, {0}},
-    {MODKEY, XK_0, view, {.ui = ~0}},
-    {MODKEY | SHIFTKEY, XK_0, tag, {.ui = ~0}},
     {MODKEY, XK_comma, focusmon, {.i = -1}},
     {MODKEY, XK_period, focusmon, {.i = +1}},
     {MODKEY | SHIFTKEY, XK_comma, tagmon, {.i = -1}},
