@@ -203,9 +203,18 @@ typedef struct {
 
 typedef struct WallpaperResult {
   int monnum, w, h;
+  char path[2048];
   uint32_t *data; /* raw ARGB pixel buffer, mallocd by worker */
   struct WallpaperResult *next;
 } WallpaperResult;
+
+typedef struct WallpaperCacheEntry {
+  char path[2048];
+  int w, h;
+  Pixmap pm;
+  unsigned long lastused;
+  struct WallpaperCacheEntry *next;
+} WallpaperCacheEntry;
 
 /* function declarations */
 static void applyrules(Client *c);
@@ -284,6 +293,10 @@ static void nextwallpaper(const Arg *arg);
 static void *wallpaperworker(void *arg);
 static void rebuildrootwallpaper(void);
 static void applywallpaperresult(WallpaperResult *res);
+static Pixmap wallpapercache_lookup(const char *path, int w, int h);
+static void wallpapercache_store(const char *path, int w, int h, Pixmap pm);
+static void wallpapercache_evict_lru(void);
+static int wallpapercache_ispinned(Pixmap pm);
 static void fifoviewtag(const Arg *arg);
 static void fifotagtag(const Arg *arg);
 static void fifotoggletag(const Arg *arg);
@@ -376,6 +389,10 @@ static pthread_mutex_t wplock = PTHREAD_MUTEX_INITIALIZER;
 static WallpaperResult *wpqueue = NULL;
 static volatile int wallpaperready = 0;
 static volatile int wpthreadrunning = 0;
+#define WALLPAPER_CACHE_MAX 64
+static WallpaperCacheEntry *wpcache = NULL;
+static int wpcachecount = 0;
+static unsigned long wpcacheclock = 0;
 static Pixmap rootwallpaper = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
@@ -1868,17 +1885,10 @@ void resize(Client *c, int x, int y, int w, int h, int interact) {
 
 void resizeclient(Client *c, int x, int y, int w, int h) {
   XWindowChanges wc;
-  unsigned int n;
   unsigned int gapoffset;
   unsigned int gapincr;
-  Client *nbc;
 
   wc.border_width = c->bw;
-
-  /* Get number of clients for the client's monitor */
-  for (n = 0, nbc = nexttiled(c->mon->clients); nbc;
-       nbc = nexttiled(nbc->next), n++)
-    ;
 
   /* Do nothing if layout is floating */
   if (c->isfloating || c->mon->lt[c->mon->sellt]->arrange == NULL) {
@@ -2444,6 +2454,7 @@ static void *wallpaperworker(void *arg) {
     res->data = buf;
     res->w = w;
     res->h = h;
+    snprintf(res->path, sizeof(res->path), "%s", jobs[i].path);
 
     pthread_mutex_lock(&wplock);
     res->next = wpqueue;
@@ -2476,6 +2487,62 @@ static void rebuildrootwallpaper(void) {
   XSetWindowBackgroundPixmap(dpy, root, rootwallpaper);
   XClearWindow(dpy, root);
   XSync(dpy, False);
+}
+
+static Pixmap wallpapercache_lookup(const char *path, int w, int h) {
+  for (WallpaperCacheEntry *e = wpcache; e; e = e->next) {
+    if (e->w == w && e->h == h && strcmp(e->path, path) == 0) {
+      e->lastused = ++wpcacheclock;
+      return e->pm;
+    }
+  }
+  return None;
+}
+
+static int wallpapercache_ispinned(Pixmap pm) {
+  for (Monitor *m = mons; m; m = m->next)
+    if (currentwallpaper[m->num] == pm)
+      return 1;
+  return 0;
+}
+
+static void wallpapercache_evict_lru(void) {
+  WallpaperCacheEntry *victim = NULL, *victimprev = NULL;
+  WallpaperCacheEntry *e, *prev = NULL;
+
+  /* find the least-recently-used entry that isn't a monitor's live wallpaper */
+  for (e = wpcache; e; prev = e, e = e->next) {
+    if (wallpapercache_ispinned(e->pm))
+      continue;
+    if (!victim || e->lastused < victim->lastused) {
+      victim = e;
+      victimprev = prev;
+    }
+  }
+  if (!victim)
+    return; /* every cached pixmap is currently in use; cache may exceed max */
+
+  if (victimprev)
+    victimprev->next = victim->next;
+  else
+    wpcache = victim->next;
+  XFreePixmap(dpy, victim->pm);
+  free(victim);
+  wpcachecount--;
+}
+
+static void wallpapercache_store(const char *path, int w, int h, Pixmap pm) {
+  if (wpcachecount >= WALLPAPER_CACHE_MAX)
+    wallpapercache_evict_lru();
+  WallpaperCacheEntry *e = ecalloc(1, sizeof(WallpaperCacheEntry));
+  snprintf(e->path, sizeof(e->path), "%s", path);
+  e->w = w;
+  e->h = h;
+  e->pm = pm;
+  e->lastused = ++wpcacheclock;
+  e->next = wpcache;
+  wpcache = e;
+  wpcachecount++;
 }
 
 static void applywallpaperresult(WallpaperResult *res) {
@@ -2511,8 +2578,9 @@ static void applywallpaperresult(WallpaperResult *res) {
   free(res->data);
   res->data = NULL;
 
-  if (currentwallpaper[m->num])
-    XFreePixmap(dpy, currentwallpaper[m->num]);
+  /* cache owns the pixmap from here on; only the cache's own eviction frees it
+   */
+  wallpapercache_store(res->path, res->w, res->h, pm);
   currentwallpaper[m->num] = pm;
 
   GC gc2 = XCreateGC(dpy, root, 0, NULL);
@@ -2572,6 +2640,7 @@ static void setrandomwallpaper(void) {
 
   srand(time(NULL));
   int idx = 0;
+  int cachehits = 0;
   for (Monitor *m = mons; m; m = m->next) {
     int pick;
     if (count == 1)
@@ -2581,9 +2650,23 @@ static void setrandomwallpaper(void) {
         pick = rand() % count;
       } while (strcmp(files[pick], lastwallpaper[m->num]) == 0);
 
-    snprintf(jobs[idx].path, sizeof(jobs[idx].path), "%s/%s", dir, files[pick]);
+    char fullpath[2048];
+    snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, files[pick]);
     snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
              files[pick]);
+
+    Pixmap cached = wallpapercache_lookup(fullpath, m->mw, m->mh);
+    if (cached != None) {
+      /* already rendered at this exact resolution — skip the worker entirely */
+      currentwallpaper[m->num] = cached;
+      GC gc = XCreateGC(dpy, root, 0, NULL);
+      XCopyArea(dpy, cached, root, gc, 0, 0, m->mw, m->mh, m->mx, m->my);
+      XFreeGC(dpy, gc);
+      cachehits++;
+      continue;
+    }
+
+    snprintf(jobs[idx].path, sizeof(jobs[idx].path), "%s", fullpath);
     jobs[idx].num = m->num;
     jobs[idx].mx = m->mx;
     jobs[idx].my = m->my;
@@ -2595,6 +2678,17 @@ static void setrandomwallpaper(void) {
 
   for (int i = 0; i < count; i++)
     free(files[i]);
+
+  if (cachehits > 0) {
+    XSync(dpy, False);
+    rebuildrootwallpaper();
+  }
+
+  if (idx == 0) {
+    /* every monitor was served from cache — nothing left for the worker */
+    free(jobs);
+    return;
+  }
 
   wpthreadrunning = 1;
   pthread_t t;
