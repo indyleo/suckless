@@ -57,7 +57,7 @@ itself unless you're also adding a new `Scheme*`.
 ## Tags
 
 ```c
-static const char *tags[] = {"", "", "", "", ""};
+static const char *tags[] = {"󰖟", "󰙯", "", "", "󰨇"};
 ```
 
 Five tags, labeled with Nerd Font glyphs rather than numbers. Keybinds still
@@ -115,10 +115,12 @@ static const int   attachbelow  = 1;     /* 1 = new clients attach after the act
 static const int   lockfullscreen = 1;   /* 1 = fullscreen client keeps focus */
 
 static const Layout layouts[] = {
-    {"", tile},    /* default on startup */
-    {"", NULL},    /* floating */
-    {"", monocle},
+    /* symbol     arrange function */
+    {"", tile}, /* first entry is default */
+    {"", NULL}, /* no layout function means floating behavior */
+    {"󰊓", monocle},
 };
+
 ```
 
 ## Keybindings
