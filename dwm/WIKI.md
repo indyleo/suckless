@@ -129,32 +129,34 @@ All keybinds use `MODKEY` (= Super/Win key) as the primary modifier. Full
 table lives in `keys[]`; grouped highlights below.
 
 **Window/layout control**
-| Key | Action |
-|---|---|
-| `MODKEY+j` / `k` | Focus next/prev visible window |
-| `MODKEY+SHIFT+j` / `k` | Focus next/prev hidden window |
-| `MODKEY+ALT+j` / `k` | Move window down/up in the stack |
-| `MODKEY+h` / `l` | Shrink/grow master area |
-| `MODKEY+SHIFT+=` / `-` | Increase/decrease master count |
-| `MODKEY+SHIFT+z` | Zoom (swap with master) |
+
+| Key                      | Action                                |
+| ------------------------ | ------------------------------------- |
+| `MODKEY+j` / `k`         | Focus next/prev visible window        |
+| `MODKEY+SHIFT+j` / `k`   | Focus next/prev hidden window         |
+| `MODKEY+ALT+j` / `k`     | Move window down/up in the stack      |
+| `MODKEY+h` / `l`         | Shrink/grow master area               |
+| `MODKEY+SHIFT+=` / `-`   | Increase/decrease master count        |
+| `MODKEY+SHIFT+z`         | Zoom (swap with master)               |
 | `MODKEY+ALT+SHIFT+t/f/m` | Set layout: tile / floating / monocle |
-| `MODKEY+SHIFT+f` | Toggle fullscreen |
-| `MODKEY+SHIFT+space` | Toggle floating |
-| `MODKEY+=` / `-` | Show / hide focused window |
-| `MODKEY+0` / `SHIFT+0` | View / tag all tags |
-| `MODKEY+,` / `.` | Focus prev/next monitor |
-| `MODKEY+SHIFT+,` / `.` | Send window to prev/next monitor |
+| `MODKEY+SHIFT+f`         | Toggle fullscreen                     |
+| `MODKEY+SHIFT+space`     | Toggle floating                       |
+| `MODKEY+=` / `-`         | Show / hide focused window            |
+| `MODKEY+0` / `SHIFT+0`   | View / tag all tags                   |
+| `MODKEY+,` / `.`         | Focus prev/next monitor               |
+| `MODKEY+SHIFT+,` / `.`   | Send window to prev/next monitor      |
 
 **Tags** — `MODKEY+[1-5]` view tag, `+CTRL` toggle-view, `+SHIFT` move
 window to tag, `+CTRL+SHIFT` toggle-tag on window.
 
 **System**
-| Key | Action |
-|---|---|
-| `MODKEY+SHIFT+q` | Quit dwm |
+
+| Key              | Action                                   |
+| ---------------- | ---------------------------------------- |
+| `MODKEY+SHIFT+q` | Quit dwm                                 |
 | `MODKEY+SHIFT+r` | Restart dwm (re-exec, preserves session) |
-| `MODKEY+q` | Kill focused client |
-| `MODKEY+SHIFT+w` | Next wallpaper |
+| `MODKEY+q`       | Kill focused client                      |
+| `MODKEY+SHIFT+w` | Next wallpaper                           |
 
 **Apps/launchers** — `MODKEY+Return` (terminal), `+f` (file manager),
 `+b` (browser), `+r` (dmenu), plus dedicated launchers for emoji picker,
@@ -166,8 +168,17 @@ than calling apps directly.
 sends them; `MODKEY+ALT`/`MODKEY+SHIFT` combos are provided as a fallback
 for keyboards without media keys.
 
-**Screenshots** — `Print` alone, plus `MODKEY`/`SHIFT`/`CTRL`/`ALT+Print`
-for select/screen/full/window/colorpicker variants.
+**Screenshots**
+
+| Key                 | Action                      |
+| ------------------- | --------------------------- |
+| `Print`             | Capture focused monitor     |
+| `MODKEY+Print`      | Capture full (all monitors) |
+| `MODKEY+CTRL+Print` | Capture focused window      |
+
+Saved to `~/Pictures/Screenshots/<timestamp>.png`, copied to clipboard via
+`xclip`, and confirmed via `notify-send`. Region-select isn't ported to
+native code yet — no binding for it currently.
 
 ## Mouse bindings
 
@@ -214,6 +225,7 @@ echo "<command> [arg]" > /tmp/dwm.fifo
 | `togglescratch`    | 0–7              | Toggle scratchpad by index       |
 | `togglebar`        | —                | Show/hide bar                    |
 | `nextwallpaper`    | —                | Load new random wallpaper        |
+| `screenshot`       | 0/1/2            | Capture full/monitor/window      |
 | `quit`             | —                | Quit dwm (`1` = restart)         |
 
 Examples:

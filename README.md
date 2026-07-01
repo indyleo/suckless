@@ -40,6 +40,7 @@ A dynamic window manager for X, enhanced with:
 - 📡 **FIFO-based remote control** (`/tmp/dwm.fifo`)
 - 🖥️🖥️ **Automatic monitor hotplug detection** via RandR
 - 🚀 **Custom autostart process management** (`autostart.sh`)
+- 🖥️ **Inbuilt screenshot tool**
 
 [dwm/README.md](dwm/README.md)
 
@@ -150,4 +151,3 @@ All tools retain their original MIT/X11 licenses from suckless.org. See individu
 ---
 
 _Customized and maintained by indyleo. Inspired by the suckless community's commitment to software that stays out of your way._
-

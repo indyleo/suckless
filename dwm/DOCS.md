@@ -181,6 +181,30 @@ This isn't applied by default since it adds a small (if imperceptible)
 delay to every screen-change event, and most setups don't need it. Only
 add it if you actually observe the lag on your hardware.
 
+## Screenshot capture (custom, not a suckless patch)
+
+Functions: `takescreenshot()`, `screenshotpath()`, `copytoclip()`, `notifyshot()`.
+
+- `takescreenshot()` grabs the root window via
+  `imlib_create_image_from_drawable()`, then crops to a rectangle depending
+  on `arg->i` (`ShotFull` = whole root, `ShotScreen` = `selmon`'s geometry,
+  `ShotWindow` = `selmon->sel`'s geometry) using
+  `imlib_create_cropped_image()`, and saves as PNG via `imlib_save_image()`.
+  All of this reuses the same Imlib2 context calls as the wallpaper engine —
+  no new library dependency.
+- `screenshotpath()` builds `~/Pictures/Screenshots/<timestamp>.png`,
+  creating the directory if missing.
+- Clipboard and notifications are deliberately **not** native. `copytoclip()`
+  and `notifyshot()` each `fork()` + `execlp()` a thin external tool
+  (`xclip`, `notify-send`) rather than dwm implementing ICCCM selection
+  ownership or a D-Bus notification client itself — same reasoning as
+  `spawn()`: dwm launches things, it doesn't become them. `SIGCHLD` is
+  already `SA_NOCLDWAIT` (see `setup()`), so these forked children never
+  need to be waited on.
+- Region-select capture (click-drag rubber band) isn't implemented yet —
+  would follow the `movemouse()`/`resizemouse()` pointer-grab pattern plus
+  live rectangle feedback. Noted here as a known gap, not a bug.
+
 ## FIFO IPC layer (custom)
 
 Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table.

@@ -110,6 +110,7 @@ enum {
   ClkRootWin,
   ClkLast
 }; /* clicks */
+enum { ShotFull, ShotScreen, ShotWindow }; /* screenshot modes */
 
 typedef union {
   int i;
@@ -136,8 +137,8 @@ struct Client {
   int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
   int bw, oldbw;
   unsigned int tags;
-  int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, issteam,
-      isterminal, noswallow;
+  int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen,
+      issteam, isterminal, noswallow;
   pid_t pid;
   Client *next;
   Client *snext;
@@ -306,6 +307,7 @@ static void fifotogglewintag(const Arg *arg);
 static void fifotogglescratch(const Arg *arg);
 static void applygeomchange(void);
 static void rrscreenchangenotify(XEvent *e);
+static void takescreenshot(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void show(const Arg *arg);
@@ -474,7 +476,7 @@ void applyrules(Client *c) {
   instance = ch.res_name ? ch.res_name : broken;
 
   if (strstr(class, "Steam") || strstr(class, "steam_app_"))
-      c->issteam = 1;
+    c->issteam = 1;
 
   for (i = 0; i < LENGTH(rules); i++) {
     r = &rules[i];
@@ -2047,6 +2049,8 @@ static FifoCmd fifocmds[] = {
     {"togglebar", togglebar, 0},
     /* wallpaper */
     {"nextwallpaper", nextwallpaper, 0},
+    /* screenshots */
+    {"screenshot", takescreenshot, 1}, /* screenshot 0=full 1=screen 2=window */
     /* session */
     {"quit", quit, 0}, /* quit 1 = restart  */
 };
@@ -2843,6 +2847,95 @@ static void nextwallpaper(const Arg *arg) {
   fprintf(stderr, "dwm: nextwallpaper called\n");
   setrandomwallpaper();
   fprintf(stderr, "dwm: nextwallpaper done\n");
+}
+
+static void screenshotpath(char *buf, size_t len) {
+  const char *home = getenv("HOME");
+  char dir[1024];
+  struct stat st;
+  time_t t;
+  struct tm tmv;
+  char ts[64];
+
+  snprintf(dir, sizeof dir, "%s/Pictures/Screenshots", home ? home : ".");
+  if (stat(dir, &st) != 0)
+    mkdir(dir, 0755); /* -p not needed, Pictures/ should already exist */
+
+  t = time(NULL);
+  localtime_r(&t, &tmv);
+  strftime(ts, sizeof ts, "%Y-%m-%d_%H-%M-%S", &tmv);
+  snprintf(buf, len, "%s/%s.png", dir, ts);
+}
+
+static void copytoclip(const char *path) {
+  if (fork() == 0) {
+    setsid();
+    execlp("xclip", "xclip", "-selection", "clipboard", "-t", "image/png", "-i",
+           path, NULL);
+    _exit(1);
+  }
+}
+
+static void notifyshot(const char *path) {
+  const char *base = strrchr(path, '/');
+  char msg[2048 + 32];
+
+  snprintf(msg, sizeof msg, "Saved to: %s", base ? base + 1 : path);
+  if (fork() == 0) {
+    setsid();
+    execlp("notify-send", "notify-send", "-i", path, "Screenshot captured", msg,
+           NULL);
+    _exit(1);
+  }
+}
+
+void takescreenshot(const Arg *arg) {
+  Imlib_Image full, out;
+  int x = 0, y = 0, w = sw, h = sh;
+  char path[2048];
+  Client *c;
+
+  switch (arg->i) {
+  case ShotScreen:
+    x = selmon->mx;
+    y = selmon->my;
+    w = selmon->mw;
+    h = selmon->mh;
+    break;
+  case ShotWindow:
+    if (!(c = selmon->sel))
+      return;
+    x = c->x;
+    y = c->y;
+    w = c->w + 2 * c->bw;
+    h = c->h + 2 * c->bw;
+    break;
+  case ShotFull:
+  default:
+    break; /* whole root, all monitors */
+  }
+
+  imlib_context_set_display(dpy);
+  imlib_context_set_visual(DefaultVisual(dpy, screen));
+  imlib_context_set_colormap(DefaultColormap(dpy, screen));
+  imlib_context_set_drawable(root);
+
+  full = imlib_create_image_from_drawable(0, 0, 0, sw, sh, 1);
+  if (!full)
+    return;
+
+  imlib_context_set_image(full);
+  out = imlib_create_cropped_image(x, y, w, h);
+  imlib_free_image(); /* frees 'full', context still points at it */
+
+  screenshotpath(path, sizeof path);
+  imlib_context_set_image(out);
+  imlib_image_set_format("png");
+  imlib_save_image(path);
+  imlib_free_image();
+
+  copytoclip(path);
+  notifyshot(path);
 }
 
 void show(const Arg *arg) {
