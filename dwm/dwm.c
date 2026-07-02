@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details.
  *
  * dynamic window manager is designed like any other X client as well. It is
@@ -57,6 +58,10 @@
 
 #include "drw.h"
 #include "util.h"
+#include "dwm.h"
+#include "ipc.h"
+#include "screenshot.h"
+#include "wallpaper.h"
 
 /* macros */
 #define BUTTONMASK (ButtonPressMask | ButtonReleaseMask)
@@ -67,7 +72,7 @@
 #define INTERSECT(x, y, w, h, m)                                               \
   (MAX(0, MIN((x) + (w), (m)->wx + (m)->ww) - MAX((x), (m)->wx)) *             \
    MAX(0, MIN((y) + (h), (m)->wy + (m)->wh) - MAX((y), (m)->wy)))
-#define ISVISIBLE(C) ((C->tags & C->mon->tagset[C->mon->seltags]))
+/* ISVISIBLE now lives in dwm.h */
 #define HIDDEN(C) ((getstate(C->win) == IconicState))
 #define MOUSEMASK (BUTTONMASK | PointerMotionMask)
 #define WIDTH(X) ((X)->w + 2 * (X)->bw + gappx)
@@ -80,7 +85,7 @@
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel, SchemeHid };       /* color schemes */
+/* SchemeNorm/SchemeSel/SchemeHid (color schemes) now live in dwm.h */
 enum {
   NetSupported,
   NetWMName,
@@ -110,14 +115,8 @@ enum {
   ClkRootWin,
   ClkLast
 }; /* clicks */
-enum { ShotFull, ShotScreen, ShotWindow, ShotSelect }; /* screenshot modes */
-
-typedef union {
-  int i;
-  unsigned int ui;
-  float f;
-  const void *v;
-} Arg;
+/* ShotFull/ShotScreen/ShotWindow/ShotSelect now live in screenshot.h */
+/* Arg now lives in dwm.h */
 
 typedef struct {
   unsigned int click;
@@ -127,25 +126,7 @@ typedef struct {
   const Arg arg;
 } Button;
 
-typedef struct Monitor Monitor;
-typedef struct Client Client;
-struct Client {
-  char name[256];
-  float mina, maxa;
-  int x, y, w, h;
-  int oldx, oldy, oldw, oldh;
-  int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
-  int bw, oldbw;
-  unsigned int tags;
-  int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen,
-      issteam, isterminal, noswallow;
-  pid_t pid;
-  Client *next;
-  Client *snext;
-  Client *swallowing;
-  Monitor *mon;
-  Window win;
-};
+/* Monitor, Client now live in dwm.h */
 
 typedef struct {
   unsigned int mod;
@@ -154,37 +135,8 @@ typedef struct {
   const Arg arg;
 } Key;
 
-typedef struct {
-  const char *symbol;
-  void (*arrange)(Monitor *);
-} Layout;
-
-typedef struct Pertag Pertag;
-struct Monitor {
-  char ltsymbol[16];
-  float mfact;
-  int nmaster;
-  int num;
-  int by;             /* bar geometry */
-  int btw;            /* width of tasks portion of bar */
-  int bt;             /* number of tasks */
-  int mx, my, mw, mh; /* screen size */
-  int wx, wy, ww, wh; /* window area  */
-  unsigned int seltags;
-  unsigned int sellt;
-  unsigned int tagset[2];
-  int showbar;
-  int topbar;
-  int hidsel;
-  Client *clients;
-  Client *sel;
-  Client *stack;
-  Monitor *next;
-  Window barwin;
-  const Layout *lt[2];
-  Pertag *pertag;
-  int stw;
-};
+/* Layout now lives in dwm.h. Pertag is forward-declared there too; its
+ * full definition stays below, after config.h, same as before. */
 
 typedef struct {
   const char *class;
@@ -197,31 +149,14 @@ typedef struct {
   int monitor;
 } Rule;
 
-typedef struct {
-  int num, mx, my, mw, mh;
-  char path[2048];
-} WallpaperJobSpec;
-
-typedef struct WallpaperResult {
-  int monnum, w, h;
-  char path[2048];
-  uint32_t *data; /* raw ARGB pixel buffer, mallocd by worker */
-  struct WallpaperResult *next;
-} WallpaperResult;
-
-typedef struct WallpaperCacheEntry {
-  char path[2048];
-  int w, h;
-  Pixmap pm;
-  unsigned long lastused;
-  struct WallpaperCacheEntry *next;
-} WallpaperCacheEntry;
+/* WallpaperJobSpec/WallpaperCacheEntry are private to wallpaper.c;
+ * WallpaperResult is shared via wallpaper.h. */
 
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h,
                           int interact);
-static void arrange(Monitor *m);
+void arrange(Monitor *m);
 static void arrangemon(Monitor *m);
 static void attach(Client *c);
 static void attachBelow(Client *c);
@@ -247,8 +182,8 @@ static void expose(XEvent *e);
 static void focus(Client *c);
 static void switchcol(const Arg *arg);
 static void focusin(XEvent *e);
-static void focusmon(const Arg *arg);
-static void focusstackvis(const Arg *arg);
+void focusmon(const Arg *arg);
+void focusstackvis(const Arg *arg);
 static void focusstackhid(const Arg *arg);
 static void focusstack(int inc, int vis);
 static Atom getatomprop(Client *c, Atom prop);
@@ -258,11 +193,11 @@ static pid_t getstatusbarpid();
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
-static void hide(const Arg *arg);
+void hide(const Arg *arg);
 static void hidewin(Client *c);
-static void incnmaster(const Arg *arg);
+void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
-static void killclient(const Arg *arg);
+void killclient(const Arg *arg);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
@@ -272,7 +207,7 @@ static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void pop(Client *c);
 static void propertynotify(XEvent *e);
-static void quit(const Arg *arg);
+void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
@@ -286,36 +221,15 @@ static void setclientstate(Client *c, long state);
 static void setclienttagprop(Client *c);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
-static void fullscreen(const Arg *arg);
+void fullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
-static void setmfact(const Arg *arg);
-static void setrandomwallpaper(void);
-static void nextwallpaper(const Arg *arg);
-static void *wallpaperworker(void *arg);
-static void rebuildrootwallpaper(void);
-static void applywallpaperresult(WallpaperResult *res);
-static void dispatchwallpaperjobs(Monitor **list, const char **paths, int n);
-static void refreshdamagedwallpapers(void);
-static Pixmap wallpapercache_lookup(const char *path, int w, int h);
-static void wallpapercache_store(const char *path, int w, int h, Pixmap pm);
-static void wallpapercache_evict_lru(void);
-static int wallpapercache_ispinned(Pixmap pm);
-static void fifoviewtag(const Arg *arg);
-static void fifotagtag(const Arg *arg);
-static void fifotoggletag(const Arg *arg);
-static void fifotogglewintag(const Arg *arg);
-static void fifotogglescratch(const Arg *arg);
+void setmfact(const Arg *arg);
 static void applygeomchange(void);
 static void rrscreenchangenotify(XEvent *e);
-static void takescreenshot(const Arg *arg);
-static void selectregion(int *rx, int *ry, int *rw, int *rh);
-static void pickcolor(const Arg *arg);
-static void copytextclip(const char *text);
-static void notifycolor(const char *hex);
 static void setup(void);
 static void seturgent(Client *c, int urg);
-static void show(const Arg *arg);
-static void showall(const Arg *arg);
+void show(const Arg *arg);
+void showall(const Arg *arg);
 static void showwin(Client *c);
 static void showhide(Client *c);
 static void sighup(int unused);
@@ -324,14 +238,14 @@ static void sigusr1(int unused);
 static void sigalrm(int unused);
 static void sigstatusbar(const Arg *arg);
 static void spawn(const Arg *arg);
-static void tag(const Arg *arg);
-static void tagmon(const Arg *arg);
+void tag(const Arg *arg);
+void tagmon(const Arg *arg);
 static void tile(Monitor *m);
-static void togglebar(const Arg *arg);
-static void togglefloating(const Arg *arg);
-static void togglescratch(const Arg *arg);
-static void toggletag(const Arg *arg);
-static void toggleview(const Arg *arg);
+void togglebar(const Arg *arg);
+void togglefloating(const Arg *arg);
+void togglescratch(const Arg *arg);
+void toggletag(const Arg *arg);
+void toggleview(const Arg *arg);
 static void togglewin(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
@@ -346,13 +260,13 @@ static void updatestatus(void);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
-static void view(const Arg *arg);
+void view(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
-static void zoom(const Arg *arg);
+void zoom(const Arg *arg);
 static void autostart_exec(void);
 
 static pid_t getparentprocess(pid_t p);
@@ -367,9 +281,9 @@ static char stext[1024];
 static int statussig;
 static int statusw;
 static pid_t statuspid = -1;
-static int screen;
-static int sw, sh; /* X display screen geometry width, height */
-static int bh;     /* bar height */
+int screen;
+int sw, sh;    /* X display screen geometry width, height */
+static int bh; /* bar height */
 static int lrpad;  /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
@@ -388,31 +302,20 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [MotionNotify] = motionnotify,
     [PropertyNotify] = propertynotify,
     [UnmapNotify] = unmapnotify};
-static int wallpaperupdate = 0;
-static int fifofd = -1;
+/* wallpaperupdate, wallpaperready, wplock, wpqueue now live in wallpaper.c
+ * (declared extern via wallpaper.h); fifofd now lives in ipc.c (declared
+ * extern via ipc.h). */
 static int rrbase = -1;
-static Pixmap currentwallpaper[32] = {0};
-static char lastwallpaper[32][2048] = {{0}};
-static int wprenderw[32] = {0};
-static int wprenderh[32] = {0};
-static pthread_mutex_t wplock = PTHREAD_MUTEX_INITIALIZER;
-static WallpaperResult *wpqueue = NULL;
-static volatile int wallpaperready = 0;
-static volatile int wpthreadrunning = 0;
-#define WALLPAPER_CACHE_MAX 64
-static WallpaperCacheEntry *wpcache = NULL;
-static int wpcachecount = 0;
-static unsigned long wpcacheclock = 0;
-static Pixmap rootwallpaper = 0;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
 static int running = 1;
 static Cur *cursor[CurLast];
-static Clr **scheme;
-static Display *dpy;
+Clr **scheme;
+Display *dpy;
 static Drw *drw;
-static Monitor *mons, *selmon;
-static Window root, wmcheckwin;
+Monitor *mons, *selmon;
+Window root;
+static Window wmcheckwin;
 
 static xcb_connection_t *xcon;
 
@@ -452,7 +355,7 @@ static void autostart_exec() {
   autostart_pids = malloc(autostart_len * sizeof(pid_t));
   for (p = autostart; *p; i++, p++) {
     if ((autostart_pids[i] = fork()) == 0) {
-      setpgid(0, 0);
+      setsid();
       execvp(*p, (char *const *)p);
       fprintf(stderr, "dwm: execvp %s\n", *p);
       perror(" failed");
@@ -1875,7 +1778,7 @@ void quit(const Arg *arg) {
   /* kill child processes */
   for (i = 0; i < autostart_len; i++) {
     if (0 < autostart_pids[i]) {
-      kill(-autostart_pids[i], SIGTERM);
+      kill(autostart_pids[i], SIGTERM);
       waitpid(autostart_pids[i], NULL, 0);
     }
   }
@@ -2019,101 +1922,6 @@ void restack(Monitor *m) {
     ;
 }
 
-typedef struct {
-  const char *cmd;
-  void (*func)(const Arg *);
-  int argtype; /* 0 = none, 1 = int, 2 = uint, 3 = float */
-} FifoCmd;
-
-static FifoCmd fifocmds[] = {
-    /* cmd                function              argtype */
-    /* tag/view */
-    {"view", fifoviewtag, 1},           /* view 0-4          */
-    {"tag", fifotagtag, 1},             /* tag 0-4           */
-    {"toggleview", fifotoggletag, 1},   /* toggleview 0-4    */
-    {"toggletag", fifotogglewintag, 1}, /* toggletag 0-4     */
-    /* layout */
-    {"setmfact", setmfact, 3},     /* setmfact 0.6      */
-    {"incnmaster", incnmaster, 1}, /* incnmaster 1/-1   */
-    {"zoom", zoom, 0},
-    {"togglefloating", togglefloating, 0},
-    {"togglefullscreen", fullscreen, 0},
-    /* focus / stack */
-    {"focusstackvis", focusstackvis, 1}, /* focusstackvis 1/-1 */
-    {"focusmon", focusmon, 1},           /* focusmon 1/-1     */
-    {"tagmon", tagmon, 1},               /* tagmon 1/-1       */
-    /* window visibility */
-    {"show", show, 0},
-    {"hide", hide, 0},
-    {"showall", showall, 0},
-    {"killclient", killclient, 0},
-    /* scratchpads */
-    {"togglescratch", fifotogglescratch, 1}, /* togglescratch 0-7 */
-    /* bar */
-    {"togglebar", togglebar, 0},
-    /* wallpaper */
-    {"nextwallpaper", nextwallpaper, 0},
-    /* screenshots */
-    {"screenshot", takescreenshot,
-     1}, /* screenshot 0=full 1=screen 2=window 3=select */
-    {"colorpicker", pickcolor, 0}, /* colorpicker */
-    /* session */
-    {"quit", quit, 0}, /* quit 1 = restart  */
-};
-
-/* tag index → bitmask wrappers */
-void fifoviewtag(const Arg *arg) { view(&((Arg){.ui = 1u << arg->i})); }
-void fifotagtag(const Arg *arg) { tag(&((Arg){.ui = 1u << arg->i})); }
-void fifotoggletag(const Arg *arg) { toggleview(&((Arg){.ui = 1u << arg->i})); }
-void fifotogglewintag(const Arg *arg) {
-  toggletag(&((Arg){.ui = 1u << arg->i}));
-}
-/* scratchpad index → ui wrapper */
-void fifotogglescratch(const Arg *arg) {
-  togglescratch(&((Arg){.ui = (unsigned int)arg->i}));
-}
-
-void readfifo(void) {
-  static char buf[256];
-  static size_t buflen = 0;
-  ssize_t n;
-  char *nl;
-  Arg arg;
-  unsigned int i;
-
-  n = read(fifofd, buf + buflen, sizeof(buf) - buflen - 1);
-  if (n <= 0)
-    return;
-  buflen += n;
-  buf[buflen] = '\0';
-
-  while ((nl = strchr(buf, '\n'))) {
-    *nl = '\0';
-    char cmd[64], param[64];
-    int items = sscanf(buf, "%63s %63s", cmd, param);
-
-    for (i = 0; i < LENGTH(fifocmds); i++) {
-      if (strcmp(cmd, fifocmds[i].cmd) != 0)
-        continue;
-      arg = (Arg){0};
-      if (fifocmds[i].argtype == 1 && items == 2)
-        arg.i = atoi(param);
-      else if (fifocmds[i].argtype == 2 && items == 2)
-        arg.ui = (unsigned int)atoi(param);
-      else if (fifocmds[i].argtype == 3 && items == 2)
-        arg.f = atof(param);
-      fifocmds[i].func(&arg);
-      break;
-    }
-    if (i == LENGTH(fifocmds))
-      fprintf(stderr, "dwm: unknown fifo command '%s'\n", cmd);
-
-    /* shift remaining buffer down past this line */
-    size_t consumed = (nl - buf) + 1;
-    memmove(buf, nl + 1, buflen - consumed + 1);
-    buflen -= consumed;
-  }
-}
 
 void run(void) {
   XEvent ev;
@@ -2301,20 +2109,6 @@ void setmfact(const Arg *arg) {
   arrange(selmon);
 }
 
-void setupfifo(void) {
-  struct stat st;
-  if (stat(fifopath, &st) != 0) {
-    if (mkfifo(fifopath, 0600) != 0) {
-      fprintf(stderr, "dwm: could not create fifo %s\n", fifopath);
-      return;
-    }
-  }
-  /* O_RDWR (not O_RDONLY) so we never block waiting for a writer,
-   * and never get POLLHUP'd when the last writer closes */
-  fifofd = open(fifopath, O_RDWR | O_NONBLOCK);
-  if (fifofd < 0)
-    fprintf(stderr, "dwm: could not open fifo %s\n", fifopath);
-}
 
 void setup(void) {
   int i;
@@ -2431,592 +2225,6 @@ void seturgent(Client *c, int urg) {
   XFree(wmh);
 }
 
-static void *wallpaperworker(void *arg) {
-  WallpaperJobSpec *jobs = arg;
-
-  for (int i = 0; jobs[i].num != -1; i++) {
-    imlib_context_set_anti_alias(0);
-    imlib_context_set_dither(0);
-    imlib_context_set_blend(0);
-    imlib_context_set_dither_mask(0);
-
-    Imlib_Image img = imlib_load_image(jobs[i].path);
-    if (!img) {
-      fprintf(stderr, "dwm: failed to load wallpaper: %s\n", jobs[i].path);
-      continue;
-    }
-    imlib_context_set_image(img);
-    Imlib_Image scaled = imlib_create_cropped_scaled_image(
-        0, 0, imlib_image_get_width(), imlib_image_get_height(), jobs[i].mw,
-        jobs[i].mh);
-    imlib_free_image();
-    if (!scaled) {
-      fprintf(stderr, "dwm: failed to scale wallpaper\n");
-      continue;
-    }
-
-    /* copy raw pixels off the imlib image — no X calls in this thread */
-    imlib_context_set_image(scaled);
-    int w = imlib_image_get_width();
-    int h = imlib_image_get_height();
-    DATA32 *src = imlib_image_get_data_for_reading_only();
-    uint32_t *buf = malloc((size_t)w * h * sizeof(uint32_t));
-    if (!buf) {
-      imlib_free_image();
-      fprintf(stderr, "dwm: out of memory for wallpaper buffer\n");
-      continue;
-    }
-    memcpy(buf, src, (size_t)w * h * sizeof(uint32_t));
-    imlib_free_image();
-
-    WallpaperResult *res = ecalloc(1, sizeof(WallpaperResult));
-    res->monnum = jobs[i].num;
-    res->data = buf;
-    res->w = w;
-    res->h = h;
-    snprintf(res->path, sizeof(res->path), "%s", jobs[i].path);
-
-    pthread_mutex_lock(&wplock);
-    res->next = wpqueue;
-    wpqueue = res;
-    wallpaperready = 1;
-    pthread_mutex_unlock(&wplock);
-  }
-
-  free(jobs);
-  wpthreadrunning = 0;
-  return NULL;
-}
-
-static void rebuildrootwallpaper(void) {
-  if (rootwallpaper)
-    XFreePixmap(dpy, rootwallpaper);
-  rootwallpaper = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
-  GC gc = XCreateGC(dpy, root, 0, NULL);
-  for (Monitor *m = mons; m; m = m->next)
-    if (currentwallpaper[m->num])
-      XCopyArea(dpy, currentwallpaper[m->num], rootwallpaper, gc, 0, 0, m->mw,
-                m->mh, m->mx, m->my);
-  XFreeGC(dpy, gc);
-  Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
-  Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
-  XChangeProperty(dpy, root, prop_root, XA_PIXMAP, 32, PropModeReplace,
-                  (unsigned char *)&rootwallpaper, 1);
-  XChangeProperty(dpy, root, prop_esetroot, XA_PIXMAP, 32, PropModeReplace,
-                  (unsigned char *)&rootwallpaper, 1);
-  XSetWindowBackgroundPixmap(dpy, root, rootwallpaper);
-  XClearWindow(dpy, root);
-  XSync(dpy, False);
-}
-
-static Pixmap wallpapercache_lookup(const char *path, int w, int h) {
-  for (WallpaperCacheEntry *e = wpcache; e; e = e->next) {
-    if (e->w == w && e->h == h && strcmp(e->path, path) == 0) {
-      e->lastused = ++wpcacheclock;
-      return e->pm;
-    }
-  }
-  return None;
-}
-
-static int wallpapercache_ispinned(Pixmap pm) {
-  for (Monitor *m = mons; m; m = m->next)
-    if (currentwallpaper[m->num] == pm)
-      return 1;
-  return 0;
-}
-
-static void wallpapercache_evict_lru(void) {
-  WallpaperCacheEntry *victim = NULL, *victimprev = NULL;
-  WallpaperCacheEntry *e, *prev = NULL;
-
-  /* find the least-recently-used entry that isn't a monitor's live wallpaper */
-  for (e = wpcache; e; prev = e, e = e->next) {
-    if (wallpapercache_ispinned(e->pm))
-      continue;
-    if (!victim || e->lastused < victim->lastused) {
-      victim = e;
-      victimprev = prev;
-    }
-  }
-  if (!victim)
-    return; /* every cached pixmap is currently in use; cache may exceed max */
-
-  if (victimprev)
-    victimprev->next = victim->next;
-  else
-    wpcache = victim->next;
-  XFreePixmap(dpy, victim->pm);
-  free(victim);
-  wpcachecount--;
-}
-
-static void wallpapercache_store(const char *path, int w, int h, Pixmap pm) {
-  if (wpcachecount >= WALLPAPER_CACHE_MAX)
-    wallpapercache_evict_lru();
-  WallpaperCacheEntry *e = ecalloc(1, sizeof(WallpaperCacheEntry));
-  snprintf(e->path, sizeof(e->path), "%s", path);
-  e->w = w;
-  e->h = h;
-  e->pm = pm;
-  e->lastused = ++wpcacheclock;
-  e->next = wpcache;
-  wpcache = e;
-  wpcachecount++;
-}
-
-static void applywallpaperresult(WallpaperResult *res) {
-  Monitor *m;
-  for (m = mons; m; m = m->next)
-    if (m->num == res->monnum)
-      break;
-  if (!m) {
-    /* monitor was unplugged while the job was in flight */
-    free(res->data);
-    return;
-  }
-
-  /* build a Pixmap from the raw pixel buffer on the main thread/connection */
-  XImage *xi =
-      XCreateImage(dpy, DefaultVisual(dpy, screen), DefaultDepth(dpy, screen),
-                   ZPixmap, 0, (char *)res->data, res->w, res->h, 32, 0);
-  if (!xi) {
-    free(res->data);
-    fprintf(stderr, "dwm: XCreateImage failed\n");
-    return;
-  }
-
-  Pixmap pm =
-      XCreatePixmap(dpy, root, res->w, res->h, DefaultDepth(dpy, screen));
-  GC gc = XCreateGC(dpy, pm, 0, NULL);
-  XPutImage(dpy, pm, gc, xi, 0, 0, 0, 0, res->w, res->h);
-  XFreeGC(dpy, gc);
-  /* XDestroyImage would free res->data — null it out first since we manage it
-   */
-  xi->data = NULL;
-  XDestroyImage(xi);
-  free(res->data);
-  res->data = NULL;
-
-  /* cache owns the pixmap from here on; only the cache's own eviction frees it
-   */
-  wallpapercache_store(res->path, res->w, res->h, pm);
-  currentwallpaper[m->num] = pm;
-  wprenderw[m->num] = res->w;
-  wprenderh[m->num] = res->h;
-
-  GC gc2 = XCreateGC(dpy, root, 0, NULL);
-  XCopyArea(dpy, pm, root, gc2, 0, 0, res->w, res->h, m->mx, m->my);
-  XFreeGC(dpy, gc2);
-  XSync(dpy, False);
-
-  rebuildrootwallpaper();
-}
-
-/* Shared dispatcher: given a list of monitors and the wallpaper file each
- * should show, serve cache hits immediately and spawn one worker thread for
- * whatever's left. Used by both setrandomwallpaper() (new random pick per
- * monitor) and refreshdamagedwallpapers() (re-render the *same* image at a
- * new resolution after a hotplug/resize). */
-static void dispatchwallpaperjobs(Monitor **list, const char **paths, int n) {
-  if (n == 0)
-    return;
-
-  if (wpthreadrunning) {
-    fprintf(stderr, "dwm: wallpaper change already in progress, skipping\n");
-    return;
-  }
-
-  WallpaperJobSpec *jobs = ecalloc(n + 1, sizeof(WallpaperJobSpec));
-  int idx = 0;
-  int cachehits = 0;
-
-  for (int i = 0; i < n; i++) {
-    Monitor *m = list[i];
-    Pixmap cached = wallpapercache_lookup(paths[i], m->mw, m->mh);
-    if (cached != None) {
-      /* already rendered at this exact resolution — skip the worker entirely */
-      currentwallpaper[m->num] = cached;
-      wprenderw[m->num] = m->mw;
-      wprenderh[m->num] = m->mh;
-      GC gc = XCreateGC(dpy, root, 0, NULL);
-      XCopyArea(dpy, cached, root, gc, 0, 0, m->mw, m->mh, m->mx, m->my);
-      XFreeGC(dpy, gc);
-      cachehits++;
-      continue;
-    }
-
-    snprintf(jobs[idx].path, sizeof(jobs[idx].path), "%s", paths[i]);
-    jobs[idx].num = m->num;
-    jobs[idx].mx = m->mx;
-    jobs[idx].my = m->my;
-    jobs[idx].mw = m->mw;
-    jobs[idx].mh = m->mh;
-    idx++;
-  }
-  jobs[idx].num = -1; /* sentinel */
-
-  if (cachehits > 0) {
-    XSync(dpy, False);
-    rebuildrootwallpaper();
-  }
-
-  if (idx == 0) {
-    /* every monitor was served from cache — nothing left for the worker */
-    free(jobs);
-    return;
-  }
-
-  wpthreadrunning = 1;
-  pthread_t t;
-  if (pthread_create(&t, NULL, wallpaperworker, jobs) != 0) {
-    fprintf(stderr, "dwm: failed to spawn wallpaper thread\n");
-    wpthreadrunning = 0;
-    free(jobs);
-    return;
-  }
-  pthread_detach(t);
-}
-
-/* Damage-aware refresh: called after monitor geometry changes (hotplug,
- * resolution change). Re-renders the *current* wallpaper image for any
- * monitor whose resolution doesn't match what's actually cached/displayed
- * — new monitors (never rendered) and monitors whose resolution changed.
- * Monitors that are unaffected are left completely untouched: no cache
- * lookup, no X calls, no thread spawn. */
-static void refreshdamagedwallpapers(void) {
-  char fulldir[1024];
-  const char *dir = wallpaperdir;
-  if (dir[0] == '~') {
-    const char *home = getenv("HOME");
-    if (!home)
-      return;
-    snprintf(fulldir, sizeof(fulldir), "%s%s", home, dir + 1);
-    dir = fulldir;
-  }
-
-  int nmon = 0;
-  for (Monitor *m = mons; m; m = m->next)
-    nmon++;
-  if (nmon == 0)
-    return;
-
-  Monitor **list = ecalloc(nmon, sizeof(Monitor *));
-  char **paths = ecalloc(nmon, sizeof(char *));
-  int n = 0;
-
-  for (Monitor *m = mons; m; m = m->next) {
-    int damaged = (currentwallpaper[m->num] == None) ||
-                  (wprenderw[m->num] != m->mw) || (wprenderh[m->num] != m->mh);
-    if (!damaged)
-      continue;
-
-    char *path = ecalloc(1, 2048);
-    if (lastwallpaper[m->num][0] != '\0') {
-      /* re-render the same image this monitor was already showing */
-      snprintf(path, 2048, "%s/%s", dir, lastwallpaper[m->num]);
-    } else {
-      /* brand-new monitor with no prior wallpaper — nothing to re-render,
-       * fall back to a fresh random pick for this monitor only */
-      DIR *d = opendir(dir);
-      if (!d) {
-        free(path);
-        continue;
-      }
-      char *files[1024];
-      int count = 0;
-      struct dirent *entry;
-      while ((entry = readdir(d)) != NULL && count < 1024) {
-        if (entry->d_name[0] == '.')
-          continue;
-        const char *ext = strrchr(entry->d_name, '.');
-        if (!ext)
-          continue;
-        if (strcasecmp(ext, ".jpg") && strcasecmp(ext, ".jpeg") &&
-            strcasecmp(ext, ".png") && strcasecmp(ext, ".bmp") &&
-            strcasecmp(ext, ".webp"))
-          continue;
-        files[count++] = strdup(entry->d_name);
-      }
-      closedir(d);
-      if (count == 0) {
-        free(path);
-        for (int i = 0; i < count; i++)
-          free(files[i]);
-        continue;
-      }
-      srand(time(NULL) ^ (unsigned)m->num);
-      int pick = rand() % count;
-      snprintf(path, 2048, "%s/%s", dir, files[pick]);
-      snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
-               files[pick]);
-      for (int i = 0; i < count; i++)
-        free(files[i]);
-    }
-
-    list[n] = m;
-    paths[n] = path;
-    n++;
-  }
-
-  if (n > 0)
-    dispatchwallpaperjobs(list, (const char **)paths, n);
-
-  for (int i = 0; i < n; i++)
-    free(paths[i]);
-  free(list);
-  free(paths);
-}
-
-static void setrandomwallpaper(void) {
-  char fulldir[1024];
-  const char *dir = wallpaperdir;
-  if (dir[0] == '~') {
-    const char *home = getenv("HOME");
-    if (!home)
-      return;
-    snprintf(fulldir, sizeof(fulldir), "%s%s", home, dir + 1);
-    dir = fulldir;
-  }
-
-  if (wpthreadrunning) {
-    fprintf(stderr, "dwm: wallpaper change already in progress, skipping\n");
-    return;
-  }
-
-  DIR *d = opendir(dir);
-  if (!d) {
-    fprintf(stderr, "dwm: cannot open wallpaper dir: %s\n", dir);
-    return;
-  }
-  char *files[1024];
-  int count = 0;
-  struct dirent *entry;
-  while ((entry = readdir(d)) != NULL && count < 1024) {
-    if (entry->d_name[0] == '.')
-      continue;
-    const char *ext = strrchr(entry->d_name, '.');
-    if (!ext)
-      continue;
-    if (strcasecmp(ext, ".jpg") && strcasecmp(ext, ".jpeg") &&
-        strcasecmp(ext, ".png") && strcasecmp(ext, ".bmp") &&
-        strcasecmp(ext, ".webp"))
-      continue;
-    files[count++] = strdup(entry->d_name);
-  }
-  closedir(d);
-  if (count == 0) {
-    fprintf(stderr, "dwm: no images found in %s\n", dir);
-    return;
-  }
-
-  int nmon = 0;
-  for (Monitor *m = mons; m; m = m->next)
-    nmon++;
-
-  Monitor **list = ecalloc(nmon, sizeof(Monitor *));
-  char **paths = ecalloc(nmon, sizeof(char *));
-  int n = 0;
-
-  srand(time(NULL));
-  for (Monitor *m = mons; m; m = m->next) {
-    int pick;
-    if (count == 1)
-      pick = 0;
-    else
-      do {
-        pick = rand() % count;
-      } while (strcmp(files[pick], lastwallpaper[m->num]) == 0);
-
-    char *path = ecalloc(1, 2048);
-    snprintf(path, 2048, "%s/%s", dir, files[pick]);
-    snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
-             files[pick]);
-
-    list[n] = m;
-    paths[n] = path;
-    n++;
-  }
-
-  for (int i = 0; i < count; i++)
-    free(files[i]);
-
-  dispatchwallpaperjobs(list, (const char **)paths, n);
-
-  for (int i = 0; i < n; i++)
-    free(paths[i]);
-  free(list);
-  free(paths);
-}
-
-static void nextwallpaper(const Arg *arg) {
-  fprintf(stderr, "dwm: nextwallpaper called\n");
-  setrandomwallpaper();
-  fprintf(stderr, "dwm: nextwallpaper done\n");
-}
-
-static void screenshotpath(char *buf, size_t len) {
-  const char *home = getenv("HOME");
-  char dir[1024];
-  struct stat st;
-  time_t t;
-  struct tm tmv;
-  char ts[64];
-
-  snprintf(dir, sizeof dir, "%s/Pictures/Screenshots", home ? home : ".");
-  if (stat(dir, &st) != 0)
-    mkdir(dir, 0755); /* -p not needed, Pictures/ should already exist */
-
-  t = time(NULL);
-  localtime_r(&t, &tmv);
-  strftime(ts, sizeof ts, "%Y-%m-%d_%H-%M-%S", &tmv);
-  snprintf(buf, len, "%s/%s.png", dir, ts);
-}
-
-static void copytoclip(const char *path) {
-  if (fork() == 0) {
-    setsid();
-    execlp("xclip", "xclip", "-selection", "clipboard", "-t", "image/png", "-i",
-           path, NULL);
-    _exit(1);
-  }
-}
-
-static void notifyshot(const char *path) {
-  const char *base = strrchr(path, '/');
-  char msg[2048 + 32];
-
-  snprintf(msg, sizeof msg, "Saved to: %s", base ? base + 1 : path);
-  if (fork() == 0) {
-    setsid();
-    execlp("notify-send", "notify-send", "-i", path, "Screenshot captured", msg,
-           NULL);
-    _exit(1);
-  }
-}
-
-void takescreenshot(const Arg *arg) {
-  Imlib_Image full, out;
-  int x = 0, y = 0, w = sw, h = sh;
-  char path[2048];
-  Client *c;
-
-  switch (arg->i) {
-  case ShotSelect: {
-    int rx, ry, rw, rh;
-    selectregion(&rx, &ry, &rw, &rh);
-    if (rw < 2 || rh < 2)
-      return; /* cancelled, or just a click with no drag */
-    x = MAX(0, rx);
-    y = MAX(0, ry);
-    w = MIN(rw, sw - x);
-    h = MIN(rh, sh - y);
-    break;
-  }
-  case ShotScreen:
-    x = selmon->mx;
-    y = selmon->my;
-    w = selmon->mw;
-    h = selmon->mh;
-    break;
-  case ShotWindow:
-    if (!(c = selmon->sel))
-      return;
-    x = c->x;
-    y = c->y;
-    w = c->w + 2 * c->bw;
-    h = c->h + 2 * c->bw;
-    break;
-  case ShotFull:
-  default:
-    break; /* whole root, all monitors */
-  }
-
-  imlib_context_set_display(dpy);
-  imlib_context_set_visual(DefaultVisual(dpy, screen));
-  imlib_context_set_colormap(DefaultColormap(dpy, screen));
-  imlib_context_set_drawable(root);
-
-  full = imlib_create_image_from_drawable(0, 0, 0, sw, sh, 1);
-  if (!full)
-    return;
-
-  imlib_context_set_image(full);
-  out = imlib_create_cropped_image(x, y, w, h);
-  imlib_free_image(); /* frees 'full', context still points at it */
-
-  screenshotpath(path, sizeof path);
-  imlib_context_set_image(out);
-  imlib_image_set_format("png");
-  imlib_save_image(path);
-  imlib_free_image();
-
-  copytoclip(path);
-  notifyshot(path);
-}
-
-static void copytextclip(const char *text) {
-  int fd[2];
-
-  if (pipe(fd) < 0)
-    return;
-  if (fork() == 0) {
-    setsid();
-    dup2(fd[0], STDIN_FILENO);
-    close(fd[0]);
-    close(fd[1]);
-    execlp("xclip", "xclip", "-selection", "clipboard", NULL);
-    _exit(1);
-  }
-  close(fd[0]);
-  write(fd[1], text, strlen(text));
-  close(fd[1]);
-}
-
-static void notifycolor(const char *hex) {
-  if (fork() == 0) {
-    setsid();
-    execlp("notify-send", "notify-send", "Color Picked", hex, NULL);
-    _exit(1);
-  }
-}
-
-void pickcolor(const Arg *arg) {
-  Cursor cur;
-  XEvent ev;
-  XImage *img;
-  XColor color;
-  int x, y;
-  char hex[8];
-
-  cur = XCreateFontCursor(dpy, XC_crosshair);
-  if (XGrabPointer(dpy, root, False, ButtonPressMask, GrabModeAsync,
-                   GrabModeAsync, root, cur, CurrentTime) != GrabSuccess) {
-    XFreeCursor(dpy, cur);
-    return;
-  }
-
-  do {
-    XMaskEvent(dpy, ButtonPressMask, &ev);
-  } while (ev.type != ButtonPress);
-  x = ev.xbutton.x_root;
-  y = ev.xbutton.y_root;
-
-  XUngrabPointer(dpy, CurrentTime);
-  XFreeCursor(dpy, cur);
-
-  if (!(img = XGetImage(dpy, root, x, y, 1, 1, AllPlanes, ZPixmap)))
-    return;
-  color.pixel = XGetPixel(img, 0, 0);
-  XDestroyImage(img);
-  XQueryColor(dpy, DefaultColormap(dpy, screen), &color);
-
-  snprintf(hex, sizeof hex, "#%02X%02X%02X", color.red >> 8, color.green >> 8,
-           color.blue >> 8);
-
-  copytextclip(hex);
-  notifycolor(hex);
-}
 
 void show(const Arg *arg) {
   if (selmon->hidsel)
@@ -3068,75 +2276,6 @@ void showhide(Client *c) {
     showhide(c->snext);
     XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
   }
-}
-
-void selectregion(int *rx, int *ry, int *rw, int *rh) {
-  XEvent ev;
-  Cursor cur;
-  Window borders[4]; /* top, bottom, left, right */
-  XSetWindowAttributes swa;
-  int i, startx, starty, curx, cury, ox, oy, ow, oh;
-
-  *rw = 0;
-  cur = XCreateFontCursor(dpy, XC_crosshair);
-  if (XGrabPointer(dpy, root, False,
-                   ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-                   GrabModeAsync, GrabModeAsync, root, cur,
-                   CurrentTime) != GrabSuccess) {
-    XFreeCursor(dpy, cur);
-    return;
-  }
-
-  swa.override_redirect = True;
-  swa.background_pixel = scheme[SchemeSel][ColBorder].pixel;
-  swa.save_under = True;
-  for (i = 0; i < 4; i++) {
-    borders[i] =
-        XCreateWindow(dpy, root, -10, -10, 1, 1, 0, DefaultDepth(dpy, screen),
-                      CopyFromParent, DefaultVisual(dpy, screen),
-                      CWOverrideRedirect | CWBackPixel | CWSaveUnder, &swa);
-    XMapRaised(dpy, borders[i]);
-  }
-
-  do {
-    XMaskEvent(dpy, ButtonPressMask, &ev);
-  } while (ev.type != ButtonPress);
-  startx = curx = ev.xbutton.x_root;
-  starty = cury = ev.xbutton.y_root;
-
-  for (;;) {
-    XMaskEvent(dpy, PointerMotionMask | ButtonReleaseMask, &ev);
-    curx = (ev.type == MotionNotify) ? ev.xmotion.x_root : ev.xbutton.x_root;
-    cury = (ev.type == MotionNotify) ? ev.xmotion.y_root : ev.xbutton.y_root;
-
-    ox = MIN(startx, curx);
-    oy = MIN(starty, cury);
-    ow = MAX(abs(curx - startx), 1);
-    oh = MAX(abs(cury - starty), 1);
-
-    XMoveResizeWindow(dpy, borders[0], ox, oy, ow, 2); /* top */
-    XMoveResizeWindow(dpy, borders[1], ox, oy + MAX(oh - 2, 0), ow,
-                      2);                              /* bottom */
-    XMoveResizeWindow(dpy, borders[2], ox, oy, 2, oh); /* left */
-    XMoveResizeWindow(dpy, borders[3], ox + MAX(ow - 2, 0), oy, 2,
-                      oh); /* right */
-
-    if (ev.type == ButtonRelease)
-      break;
-  }
-
-  for (i = 0; i < 4; i++)
-    XDestroyWindow(dpy, borders[i]);
-
-  XUngrabPointer(dpy, CurrentTime);
-  XFreeCursor(dpy, cur);
-  XSync(dpy, False); /* let the destroys + resulting Expose repaints land before
-                        we grab pixels */
-
-  *rx = MIN(startx, curx);
-  *ry = MIN(starty, cury);
-  *rw = abs(curx - startx);
-  *rh = abs(cury - starty);
 }
 
 void sighup(int unused) {

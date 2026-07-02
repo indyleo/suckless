@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
@@ -8,9 +9,9 @@ static const int swallowfloating =
     0;                        /* 1 means swallow floating windows by default */
 static const int showbar = 1; /* 0 means no bar */
 static const int topbar = 1;  /* 0 means bottom bar */
-static const char *wallpaperdir = "~/Pictures/Wallpapers/gruvbox";
+const char *wallpaperdir = "~/Pictures/Wallpapers/gruvbox";
 static const int wallpaperinterval = 900; /* seconds, 0 to disable timer */
-static const char *fifopath = "/tmp/dwm.fifo";
+const char *fifopath = "/tmp/dwm.fifo";
 static const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
@@ -111,7 +112,7 @@ static const Layout layouts[] = {
 };
 
 /* key definitions */
-#include "movestack.c"
+#include "movestack.h"
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define ALTKEY Mod1Mask

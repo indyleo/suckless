@@ -1,3 +1,4 @@
+
 # DOCS — Code Layout & Internals
 
 This document describes how the source is organized, for anyone (including
@@ -6,18 +7,51 @@ future-you) editing `dwm.c` directly. Configuration values live in
 
 ## File overview
 
-| File                | Purpose                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------- |
-| `dwm.c`             | Everything: event loop, layouts, client management, wallpaper engine, FIFO IPC           |
-| `drw.c` / `drw.h`   | Drawing primitives (the "drw" library) — fonts, colors, the status bar surface           |
-| `util.c` / `util.h` | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)              |
-| `movestack.c`       | Implementation of the `movestack` patch, `#include`d directly into `config.h`            |
-| `transient.c`       | Transient-window handling helper, `#include`d where needed                               |
-| `config.def.h`      | Upstream default config — **do not edit**, copy to `config.h` instead                    |
-| `config.h`          | Your actual config — compiled directly into the binary                                   |
-| `config.mk`         | Build flags, install prefix, library paths                                               |
-| `autostart.sh`      | Shell script run once at dwm startup to launch background processes                      |
-| `patches/`          | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading) |
+| File                    | Purpose                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `dwm.c`                 | Event loop, layouts, client management -- the stock-dwm core plus the merged patches |
+| `dwm.h`                 | Shared surface between `dwm.c` and the modules below: `Arg`/`Client`/`Monitor` types, `ISVISIBLE`, and externs for the globals/functions those modules call into |
+| `wallpaper.c` / `.h`    | Async Imlib2 wallpaper engine (custom, not a suckless patch)                  |
+| `ipc.c` / `.h`          | FIFO-based remote control (custom, not a suckless patch)                      |
+| `screenshot.c` / `.h`   | Screenshot capture + colorpicker (custom, not a suckless patch)               |
+| `movestack.c` / `.h`    | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h` |
+| `drw.c` / `drw.h`       | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface |
+| `util.c` / `util.h`     | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)   |
+| `transient.c`           | Transient-window handling helper, `#include`d where needed                    |
+| `config.def.h`          | Upstream default config -- **do not edit**, copy to `config.h` instead        |
+| `config.h`              | Your actual config -- compiled directly into the binary                       |
+| `config.mk`             | Build flags, install prefix, library paths                                    |
+| `autostart.sh`          | Shell script run once at dwm startup to launch background processes           |
+| `patches/`              | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading) |
+
+### Why the split
+
+`dwm.c` used to contain everything, including three sizeable, largely
+self-contained subsystems (wallpaper, IPC, screenshots) that don't touch
+client/layout internals. Those three got pulled into their own `.c`/`.h`
+pairs to keep `dwm.c` itself focused on the actual window manager.
+`movestack.c` was already a separate file but was previously `#include`d
+as text from `config.h` rather than compiled as its own translation unit
+-- it's now wired up the same way as the other three.
+
+`dwm.h` exists solely so those modules have something to compile against.
+It is **not** a general-purpose dwm header -- it only exposes what's
+actually used across a file boundary (checked against real call sites,
+not copied wholesale). If you add a new cross-file dependency, add the
+specific type/extern/function to `dwm.h` rather than widening what any
+one module `#include`s.
+
+One consequence worth knowing: `config.h` still does
+`#include "movestack.h"` before the `keys[]` table, and `config.h` is
+still `#include`d only once, from `dwm.c`. If you split another chunk of
+`dwm.c` into its own file and that file also needs a `config.h` value
+(the way `wallpaper.c` needs `wallpaperdir`), don't `#include "config.h"`
+from the new file -- it'll pull in `movestack.h`/`keys[]`/etc. again, and
+if `config.h` ever textually includes another `.c` file the way it used
+to for `movestack.c`, that's a duplicate-symbol link error waiting to
+happen. Instead, give the specific `config.h` variable external linkage
+(drop `static` from just that line) and declare it `extern` in the new
+file, the way `wallpaperdir` and `fifopath` are handled now.
 
 ## Program flow
 
@@ -27,9 +61,9 @@ main()
   ├─ checkotherwm()        — refuse to start if another WM owns the display
   ├─ autostart_exec()      — run autostart.sh
   ├─ setup()               — screen geometry, atoms, cursors, the bar, signal handlers
-  ├─ setupfifo()           — create/open the IPC FIFO
+  ├─ setupfifo()           — create/open the IPC FIFO (ipc.c)
   ├─ scan()                — adopt any windows already mapped
-  ├─ setrandomwallpaper()  — initial wallpaper draw
+  ├─ setrandomwallpaper()  — initial wallpaper draw (wallpaper.c)
   └─ run()                 — the main event loop (see below)
        └─ (on exit) cleanup() → XCloseDisplay()
 ```
@@ -82,9 +116,13 @@ Per-tag state (layout, mfact, nmaster, selected client) is tracked via the
 `Pertag` struct attached to each `Monitor`, populated/restored on `view()` —
 this is the `pertag` patch's mechanism.
 
-## Wallpaper engine (custom, not a suckless patch)
+## Wallpaper engine (`wallpaper.c` / `wallpaper.h`, custom, not a suckless patch)
 
-Functions: `setwallpaper()`, `setrandomwallpaper()`, `nextwallpaper()`.
+Functions: `setrandomwallpaper()`, `nextwallpaper()`, `applywallpaperresult()`,
+`refreshdamagedwallpapers()` are the public surface (declared in
+`wallpaper.h`); everything else in this section (`wallpaperworker()`,
+`rebuildrootwallpaper()`, the `wallpapercache_*()` family,
+`dispatchwallpaperjobs()`) is `static` inside `wallpaper.c`.
 
 - Wallpaper images are loaded via **Imlib2**, scaled to each monitor's
   geometry, and pushed to the root window as a `Pixmap`.
@@ -93,7 +131,11 @@ Functions: `setwallpaper()`, `setrandomwallpaper()`, `nextwallpaper()`.
   image and avoid redundant reloads.
 - Triggering:
   - `SIGALRM`, fired on the interval set by `wallpaperinterval`, sets the
-    `wallpaperupdate` flag → picked up by `run()`.
+    `wallpaperupdate` flag → picked up by `run()`. `wallpaperupdate`,
+    `wallpaperready`, `wplock`, and `wpqueue` are defined in `wallpaper.c`
+    and declared `extern` in `wallpaper.h` specifically so `run()` (still
+    in `dwm.c`) can keep polling them each tick without needing a wrapper
+    function call.
   - `SIGUSR1` does the same thing on demand (`kill -USR1 $(pidof dwm)`).
   - The `MODKEY+SHIFT+w` keybind calls `nextwallpaper()` directly.
   - The FIFO `nextwallpaper` command calls the same function.
@@ -181,11 +223,14 @@ This isn't applied by default since it adds a small (if imperceptible)
 delay to every screen-change event, and most setups don't need it. Only
 add it if you actually observe the lag on your hardware.
 
-## Screenshot capture (custom, not a suckless patch)
+## Screenshot capture (`screenshot.c` / `screenshot.h`, custom, not a suckless patch)
 
 Functions: `takescreenshot()`, `screenshotpath()`, `selectregion()`,
 `pickcolor()`, `copytoclip()`, `copytextclip()`, `notifyshot()`,
-`notifycolor()`.
+`notifycolor()`. Only `takescreenshot()` and `pickcolor()` are public
+(declared in `screenshot.h`, called from `ipc.c`'s `fifocmds[]` table and
+from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
+`screenshot.c`.
 
 - `takescreenshot()` grabs the root window via
   `imlib_create_image_from_drawable()`, then crops to a rectangle depending
@@ -216,9 +261,14 @@ Functions: `takescreenshot()`, `screenshotpath()`, `selectregion()`,
   become them. `SIGCHLD` is already `SA_NOCLDWAIT` (see `setup()`), so
   these forked children never need to be waited on.
 
-## FIFO IPC layer (custom)
+## FIFO IPC layer (`ipc.c` / `ipc.h`, custom)
 
-Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table.
+Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table
+and the `fifo*` wrapper functions -- all in `ipc.c` now. `setupfifo()` and
+`readfifo()` are the only two declared in `ipc.h`; the dispatch table and
+wrappers are `static` inside `ipc.c`. `fifofd` is defined in `ipc.c` and
+declared `extern` in `ipc.h` so `run()` and `cleanup()` (still in `dwm.c`)
+can check/close it directly, same pattern as the wallpaper globals above.
 
 - `setupfifo()` (called once from `main()`) creates the FIFO at `fifopath`
   (`config.h`) if it doesn't exist, then opens it **`O_RDWR | O_NONBLOCK`**.
@@ -236,7 +286,9 @@ Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table.
 - `fifoviewtag()` / `fifotagtag()` exist purely to translate a human-typed
   tag _index_ (`view 3`) into the bitmask dwm's `view()`/`tag()` actually
   expect (`1 << 3`) — every other FIFO command calls dwm's existing
-  `Arg`-taking functions directly, no wrapper needed.
+  `Arg`-taking functions directly, no wrapper needed. Those target
+  functions (`view`, `tag`, `setmfact`, `show`, `quit`, etc.) are declared
+  in `dwm.h` so `ipc.c` can call them.
 - `cleanup()` closes the fd and `unlink()`s the FIFO path on exit/restart.
 
 See `WIKI.md` → "FIFO Commands" for the full command table and usage
@@ -244,10 +296,14 @@ examples.
 
 ## Adding a new FIFO command
 
-1. If the function doesn't already take an `Arg*` with the shape you need,
-   add a one-line wrapper near `fifoviewtag`/`fifotagtag`.
-2. Add a row to `fifocmds[]`: `{"yourcmd", yourfunc, argtype}`.
-3. Rebuild. No other wiring needed — `readfifo()`'s dispatch loop is generic.
+1. If the target function doesn't already take an `Arg*` with the shape
+   you need, add a one-line wrapper in `ipc.c` near `fifoviewtag`/`fifotagtag`.
+2. If the target function lives in `dwm.c` and isn't already declared in
+   `dwm.h`, add its prototype there (drop `static` from its forward
+   declaration in `dwm.c` too). Functions in `wallpaper.h`/`screenshot.h`
+   are already visible to `ipc.c`.
+3. Add a row to `fifocmds[]` in `ipc.c`: `{"yourcmd", yourfunc, argtype}`.
+4. Rebuild. No other wiring needed — `readfifo()`'s dispatch loop is generic.
 
 ## Adding a new patch
 
