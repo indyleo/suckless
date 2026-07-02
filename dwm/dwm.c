@@ -3088,7 +3088,7 @@ void selectregion(int *rx, int *ry, int *rw, int *rh) {
   }
 
   swa.override_redirect = True;
-  swa.background_pixel = WhitePixel(dpy, screen);
+  swa.background_pixel = scheme[SchemeSel][ColBorder].pixel;
   swa.save_under = True;
   for (i = 0; i < 4; i++) {
     borders[i] =
