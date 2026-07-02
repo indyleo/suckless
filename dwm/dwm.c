@@ -57,10 +57,10 @@
 #endif /* __OpenBSD */
 
 #include "drw.h"
-#include "util.h"
 #include "dwm.h"
 #include "ipc.h"
 #include "screenshot.h"
+#include "util.h"
 #include "wallpaper.h"
 
 /* macros */
@@ -282,9 +282,9 @@ static int statussig;
 static int statusw;
 static pid_t statuspid = -1;
 int screen;
-int sw, sh;    /* X display screen geometry width, height */
-static int bh; /* bar height */
-static int lrpad;  /* sum of left and right padding for text */
+int sw, sh;       /* X display screen geometry width, height */
+static int bh;    /* bar height */
+static int lrpad; /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static void (*handler[LASTEvent])(XEvent *) = {
@@ -355,7 +355,7 @@ static void autostart_exec() {
   autostart_pids = malloc(autostart_len * sizeof(pid_t));
   for (p = autostart; *p; i++, p++) {
     if ((autostart_pids[i] = fork()) == 0) {
-      setsid();
+      setpgid(0, 0);
       execvp(*p, (char *const *)p);
       fprintf(stderr, "dwm: execvp %s\n", *p);
       perror(" failed");
@@ -1778,7 +1778,7 @@ void quit(const Arg *arg) {
   /* kill child processes */
   for (i = 0; i < autostart_len; i++) {
     if (0 < autostart_pids[i]) {
-      kill(autostart_pids[i], SIGTERM);
+      kill(-autostart_pids[i], SIGTERM);
       waitpid(autostart_pids[i], NULL, 0);
     }
   }
@@ -1921,7 +1921,6 @@ void restack(Monitor *m) {
   while (XCheckMaskEvent(dpy, EnterWindowMask, &ev))
     ;
 }
-
 
 void run(void) {
   XEvent ev;
@@ -2109,7 +2108,6 @@ void setmfact(const Arg *arg) {
   arrange(selmon);
 }
 
-
 void setup(void) {
   int i;
   XSetWindowAttributes wa;
@@ -2224,7 +2222,6 @@ void seturgent(Client *c, int urg) {
   XSetWMHints(dpy, c->win, wmh);
   XFree(wmh);
 }
-
 
 void show(const Arg *arg) {
   if (selmon->hidsel)
