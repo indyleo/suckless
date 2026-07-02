@@ -1,4 +1,4 @@
-# suckless-tools-custom
+# Suckless Tools
 
 A personal collection of patched and customized [suckless.org](https://suckless.org/) tools, tailored for a polished, productive desktop experience.
 
