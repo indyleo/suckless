@@ -1,0 +1,10 @@
+# Object files
+**/*.o
+**/*.d
+
+# Common suckless binaries
+**/dwm
+**/st
+**/dmenu
+**/slock
+**/dwmblocks
