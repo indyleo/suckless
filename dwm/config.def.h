@@ -248,11 +248,11 @@ static const Key keys[] = {
      SHCMD("mediactl --source browser play-pause")},
 
     /* Screenshots */
-    {0, XK_Print, takescreenshot, {.i = ShotScreen}},
-    {MODKEY, XK_Print, takescreenshot, {.i = ShotFull}},
+    {0, XK_Print, takescreenshot, {.i = ShotSelect}},
+    {MODKEY, XK_Print, takescreenshot, {.i = ShotScreen}},
+    {MODKEY | SHIFTKEY, XK_Print, takescreenshot, {.i = ShotFull}},
     {MODKEY | CTRLKEY, XK_Print, takescreenshot, {.i = ShotWindow}},
-    // {MODKEY | CTRLKEY, XK_Print, spawn, SHCMD("screenshot --window")},
-    // {MODKEY | ALTKEY, XK_Print, spawn, SHCMD("screenshot --colorpicker")},
+    {MODKEY | ALTKEY, XK_Print, pickcolor, {0}},
 
     /* Scratch Pads */
     {MODKEY, XK_t, togglescratch, {.ui = 0}}, /* termsc */

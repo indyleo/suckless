@@ -40,7 +40,7 @@ A dynamic window manager for X, enhanced with:
 - 📡 **FIFO-based remote control** (`/tmp/dwm.fifo`)
 - 🖥️🖥️ **Automatic monitor hotplug detection** via RandR
 - 🚀 **Custom autostart process management** (`autostart.sh`)
-- 🖥️ **Inbuilt screenshot tool**
+- 🖥️ **Inbuilt screenshot tool** (region select, color picker, clipboard + notifications)
 
 [dwm/README.md](dwm/README.md)
 

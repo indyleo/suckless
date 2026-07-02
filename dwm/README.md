@@ -31,7 +31,7 @@ external IPC control.
 | IPC           | FIFO-based remote control (`/tmp/dwm.fifo`)                        | custom              |
 | Multi-monitor | Automatic monitor hotplug detection via RandR                      | custom              |
 | Session       | Custom autostart process management                                | `autostart.sh`      |
-| Utilities     | Native screenshot capture (full/monitor/window) + clipboard/notify | custom              |
+| Utilities     | Native screenshot capture (full/monitor/window/select) + colorpicker, clipboard, notify | custom |
 
 See **[DOCS.md](DOCS.md)** for how the code is organized and **[WIKI.md](WIKI.md)**
 for how to configure it.
@@ -41,20 +41,20 @@ for how to configure it.
 - Xlib headers (`libx11-dev` or equivalent)
 - Xinerama (multi-monitor support)
 - Xft + fontconfig (font rendering)
-- Imlib2 (wallpaper rendering)
-- libxcb + xcb-res (used for process/PID lookups, e.g. swallow)
 - Imlib2 (wallpaper rendering **and** screenshot capture)
+- libxcb + xcb-res (used for process/PID lookups, e.g. swallow)
 
 ### Runtime (not linked, called via exec)
 
-- `xclip` — screenshot clipboard copy
-- `notify-send` + a running notification daemon (e.g. `dunst`) — screenshot notifications
+- `xclip` — screenshot/colorpicker clipboard copy
+- `notify-send` (from `libnotify-bin`) + a running notification daemon
+  (e.g. `dunst`) — screenshot and colorpicker notifications
 
 On Debian/Ubuntu-style systems:
 
 ```sh
 sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
-                  libxcb1-dev libxcb-res0-dev xclip notify-send dunst
+                  libxcb1-dev libxcb-res0-dev xclip libnotify-bin dunst
 ```
 
 ## Building

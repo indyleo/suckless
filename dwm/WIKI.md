@@ -170,15 +170,18 @@ for keyboards without media keys.
 
 **Screenshots**
 
-| Key                 | Action                      |
-| ------------------- | --------------------------- |
-| `Print`             | Capture focused monitor     |
-| `MODKEY+Print`      | Capture full (all monitors) |
-| `MODKEY+CTRL+Print` | Capture focused window      |
+| Key                  | Action                      |
+| -------------------- | --------------------------- |
+| `Print`              | Select a region to capture  |
+| `MODKEY+Print`       | Capture focused monitor     |
+| `MODKEY+SHIFT+Print` | Capture full (all monitors) |
+| `MODKEY+CTRL+Print`  | Capture focused window      |
+| `MODKEY+ALT+Print`   | Pick a color under cursor   |
 
-Saved to `~/Pictures/Screenshots/<timestamp>.png`, copied to clipboard via
-`xclip`, and confirmed via `notify-send`. Region-select isn't ported to
-native code yet — no binding for it currently.
+Screenshots save to `~/Pictures/Screenshots/<timestamp>.png`, copy to
+clipboard via `xclip`, and confirm via `notify-send`. The colorpicker copies
+the hex value as text (not a file) and notifies with the hex string instead
+of an image thumbnail.
 
 ## Mouse bindings
 
@@ -204,29 +207,30 @@ event loop tick (~10ms latency). Send a command by writing a line to it:
 echo "<command> [arg]" > /tmp/dwm.fifo
 ```
 
-| Command            | Arg              | Effect                           |
-| ------------------ | ---------------- | -------------------------------- |
-| `view`             | 0–4              | Switch to tag                    |
-| `tag`              | 0–4              | Move window to tag               |
-| `toggleview`       | 0–4              | Add/remove tag from current view |
-| `toggletag`        | 0–4              | Toggle tag on focused window     |
-| `setmfact`         | float e.g. `0.6` | Set master area size             |
-| `incnmaster`       | `1` or `-1`      | Add/remove master client         |
-| `zoom`             | —                | Swap focused window with master  |
-| `togglefloating`   | —                | Toggle float on focused window   |
-| `togglefullscreen` | —                | Toggle fullscreen                |
-| `focusstackvis`    | `1` or `-1`      | Focus next/prev visible window   |
-| `focusmon`         | `1` or `-1`      | Focus next/prev monitor          |
-| `tagmon`           | `1` or `-1`      | Send window to next/prev monitor |
-| `show`             | —                | Show focused window              |
-| `hide`             | —                | Hide focused window              |
-| `showall`          | —                | Show all hidden windows          |
-| `killclient`       | —                | Close focused window             |
-| `togglescratch`    | 0–7              | Toggle scratchpad by index       |
-| `togglebar`        | —                | Show/hide bar                    |
-| `nextwallpaper`    | —                | Load new random wallpaper        |
-| `screenshot`       | 0/1/2            | Capture full/monitor/window      |
-| `quit`             | —                | Quit dwm (`1` = restart)         |
+| Command            | Arg              | Effect                             |
+| ------------------ | ---------------- | ---------------------------------- |
+| `view`             | 0–4              | Switch to tag                      |
+| `tag`              | 0–4              | Move window to tag                 |
+| `toggleview`       | 0–4              | Add/remove tag from current view   |
+| `toggletag`        | 0–4              | Toggle tag on focused window       |
+| `setmfact`         | float e.g. `0.6` | Set master area size               |
+| `incnmaster`       | `1` or `-1`      | Add/remove master client           |
+| `zoom`             | —                | Swap focused window with master    |
+| `togglefloating`   | —                | Toggle float on focused window     |
+| `togglefullscreen` | —                | Toggle fullscreen                  |
+| `focusstackvis`    | `1` or `-1`      | Focus next/prev visible window     |
+| `focusmon`         | `1` or `-1`      | Focus next/prev monitor            |
+| `tagmon`           | `1` or `-1`      | Send window to next/prev monitor   |
+| `show`             | —                | Show focused window                |
+| `hide`             | —                | Hide focused window                |
+| `showall`          | —                | Show all hidden windows            |
+| `killclient`       | —                | Close focused window               |
+| `togglescratch`    | 0–7              | Toggle scratchpad by index         |
+| `togglebar`        | —                | Show/hide bar                      |
+| `nextwallpaper`    | —                | Load new random wallpaper          |
+| `screenshot`       | 0–3              | Capture full/monitor/window/select |
+| `colorpicker`      | —                | Pick a color under cursor          |
+| `quit`             | —                | Quit dwm (`1` = restart)           |
 
 Examples:
 
@@ -240,6 +244,10 @@ This is intended for scripting — bind it to acpi events, a rofi menu,
 a hardware button, or any external trigger that shouldn't need its own
 X11 keybind. See `DOCS.md` → "Adding a new FIFO command" to extend the
 table.
+
+Note: `screenshot 3` (select) and `colorpicker` block dwm's event loop
+until the interaction completes, same as a mouse-drag resize would — don't
+trigger them from something expecting an instant return.
 
 ## Autostart
 

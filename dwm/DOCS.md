@@ -183,27 +183,38 @@ add it if you actually observe the lag on your hardware.
 
 ## Screenshot capture (custom, not a suckless patch)
 
-Functions: `takescreenshot()`, `screenshotpath()`, `copytoclip()`, `notifyshot()`.
+Functions: `takescreenshot()`, `screenshotpath()`, `selectregion()`,
+`pickcolor()`, `copytoclip()`, `copytextclip()`, `notifyshot()`,
+`notifycolor()`.
 
 - `takescreenshot()` grabs the root window via
   `imlib_create_image_from_drawable()`, then crops to a rectangle depending
   on `arg->i` (`ShotFull` = whole root, `ShotScreen` = `selmon`'s geometry,
-  `ShotWindow` = `selmon->sel`'s geometry) using
-  `imlib_create_cropped_image()`, and saves as PNG via `imlib_save_image()`.
-  All of this reuses the same Imlib2 context calls as the wallpaper engine —
-  no new library dependency.
+  `ShotWindow` = `selmon->sel`'s geometry, `ShotSelect` = a user-dragged
+  rectangle from `selectregion()`) using `imlib_create_cropped_image()`,
+  and saves as PNG via `imlib_save_image()`. Reuses the same Imlib2 context
+  calls as the wallpaper engine — no new library dependency.
 - `screenshotpath()` builds `~/Pictures/Screenshots/<timestamp>.png`,
   creating the directory if missing.
+- `selectregion()` follows the `movemouse()`/`resizemouse()` pointer-grab
+  pattern: grabs the pointer on `root`, waits for `ButtonPress`, then tracks
+  `MotionNotify` and redraws a rectangle on `root` using an XOR `GC`
+  (`GXxor`) so each redraw erases the previous frame instead of needing a
+  full repaint. `ButtonRelease` ends the grab. An `XSync()` is required
+  right after the final erase — without it there's a race where
+  `takescreenshot()`'s root grab can happen before the last XOR erase is
+  flushed to the server, leaving a ghost rectangle baked into the capture.
+- `pickcolor()` grabs the pointer, waits for a single `ButtonPress`, then
+  reads the pixel under the cursor via `XGetImage()` on a 1×1 region and
+  resolves it to RGB with `XQueryColor()`.
 - Clipboard and notifications are deliberately **not** native. `copytoclip()`
-  and `notifyshot()` each `fork()` + `execlp()` a thin external tool
-  (`xclip`, `notify-send`) rather than dwm implementing ICCCM selection
-  ownership or a D-Bus notification client itself — same reasoning as
-  `spawn()`: dwm launches things, it doesn't become them. `SIGCHLD` is
-  already `SA_NOCLDWAIT` (see `setup()`), so these forked children never
-  need to be waited on.
-- Region-select capture (click-drag rubber band) isn't implemented yet —
-  would follow the `movemouse()`/`resizemouse()` pointer-grab pattern plus
-  live rectangle feedback. Noted here as a known gap, not a bug.
+  (image, via a file path) and `copytextclip()` (color hex, piped over
+  stdin) each `fork()` + `execlp()` a thin external tool (`xclip`), same for
+  `notifyshot()`/`notifycolor()` (`notify-send`) — rather than dwm
+  implementing ICCCM selection ownership or a D-Bus notification client
+  itself. Same reasoning as `spawn()`: dwm launches things, it doesn't
+  become them. `SIGCHLD` is already `SA_NOCLDWAIT` (see `setup()`), so
+  these forked children never need to be waited on.
 
 ## FIFO IPC layer (custom)
 

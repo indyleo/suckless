@@ -110,7 +110,7 @@ enum {
   ClkRootWin,
   ClkLast
 }; /* clicks */
-enum { ShotFull, ShotScreen, ShotWindow }; /* screenshot modes */
+enum { ShotFull, ShotScreen, ShotWindow, ShotSelect }; /* screenshot modes */
 
 typedef union {
   int i;
@@ -308,6 +308,10 @@ static void fifotogglescratch(const Arg *arg);
 static void applygeomchange(void);
 static void rrscreenchangenotify(XEvent *e);
 static void takescreenshot(const Arg *arg);
+static void selectregion(int *rx, int *ry, int *rw, int *rh);
+static void pickcolor(const Arg *arg);
+static void copytextclip(const char *text);
+static void notifycolor(const char *hex);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void show(const Arg *arg);
@@ -2050,7 +2054,9 @@ static FifoCmd fifocmds[] = {
     /* wallpaper */
     {"nextwallpaper", nextwallpaper, 0},
     /* screenshots */
-    {"screenshot", takescreenshot, 1}, /* screenshot 0=full 1=screen 2=window */
+    {"screenshot", takescreenshot,
+     1}, /* screenshot 0=full 1=screen 2=window 3=select */
+    {"colorpicker", pickcolor, 0}, /* colorpicker */
     /* session */
     {"quit", quit, 0}, /* quit 1 = restart  */
 };
@@ -2896,6 +2902,17 @@ void takescreenshot(const Arg *arg) {
   Client *c;
 
   switch (arg->i) {
+  case ShotSelect: {
+    int rx, ry, rw, rh;
+    selectregion(&rx, &ry, &rw, &rh);
+    if (rw < 2 || rh < 2)
+      return; /* cancelled, or just a click with no drag */
+    x = MAX(0, rx);
+    y = MAX(0, ry);
+    w = MIN(rw, sw - x);
+    h = MIN(rh, sh - y);
+    break;
+  }
   case ShotScreen:
     x = selmon->mx;
     y = selmon->my;
@@ -2936,6 +2953,69 @@ void takescreenshot(const Arg *arg) {
 
   copytoclip(path);
   notifyshot(path);
+}
+
+static void copytextclip(const char *text) {
+  int fd[2];
+
+  if (pipe(fd) < 0)
+    return;
+  if (fork() == 0) {
+    setsid();
+    dup2(fd[0], STDIN_FILENO);
+    close(fd[0]);
+    close(fd[1]);
+    execlp("xclip", "xclip", "-selection", "clipboard", NULL);
+    _exit(1);
+  }
+  close(fd[0]);
+  write(fd[1], text, strlen(text));
+  close(fd[1]);
+}
+
+static void notifycolor(const char *hex) {
+  if (fork() == 0) {
+    setsid();
+    execlp("notify-send", "notify-send", "Color Picked", hex, NULL);
+    _exit(1);
+  }
+}
+
+void pickcolor(const Arg *arg) {
+  Cursor cur;
+  XEvent ev;
+  XImage *img;
+  XColor color;
+  int x, y;
+  char hex[8];
+
+  cur = XCreateFontCursor(dpy, XC_crosshair);
+  if (XGrabPointer(dpy, root, False, ButtonPressMask, GrabModeAsync,
+                   GrabModeAsync, root, cur, CurrentTime) != GrabSuccess) {
+    XFreeCursor(dpy, cur);
+    return;
+  }
+
+  do {
+    XMaskEvent(dpy, ButtonPressMask, &ev);
+  } while (ev.type != ButtonPress);
+  x = ev.xbutton.x_root;
+  y = ev.xbutton.y_root;
+
+  XUngrabPointer(dpy, CurrentTime);
+  XFreeCursor(dpy, cur);
+
+  if (!(img = XGetImage(dpy, root, x, y, 1, 1, AllPlanes, ZPixmap)))
+    return;
+  color.pixel = XGetPixel(img, 0, 0);
+  XDestroyImage(img);
+  XQueryColor(dpy, DefaultColormap(dpy, screen), &color);
+
+  snprintf(hex, sizeof hex, "#%02X%02X%02X", color.red >> 8, color.green >> 8,
+           color.blue >> 8);
+
+  copytextclip(hex);
+  notifycolor(hex);
 }
 
 void show(const Arg *arg) {
@@ -2988,6 +3068,71 @@ void showhide(Client *c) {
     showhide(c->snext);
     XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
   }
+}
+
+void selectregion(int *rx, int *ry, int *rw, int *rh) {
+  XEvent ev;
+  Cursor cur;
+  GC gc;
+  XGCValues gcv;
+  int startx, starty, curx, cury;
+  int ocx = -1, ocy = -1, ocw = -1, och = -1;
+
+  *rw = 0;
+  cur = XCreateFontCursor(dpy, XC_crosshair);
+  if (XGrabPointer(dpy, root, False,
+                   ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
+                   GrabModeAsync, GrabModeAsync, root, cur,
+                   CurrentTime) != GrabSuccess) {
+    XFreeCursor(dpy, cur);
+    return;
+  }
+
+  gcv.function = GXxor;
+  gcv.foreground = WhitePixel(dpy, screen) ^ BlackPixel(dpy, screen);
+  gcv.subwindow_mode = IncludeInferiors;
+  gcv.line_width = 1;
+  gc = XCreateGC(dpy, root,
+                 GCFunction | GCForeground | GCSubwindowMode | GCLineWidth,
+                 &gcv);
+
+  do {
+    XMaskEvent(dpy, ButtonPressMask, &ev);
+  } while (ev.type != ButtonPress);
+  startx = curx = ev.xbutton.x_root;
+  starty = cury = ev.xbutton.y_root;
+
+  for (;;) {
+    XMaskEvent(dpy, PointerMotionMask | ButtonReleaseMask, &ev);
+    if (ev.type == MotionNotify) {
+      if (ocw >= 0)
+        XDrawRectangle(dpy, root, gc, ocx, ocy, ocw, och); /* erase */
+      curx = ev.xmotion.x_root;
+      cury = ev.xmotion.y_root;
+      ocx = MIN(startx, curx);
+      ocy = MIN(starty, cury);
+      ocw = abs(curx - startx);
+      och = abs(cury - starty);
+      XDrawRectangle(dpy, root, gc, ocx, ocy, ocw, och); /* draw */
+    } else if (ev.type == ButtonRelease) {
+      curx = ev.xbutton.x_root;
+      cury = ev.xbutton.y_root;
+      break;
+    }
+  }
+  if (ocw >= 0)
+    XDrawRectangle(dpy, root, gc, ocx, ocy, ocw, och); /* final erase */
+
+  XFreeGC(dpy, gc);
+  XUngrabPointer(dpy, CurrentTime);
+  XFreeCursor(dpy, cur);
+  XSync(dpy,
+        False); /* make sure the erase actually lands before we grab pixels */
+
+  *rx = MIN(startx, curx);
+  *ry = MIN(starty, cury);
+  *rw = abs(curx - startx);
+  *rh = abs(cury - starty);
 }
 
 void sighup(int unused) {
