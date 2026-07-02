@@ -3,8 +3,8 @@
 **/*.d
 
 # Common suckless binaries
-**/dwm
-**/st
-**/dmenu
-**/slock
-**/dwmblocks
+dwm/dwm
+st/st
+dmenu/dmenu
+slock/slock
+dwmblocks-aysnc/dwmblocks

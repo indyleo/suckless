@@ -1,0 +1,290 @@
+
+/* See LICENSE file for copyright and license details. */
+
+/* appearance */
+static const unsigned int borderpx = 1; /* border pixel of windows */
+static const unsigned int gappx = 8;    /* gaps between windows */
+static const unsigned int snap = 16;    /* snap pixel */
+static const int swallowfloating =
+    0;                        /* 1 means swallow floating windows by default */
+static const int showbar = 1; /* 0 means no bar */
+static const int topbar = 1;  /* 0 means bottom bar */
+const char *wallpaperdir = "~/Pictures/Wallpapers/gruvbox";
+static const int wallpaperinterval = 900; /* seconds, 0 to disable timer */
+const char *fifopath = "/tmp/dwm.fifo";
+static const char *fonts[] = {
+    "MesloLGS Nerd Font Mono:pixelsize=12",
+    "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
+/* Gruvbox color variables */
+static const char gruvbox_normfgcolor[] = "#ebdbb2"; // light fg
+static const char gruvbox_normbgcolor[] = "#282828"; // dark bg
+static const char gruvbox_normbordercolor[] =
+    "#3c3836"; // slightly lighter than bg
+
+static const char gruvbox_selfgcolor[] = "#282828"; // dark fg for contrast
+static const char gruvbox_selbgcolor[] = "#fabd2f"; // bright yellow
+static const char gruvbox_selbordercolor[] =
+    "#d79921"; // muted yellow for border
+
+static const char gruvbox_hidfgcolor[] = "#928374";     // gruvbox faded fg
+static const char gruvbox_hidbgcolor[] = "#1d2021";     // hard contrast bg
+static const char gruvbox_hidbordercolor[] = "#3c3836"; // same as norm border
+
+/* Gruvbox color scheme table */
+static const char *colors[][3] = {
+    /*               fg               bg                border               */
+    [SchemeNorm] = {gruvbox_normfgcolor, gruvbox_normbgcolor,
+                    gruvbox_normbordercolor}, /* normal */
+    [SchemeSel] = {gruvbox_selfgcolor, gruvbox_selbgcolor,
+                   gruvbox_selbordercolor}, /* selected */
+    [SchemeHid] = {gruvbox_hidfgcolor, gruvbox_hidbgcolor,
+                   gruvbox_hidbordercolor}, /* hidden */
+};
+
+typedef struct {
+  const char *name;
+  const void *cmd;
+} Sp;
+const char *spcmd1[] = {"st", "-c", "termsc,Termsc", NULL};
+const char *spcmd2[] = {"st", "-c", "lfsc,Lfsc", "-e", "zsh", "-c", "lf", NULL};
+const char *spcmd3[] = {"st", "-c", "qalsc,Qalsc", "-e", "qalc", NULL};
+const char *spcmd4[] = {"st", "-c",      "wiremixsc,Wiremixsc",
+                        "-e", "wiremix", NULL};
+const char *spcmd5[] = {"st",  "-c", "gurks,Gurks", "-e",
+                        "zsh", "-c", "gurks",       NULL};
+const char *spcmd6[] = {"st",  "-c", "discordo,Discordo", "-e",
+                        "zsh", "-c", "discordo",          NULL};
+const char *spcmd7[] = {"st", "-c", "twitch-tui,Twitch-tui", "-e", "twt", NULL};
+const char *spcmd8[] = {"st",  "-c", "musicsc,Musicsc", "-e",
+                        "zsh", "-c", "subsonic-tui",    NULL};
+static Sp scratchpads[] = {
+    {"termsc", spcmd1},     {"lfsc", spcmd2},    {"qalsc", spcmd3},
+    {"wiremixsc", spcmd4},  {"gurks", spcmd5},   {"discordo", spcmd6},
+    {"twitch-tui", spcmd7}, {"musicsc", spcmd8},
+};
+
+static const char *const autostart[] = {
+    "/usr/local/bin/autostart.sh", NULL, NULL /* terminate */
+};
+
+/* tagging */
+static const char *tags[] = {"󰖟", "󰙯", "", "", "󰨇"};
+
+static const Rule rules[] = {
+    /* xprop(1):
+     *	WM_CLASS(STRING) = instance, class
+     *	WM_NAME(STRING) = title
+     */
+    /* class     instance      title           tags mask  isfloating  isterminal
+                     noswallow  monitor */
+    {"Gimp", NULL, NULL, 0, 1, 0, 0, -1},
+    {"Firefox", NULL, NULL, 1 << 8, 0, 0, -1, -1},
+    {"St", NULL, NULL, 0, 0, 1, 0, -1},
+    {"Alacritty", NULL, NULL, 0, 0, 1, 0, -1},
+    {"org.wezfurlong.wezterm", NULL, NULL, 0, 0, 1, 0, -1},
+    {NULL, NULL, "Event Tester", 0, 0, 0, 1, -1}, /* xev */
+    {"termsc", NULL, NULL, SPTAG(0), 1, -1},
+    {"lfsc", NULL, NULL, SPTAG(1), 1, -1},
+    {"qalsc", NULL, NULL, SPTAG(2), 1, -1},
+    {"wiremixsc", NULL, NULL, SPTAG(3), 1, -1},
+    {"gurks", NULL, NULL, SPTAG(4), 1, -1},
+    {"discord", NULL, NULL, SPTAG(5), 1, -1},
+    {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
+    {"musicsc", NULL, NULL, SPTAG(7), 1, -1},
+    {"Dragon", NULL, NULL, 0, 1, -1},
+};
+
+/* layout(s) */
+static const float mfact = 0.55; /* factor of master area size [0.05..0.95] */
+static const int nmaster = 1;    /* number of clients in master area */
+static const int resizehints =
+    0; /* 1 means respect size hints in tiled resizals */
+static const int attachbelow =
+    1; /* 1 means attach after the currently active window */
+static const int lockfullscreen =
+    1; /* 1 will force focus on the fullscreen window */
+
+static const Layout layouts[] = {
+    /* symbol     arrange function */
+    {"", tile}, /* first entry is default */
+    {"", NULL}, /* no layout function means floating behavior */
+    {"󰊓", monocle},
+};
+
+/* key definitions */
+#include "movestack.h"
+#include <X11/XF86keysym.h>
+#define MODKEY Mod4Mask
+#define ALTKEY Mod1Mask
+#define CTRLKEY ControlMask
+#define SHIFTKEY ShiftMask
+#define TAGKEYS(KEY, TAG)                                                      \
+  {MODKEY, KEY, view, {.ui = 1 << TAG}},                                       \
+      {MODKEY | CTRLKEY, KEY, toggleview, {.ui = 1 << TAG}},                   \
+      {MODKEY | SHIFTKEY, KEY, tag, {.ui = 1 << TAG}},                         \
+      {MODKEY | CTRLKEY | SHIFTKEY, KEY, toggletag, {.ui = 1 << TAG}},
+
+/* helper for spawning shell commands in the pre dwm-5.0 fashion */
+#define SHCMD(cmd)                                                             \
+  {                                                                            \
+    .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                       \
+  }
+
+#define STATUSBAR "dwmblocks"
+
+/* commands */
+static char dmenumon[2] =
+    "0"; /* component of dmenucmd, manipulated in spawn() */
+static const char *dmenucmd[] = {"dmenu_run", NULL};
+
+static const Key keys[] = {
+    /* modifier                     key        function        argument */
+
+    /* DWM Controls */
+    {MODKEY | SHIFTKEY, XK_b, togglebar, {0}},
+    {MODKEY, XK_j, focusstackvis, {.i = +1}},
+    {MODKEY, XK_k, focusstackvis, {.i = -1}},
+    {MODKEY | SHIFTKEY, XK_j, focusstackhid, {.i = +1}},
+    {MODKEY | SHIFTKEY, XK_k, focusstackhid, {.i = -1}},
+    {MODKEY, XK_space, switchcol, {0}},
+    {MODKEY, XK_h, setmfact, {.f = -0.05}},
+    {MODKEY, XK_l, setmfact, {.f = +0.05}},
+    {MODKEY | ALTKEY, XK_j, movestack, {.i = +1}},
+    {MODKEY | ALTKEY, XK_k, movestack, {.i = -1}},
+    {MODKEY | SHIFTKEY, XK_equal, incnmaster, {.i = +1}},
+    {MODKEY | SHIFTKEY, XK_minus, incnmaster, {.i = -1}},
+    {MODKEY | SHIFTKEY, XK_z, zoom, {0}},
+    {MODKEY, XK_Tab, view, {0}},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_t, setlayout, {.v = &layouts[0]}},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_f, setlayout, {.v = &layouts[1]}},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_m, setlayout, {.v = &layouts[2]}},
+    {MODKEY | SHIFTKEY, XK_f, fullscreen, {0}},
+    {MODKEY | SHIFTKEY, XK_space, togglefloating, {0}},
+    {MODKEY, XK_comma, focusmon, {.i = -1}},
+    {MODKEY, XK_period, focusmon, {.i = +1}},
+    {MODKEY | SHIFTKEY, XK_comma, tagmon, {.i = -1}},
+    {MODKEY | SHIFTKEY, XK_period, tagmon, {.i = +1}},
+    {MODKEY, XK_equal, show, {0}},
+    {MODKEY | SHIFTKEY, XK_equal, showall, {0}},
+    {MODKEY, XK_minus, hide, {0}},
+
+    /* System Controls */
+    {MODKEY | SHIFTKEY, XK_q, quit, {0}},
+    {MODKEY | SHIFTKEY, XK_r, quit, {1}},
+    {MODKEY, XK_q, killclient, {0}},
+
+    /* Tags */
+    TAGKEYS(XK_1, 0) TAGKEYS(XK_2, 1) TAGKEYS(XK_3, 2) TAGKEYS(XK_4, 3)
+        TAGKEYS(XK_5, 4)
+
+    /* Wallpaper */
+    {MODKEY | SHIFTKEY, XK_w, nextwallpaper, {0}},
+
+    /* Applications */
+    {MODKEY, XK_Return, spawn, SHCMD("st")},
+    {MODKEY, XK_f, spawn, SHCMD("thunar")},
+    {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
+    {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("vesktop")},
+    {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
+
+    /* Launchers */
+    {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
+    {MODKEY, XK_w, spawn, SHCMD("wikibook")},
+    {MODKEY, XK_n, spawn, SHCMD("notebook")},
+    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clip select")},
+    {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("emoji")},
+    {MODKEY | ALTKEY, XK_e, spawn, SHCMD("nerdfont")},
+    {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("power")},
+    {MODKEY | ALTKEY, XK_r, spawn, SHCMD("recorder")},
+
+    /* System */
+    {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
+    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
+    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
+    {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
+    {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
+
+    /* Volume */
+    {MODKEY | ALTKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
+    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
+    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("sysctl vol --toggle")},
+    {ALTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
+    {ALTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
+    {ALTKEY, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
+
+    /* Microphone */
+    {MODKEY | SHIFTKEY, XK_Up, spawn, SHCMD("sysctl mic -i 5")},
+    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl mic -d 5")},
+    {MODKEY | SHIFTKEY, XK_m, spawn, SHCMD("sysctl mic --toggle")},
+    {SHIFTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl mic -i 5")},
+    {SHIFTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl mic -d 5")},
+    {0, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
+
+    /* Media - Song */
+    {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},
+    {MODKEY, XK_Left, spawn, SHCMD("mediactl --source song previous")},
+    {MODKEY, XK_s, spawn, SHCMD("mediactl --source song play-pause")},
+    {MODKEY | SHIFTKEY, XK_Right, spawn,
+     SHCMD("mediactl --source song skip 10")},
+    {MODKEY | SHIFTKEY, XK_Left, spawn,
+     SHCMD("mediactl --source song back 10")},
+    {0, XF86XK_AudioNext, spawn, SHCMD("mediactl --source song next")},
+    {0, XF86XK_AudioPrev, spawn, SHCMD("mediactl --source song previous")},
+    {0, XF86XK_AudioPlay, spawn, SHCMD("mediactl --source song play-pause")},
+
+    /* Media - Browser */
+    {MODKEY | ALTKEY, XK_Right, spawn, SHCMD("mediactl --source browser next")},
+    {MODKEY | ALTKEY, XK_Left, spawn,
+     SHCMD("mediactl --source browser previous")},
+    {MODKEY | ALTKEY, XK_s, spawn,
+     SHCMD("mediactl --source browser play-pause")},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_Right, spawn,
+     SHCMD("mediactl --source browser skip 10")},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_Left, spawn,
+     SHCMD("mediactl --source browser back 10")},
+    {ALTKEY, XF86XK_AudioNext, spawn, SHCMD("mediactl --source browser next")},
+    {ALTKEY, XF86XK_AudioPrev, spawn,
+     SHCMD("mediactl --source browser previous")},
+    {ALTKEY, XF86XK_AudioPlay, spawn,
+     SHCMD("mediactl --source browser play-pause")},
+
+    /* Screenshots */
+    {0, XK_Print, takescreenshot, {.i = ShotSelect}},
+    {MODKEY, XK_Print, takescreenshot, {.i = ShotScreen}},
+    {MODKEY | SHIFTKEY, XK_Print, takescreenshot, {.i = ShotFull}},
+    {MODKEY | CTRLKEY, XK_Print, takescreenshot, {.i = ShotWindow}},
+    {MODKEY | ALTKEY, XK_Print, pickcolor, {0}},
+
+    /* Scratch Pads */
+    {MODKEY, XK_t, togglescratch, {.ui = 0}}, /* termsc */
+    {MODKEY, XK_y, togglescratch, {.ui = 1}}, /* lfsc */
+    {MODKEY, XK_z, togglescratch, {.ui = 2}}, /* qalsc */
+    {MODKEY, XK_a, togglescratch, {.ui = 3}}, /* wiremixsc */
+    {MODKEY, XK_g, togglescratch, {.ui = 4}}, /* gurks */
+    {MODKEY, XK_d, togglescratch, {.ui = 5}}, /* discordo */
+    {MODKEY, XK_c, togglescratch, {.ui = 6}}, /* twitch-tui */
+    {MODKEY, XK_m, togglescratch, {.ui = 7}}, /* musicsc */
+};
+
+/* button definitions */
+/* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
+ * ClkClientWin, or ClkRootWin */
+static const Button buttons[] = {
+    /* click                event mask      button          function argument */
+    {ClkLtSymbol, 0, Button1, setlayout, {0}},
+    {ClkLtSymbol, 0, Button3, setlayout, {.v = &layouts[2]}},
+    {ClkWinTitle, 0, Button1, togglewin, {0}},
+    {ClkWinTitle, 0, Button2, zoom, {0}},
+    {ClkStatusText, 0, Button1, sigstatusbar, {.i = 1}},
+    {ClkStatusText, 0, Button2, sigstatusbar, {.i = 2}},
+    {ClkStatusText, 0, Button3, sigstatusbar, {.i = 3}},
+    {ClkStatusText, 0, Button4, sigstatusbar, {.i = 4}},
+    {ClkStatusText, 0, Button5, sigstatusbar, {.i = 5}},
+    {ClkClientWin, MODKEY, Button1, movemouse, {0}},
+    {ClkClientWin, MODKEY, Button2, togglefloating, {0}},
+    {ClkClientWin, MODKEY, Button3, resizemouse, {0}},
+    {ClkTagBar, 0, Button1, view, {0}},
+    {ClkTagBar, 0, Button3, toggleview, {0}},
+    {ClkTagBar, MODKEY, Button1, tag, {0}},
+    {ClkTagBar, MODKEY, Button2, toggletag, {0}},
+};
