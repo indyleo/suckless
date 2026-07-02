@@ -12,6 +12,7 @@ DAEMON_PROCS=(
     "clip daemon"
     "organizer.py --daemon"
     "python3 -m http.server 8080 --bind 127.0.0.1 --directory ~/.config/startpage"
+    "picom"
 )
 
 # Functions
@@ -58,7 +59,6 @@ if command_exists nvidia-settings; then
 fi
 
 # Start compositor
-picom -b
 
 # Load X resources
 [[ -f "$HOME/.Xresources" ]] && xrdb -load "$HOME/.Xresources"
