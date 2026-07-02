@@ -3073,10 +3073,9 @@ void showhide(Client *c) {
 void selectregion(int *rx, int *ry, int *rw, int *rh) {
   XEvent ev;
   Cursor cur;
-  GC gc;
-  XGCValues gcv;
-  int startx, starty, curx, cury;
-  int ocx = -1, ocy = -1, ocw = -1, och = -1;
+  Window borders[4]; /* top, bottom, left, right */
+  XSetWindowAttributes swa;
+  int i, startx, starty, curx, cury, ox, oy, ow, oh;
 
   *rw = 0;
   cur = XCreateFontCursor(dpy, XC_crosshair);
@@ -3088,13 +3087,16 @@ void selectregion(int *rx, int *ry, int *rw, int *rh) {
     return;
   }
 
-  gcv.function = GXxor;
-  gcv.foreground = WhitePixel(dpy, screen) ^ BlackPixel(dpy, screen);
-  gcv.subwindow_mode = IncludeInferiors;
-  gcv.line_width = 1;
-  gc = XCreateGC(dpy, root,
-                 GCFunction | GCForeground | GCSubwindowMode | GCLineWidth,
-                 &gcv);
+  swa.override_redirect = True;
+  swa.background_pixel = WhitePixel(dpy, screen);
+  swa.save_under = True;
+  for (i = 0; i < 4; i++) {
+    borders[i] =
+        XCreateWindow(dpy, root, -10, -10, 1, 1, 0, DefaultDepth(dpy, screen),
+                      CopyFromParent, DefaultVisual(dpy, screen),
+                      CWOverrideRedirect | CWBackPixel | CWSaveUnder, &swa);
+    XMapRaised(dpy, borders[i]);
+  }
 
   do {
     XMaskEvent(dpy, ButtonPressMask, &ev);
@@ -3104,30 +3106,32 @@ void selectregion(int *rx, int *ry, int *rw, int *rh) {
 
   for (;;) {
     XMaskEvent(dpy, PointerMotionMask | ButtonReleaseMask, &ev);
-    if (ev.type == MotionNotify) {
-      if (ocw >= 0)
-        XDrawRectangle(dpy, root, gc, ocx, ocy, ocw, och); /* erase */
-      curx = ev.xmotion.x_root;
-      cury = ev.xmotion.y_root;
-      ocx = MIN(startx, curx);
-      ocy = MIN(starty, cury);
-      ocw = abs(curx - startx);
-      och = abs(cury - starty);
-      XDrawRectangle(dpy, root, gc, ocx, ocy, ocw, och); /* draw */
-    } else if (ev.type == ButtonRelease) {
-      curx = ev.xbutton.x_root;
-      cury = ev.xbutton.y_root;
-      break;
-    }
-  }
-  if (ocw >= 0)
-    XDrawRectangle(dpy, root, gc, ocx, ocy, ocw, och); /* final erase */
+    curx = (ev.type == MotionNotify) ? ev.xmotion.x_root : ev.xbutton.x_root;
+    cury = (ev.type == MotionNotify) ? ev.xmotion.y_root : ev.xbutton.y_root;
 
-  XFreeGC(dpy, gc);
+    ox = MIN(startx, curx);
+    oy = MIN(starty, cury);
+    ow = MAX(abs(curx - startx), 1);
+    oh = MAX(abs(cury - starty), 1);
+
+    XMoveResizeWindow(dpy, borders[0], ox, oy, ow, 2); /* top */
+    XMoveResizeWindow(dpy, borders[1], ox, oy + MAX(oh - 2, 0), ow,
+                      2);                              /* bottom */
+    XMoveResizeWindow(dpy, borders[2], ox, oy, 2, oh); /* left */
+    XMoveResizeWindow(dpy, borders[3], ox + MAX(ow - 2, 0), oy, 2,
+                      oh); /* right */
+
+    if (ev.type == ButtonRelease)
+      break;
+  }
+
+  for (i = 0; i < 4; i++)
+    XDestroyWindow(dpy, borders[i]);
+
   XUngrabPointer(dpy, CurrentTime);
   XFreeCursor(dpy, cur);
-  XSync(dpy,
-        False); /* make sure the erase actually lands before we grab pixels */
+  XSync(dpy, False); /* let the destroys + resulting Expose repaints land before
+                        we grab pixels */
 
   *rx = MIN(startx, curx);
   *ry = MIN(starty, cury);
