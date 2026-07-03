@@ -59,6 +59,7 @@
 #include "drw.h"
 #include "dwm.h"
 #include "ipc.h"
+#include "movestack.h"
 #include "screenshot.h"
 #include "util.h"
 #include "wallpaper.h"
