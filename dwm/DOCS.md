@@ -1,4 +1,3 @@
-
 # DOCS — Code Layout & Internals
 
 This document describes how the source is organized, for anyone (including
@@ -7,22 +6,22 @@ future-you) editing `dwm.c` directly. Configuration values live in
 
 ## File overview
 
-| File                    | Purpose                                                                       |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| `dwm.c`                 | Event loop, layouts, client management -- the stock-dwm core plus the merged patches |
-| `dwm.h`                 | Shared surface between `dwm.c` and the modules below: `Arg`/`Client`/`Monitor` types, `ISVISIBLE`, and externs for the globals/functions those modules call into |
-| `wallpaper.c` / `.h`    | Async Imlib2 wallpaper engine (custom, not a suckless patch)                  |
-| `ipc.c` / `.h`          | FIFO-based remote control (custom, not a suckless patch)                      |
-| `screenshot.c` / `.h`   | Screenshot capture + colorpicker (custom, not a suckless patch)               |
-| `movestack.c` / `.h`    | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h` |
-| `drw.c` / `drw.h`       | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface |
-| `util.c` / `util.h`     | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)   |
-| `transient.c`           | Transient-window handling helper, `#include`d where needed                    |
-| `config.def.h`          | Upstream default config -- **do not edit**, copy to `config.h` instead        |
-| `config.h`              | Your actual config -- compiled directly into the binary                       |
-| `config.mk`             | Build flags, install prefix, library paths                                    |
-| `autostart.sh`          | Shell script run once at dwm startup to launch background processes           |
-| `patches/`              | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading) |
+| File                  | Purpose                                                                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dwm.c`               | Event loop, layouts, client management -- the stock-dwm core plus the merged patches                                                                             |
+| `dwm.h`               | Shared surface between `dwm.c` and the modules below: `Arg`/`Client`/`Monitor` types, `ISVISIBLE`, and externs for the globals/functions those modules call into |
+| `wallpaper.c` / `.h`  | Async Imlib2 wallpaper engine (custom, not a suckless patch)                                                                                                     |
+| `ipc.c` / `.h`        | FIFO-based remote control (custom, not a suckless patch)                                                                                                         |
+| `screenshot.c` / `.h` | Screenshot capture + colorpicker (custom, not a suckless patch)                                                                                                  |
+| `movestack.c` / `.h`  | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h`                             |
+| `drw.c` / `drw.h`     | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface                                                                                  |
+| `util.c` / `util.h`   | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)                                                                                      |
+| `transient.c`         | Transient-window handling helper, `#include`d where needed                                                                                                       |
+| `config.def.h`        | Upstream default config -- **do not edit**, copy to `config.h` instead                                                                                           |
+| `config.h`            | Your actual config -- compiled directly into the binary                                                                                                          |
+| `config.mk`           | Build flags, install prefix, library paths                                                                                                                       |
+| `autostart.sh`        | Shell script run once at dwm startup to launch background processes                                                                                              |
+| `patches/`            | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading)                                                                         |
 
 ### Why the split
 
