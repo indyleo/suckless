@@ -40,10 +40,6 @@ static const char *colors[][3] = {
                    gruvbox_hidbordercolor}, /* hidden */
 };
 
-typedef struct {
-  const char *name;
-  const void *cmd;
-} Sp;
 const char *spcmd1[] = {"st", "-c", "termsc,Termsc", NULL};
 const char *spcmd2[] = {"st", "-c", "lfsc,Lfsc", "-e", "zsh", "-c", "lf", NULL};
 const char *spcmd3[] = {"st", "-c", "qalsc,Qalsc", "-e", "qalc", NULL};

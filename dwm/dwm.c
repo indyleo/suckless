@@ -150,6 +150,12 @@ typedef struct {
   int monitor;
 } Rule;
 
+/* Scratchpads */
+typedef struct {
+  const char *name;
+  const void *cmd;
+} Sp;
+
 /* WallpaperJobSpec/WallpaperCacheEntry are private to wallpaper.c;
  * WallpaperResult is shared via wallpaper.h. */
 
