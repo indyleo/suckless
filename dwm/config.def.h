@@ -107,7 +107,6 @@ static const Layout layouts[] = {
 };
 
 /* key definitions */
-#include "movestack.h"
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define ALTKEY Mod1Mask
