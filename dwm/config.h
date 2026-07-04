@@ -174,6 +174,9 @@ static const Key keys[] = {
     /* Wallpaper */
     {MODKEY | SHIFTKEY, XK_w, nextwallpaper, {0}},
 
+    /* Compositor */
+    {MODKEY, XK_p, spawn, SHCMD("picom_toggle")},
+
     /* Applications */
     {MODKEY, XK_Return, spawn, SHCMD("st")},
     {MODKEY, XK_f, spawn, SHCMD("thunar")},
