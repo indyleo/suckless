@@ -711,7 +711,7 @@ void checkotherwm(void) {
 
 void cleanup(void) {
   Arg a = {.ui = ~0};
-  Layout foo = {"", NULL};
+  Layout foo = {"", "", NULL};
   Monitor *m;
   size_t i;
 

@@ -42,7 +42,8 @@ struct Client {
 };
 
 typedef struct {
-  const char *symbol;
+  const char *symbol; /* shown in the bar */
+  const char *name;   /* plain-text name, e.g. for the fifo state reply */
   void (*arrange)(Monitor *);
 } Layout;
 

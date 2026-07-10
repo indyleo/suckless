@@ -63,8 +63,9 @@ static void fifostate(const Arg *arg) {
     ;
 
   len = snprintf(buf, sizeof(buf), "mon=%d tags=%u layout=%s urgent=%u title=%s\n",
-                 selmon->num, selmon->tagset[selmon->seltags], selmon->ltsymbol,
-                 urg, selmon->sel ? selmon->sel->name : "");
+                 selmon->num, selmon->tagset[selmon->seltags],
+                 selmon->lt[selmon->sellt]->name, urg,
+                 selmon->sel ? selmon->sel->name : "");
   if (len > 0)
     write(fiforeplyfd, buf, (size_t)len);
 }

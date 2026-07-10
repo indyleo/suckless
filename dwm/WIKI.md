@@ -124,13 +124,17 @@ static const int   attachbelow  = 1;     /* 1 = new clients attach after the act
 static const int   lockfullscreen = 1;   /* 1 = fullscreen client keeps focus */
 
 static const Layout layouts[] = {
-    /* symbol     arrange function */
-    {"", tile}, /* first entry is default */
-    {"", NULL}, /* no layout function means floating behavior */
-    {"󰊓", monocle},
+    /* symbol   name       arrange function */
+    {"", "tile", tile}, /* first entry is default */
+    {"", "float", NULL}, /* no layout function means floating behavior */
+    {"󰊓", "monocle", monocle},
 };
-
 ```
+
+Each layout has both a `symbol` (the glyph shown in the bar via `ltsymbol`)
+and a plain-text `name`. The name isn't drawn anywhere in the bar; it only
+surfaces in the FIFO `state` reply (`layout=tile`/`float`/`monocle`) so a
+script reading it doesn't have to parse a Nerd Font glyph.
 
 ## Keybindings
 
@@ -274,7 +278,7 @@ The command fifo is one-way (script → dwm). For the other direction, send
 ```sh
 echo "state" > /tmp/dwm.fifo
 cat /tmp/dwm.fifo.reply
-# mon=0 tags=1 layout=[]= urgent=0 title=st
+# mon=0 tags=1 layout=tile urgent=0 title=st
 ```
 
 The reply fifo is opened `O_RDWR|O_NONBLOCK` the same way the command fifo
