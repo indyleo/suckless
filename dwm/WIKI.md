@@ -136,6 +136,10 @@ and a plain-text `name`. The name isn't drawn anywhere in the bar; it only
 surfaces in the FIFO `state` reply (`layout=tile`/`float`/`monocle`) so a
 script reading it doesn't have to parse a Nerd Font glyph.
 
+`monocle()` still overrides `ltsymbol` at runtime to show a client count,
+but now prepends the icon instead of replacing it: `[N]` becomes
+`<icon>[N]`, so the bar keeps a consistent glyph across all three layouts.
+
 ## Keybindings
 
 All keybinds use `MODKEY` (= Super/Win key) as the primary modifier. Full
@@ -278,8 +282,14 @@ The command fifo is one-way (script → dwm). For the other direction, send
 ```sh
 echo "state" > /tmp/dwm.fifo
 cat /tmp/dwm.fifo.reply
-# mon=0 tags=1 layout=tile urgent=0 title=st
+# mon=0 tags=1 layout=monocle clients=3 urgent=0 title=st
 ```
+
+`clients` is the visible-client count on the current tag — the same count
+monocle's bar symbol shows as `[N]`, just available to scripts without
+having to parse the glyph. It's not layout-specific; it's reported for
+every layout, since it's cheap and generally useful (e.g. deciding whether
+it's worth switching to monocle).
 
 The reply fifo is opened `O_RDWR|O_NONBLOCK` the same way the command fifo
 is, so writing to it never blocks dwm even if nothing is reading it. Any

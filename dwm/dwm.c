@@ -1648,8 +1648,9 @@ void monocle(Monitor *m) {
   for (c = m->clients; c; c = c->next)
     if (ISVISIBLE(c))
       n++;
-  if (n > 0) /* override layout symbol */
-    snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
+  if (n > 0) /* keep the layout icon, append the client count after it */
+    snprintf(m->ltsymbol, sizeof m->ltsymbol, "%s[%d]",
+             m->lt[m->sellt]->symbol, n);
   for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
     resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
 }

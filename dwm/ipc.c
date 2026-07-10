@@ -47,24 +47,28 @@ static void fifotogglescratch(const Arg *arg) {
 static void fifostate(const Arg *arg) {
   char buf[512], discard[512];
   Client *c;
-  unsigned int urg = 0;
+  unsigned int urg = 0, nvis = 0;
   int len;
 
   if (fiforeplyfd < 0)
     return;
 
-  for (c = selmon->clients; c; c = c->next)
+  for (c = selmon->clients; c; c = c->next) {
     if (c->isurgent)
       urg |= c->tags;
+    if (ISVISIBLE(c))
+      nvis++;
+  }
 
   /* drain any unread previous reply so the pipe buffer can't grow
    * unbounded if nothing is reading it */
   while (read(fiforeplyfd, discard, sizeof(discard)) > 0)
     ;
 
-  len = snprintf(buf, sizeof(buf), "mon=%d tags=%u layout=%s urgent=%u title=%s\n",
+  len = snprintf(buf, sizeof(buf),
+                 "mon=%d tags=%u layout=%s clients=%u urgent=%u title=%s\n",
                  selmon->num, selmon->tagset[selmon->seltags],
-                 selmon->lt[selmon->sellt]->name, urg,
+                 selmon->lt[selmon->sellt]->name, nvis, urg,
                  selmon->sel ? selmon->sel->name : "");
   if (len > 0)
     write(fiforeplyfd, buf, (size_t)len);

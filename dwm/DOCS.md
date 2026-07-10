@@ -297,7 +297,7 @@ can check/close it directly, same pattern as the wallpaper globals above.
 **Query side.** `fifopath` is write-only from the caller's perspective —
 dwm never talks back on it. The `state` command is the one exception:
 `fifostate()` (static in `ipc.c`) builds a one-line summary (monitor,
-tagset, layout symbol, urgent tag bitmask, focused client title) and
+tagset, layout name, visible client count, urgent tag bitmask, focused client title) and
 `write()`s it to `fiforeplyfd`. Before writing, it drains any bytes still
 unread from a previous `state` call — since the fifo is opened `O_RDWR` by
 dwm itself, a write with no external reader would otherwise just
