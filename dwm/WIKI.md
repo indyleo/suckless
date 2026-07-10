@@ -49,7 +49,13 @@ per state, then assembled into the `colors[][3]` table:
 [SchemeNorm] = {gruvbox_normfgcolor, gruvbox_normbgcolor, gruvbox_normbordercolor}, /* unfocused */
 [SchemeSel]  = {gruvbox_selfgcolor,  gruvbox_selbgcolor,  gruvbox_selbordercolor},  /* focused */
 [SchemeHid]  = {gruvbox_hidfgcolor,  gruvbox_hidbgcolor,  gruvbox_hidbordercolor},  /* hidden/scratchpad */
+[SchemeUrg]  = {gruvbox_urgfgcolor,  gruvbox_urgbgcolor,  gruvbox_urgbordercolor},  /* urgency hint */
 ```
+
+`SchemeUrg` is used for any tag with an urgent client on it, and for that
+client's own tab in the title area — both in `drawbar()`. It only fires
+off `XWMHintsIsUrgent`/`isurgent`, which clears itself the moment you
+focus the client.
 
 To re-theme, edit the named hex variables — don't restructure the table
 itself unless you're also adding a new `Scheme*`.
@@ -82,6 +88,9 @@ Toggle-able floating terminal apps, bound via `togglescratch`:
 To add a new scratchpad: add a `const char *spcmdN[]` array, add it to the
 `scratchpads[]` table, add a matching rule in `rules[]` using `SPTAG(N)`,
 and bind `togglescratch` with `{.ui = N}` in `keys[]`.
+
+`MODKEY+SHIFT+t` (`hideallscratchpads`) collapses every currently visible
+scratchpad out of view in one call — handy before a screen share.
 
 ## Window rules
 
@@ -139,9 +148,12 @@ table lives in `keys[]`; grouped highlights below.
 | `MODKEY+SHIFT+=` / `-`   | Increase/decrease master count        |
 | `MODKEY+SHIFT+z`         | Zoom (swap with master)               |
 | `MODKEY+ALT+SHIFT+t/f/m` | Set layout: tile / floating / monocle |
+| `MODKEY+ALT+space`       | Cycle to next layout                  |
+| `MODKEY+ALT+SHIFT+space` | Cycle to prev layout                  |
 | `MODKEY+SHIFT+f`         | Toggle fullscreen                     |
 | `MODKEY+SHIFT+space`     | Toggle floating                       |
 | `MODKEY+=` / `-`         | Show / hide focused window            |
+| `MODKEY+SHIFT+t`         | Hide all visible scratchpads          |
 | `MODKEY+0` / `SHIFT+0`   | View / tag all tags                   |
 | `MODKEY+,` / `.`         | Focus prev/next monitor               |
 | `MODKEY+SHIFT+,` / `.`   | Send window to prev/next monitor      |
@@ -207,30 +219,35 @@ event loop tick (~10ms latency). Send a command by writing a line to it:
 echo "<command> [arg]" > /tmp/dwm.fifo
 ```
 
-| Command            | Arg              | Effect                             |
-| ------------------ | ---------------- | ---------------------------------- |
-| `view`             | 0–4              | Switch to tag                      |
-| `tag`              | 0–4              | Move window to tag                 |
-| `toggleview`       | 0–4              | Add/remove tag from current view   |
-| `toggletag`        | 0–4              | Toggle tag on focused window       |
-| `setmfact`         | float e.g. `0.6` | Set master area size               |
-| `incnmaster`       | `1` or `-1`      | Add/remove master client           |
-| `zoom`             | —                | Swap focused window with master    |
-| `togglefloating`   | —                | Toggle float on focused window     |
-| `togglefullscreen` | —                | Toggle fullscreen                  |
-| `focusstackvis`    | `1` or `-1`      | Focus next/prev visible window     |
-| `focusmon`         | `1` or `-1`      | Focus next/prev monitor            |
-| `tagmon`           | `1` or `-1`      | Send window to next/prev monitor   |
-| `show`             | —                | Show focused window                |
-| `hide`             | —                | Hide focused window                |
-| `showall`          | —                | Show all hidden windows            |
-| `killclient`       | —                | Close focused window               |
-| `togglescratch`    | 0–7              | Toggle scratchpad by index         |
-| `togglebar`        | —                | Show/hide bar                      |
-| `nextwallpaper`    | —                | Load new random wallpaper          |
-| `screenshot`       | 0–3              | Capture full/monitor/window/select |
-| `colorpicker`      | —                | Pick a color under cursor          |
-| `quit`             | —                | Quit dwm (`1` = restart)           |
+| Command             | Arg              | Effect                                 |
+| ------------------- | ---------------- | --------------------------------------- |
+| `view`              | 0–4              | Switch to tag                            |
+| `tag`               | 0–4              | Move window to tag                       |
+| `toggleview`        | 0–4              | Add/remove tag from current view         |
+| `toggletag`         | 0–4              | Toggle tag on focused window             |
+| `setmfact`          | float e.g. `0.6` | Set master area size                     |
+| `incnmaster`        | `1` or `-1`      | Add/remove master client                 |
+| `cyclelayout`       | `1` or `-1`      | Cycle to next/prev layout                |
+| `zoom`              | —                | Swap focused window with master          |
+| `togglefloating`    | —                | Toggle float on focused window           |
+| `togglefullscreen`  | —                | Toggle fullscreen                        |
+| `focusstackvis`     | `1` or `-1`      | Focus next/prev visible window           |
+| `focusmon`          | `1` or `-1`      | Focus next/prev monitor                  |
+| `tagmon`            | `1` or `-1`      | Send window to next/prev monitor         |
+| `switchcol`         | —                | Focus first window in the other column   |
+| `show`              | —                | Show focused window                      |
+| `hide`              | —                | Hide focused window                      |
+| `showall`           | —                | Show all hidden windows                  |
+| `togglewin`         | —                | Toggle hide/show on the focused window   |
+| `killclient`        | —                | Close focused window                     |
+| `togglescratch`     | 0–7              | Toggle scratchpad by index                |
+| `hideallscratch`    | —                | Hide every visible scratchpad            |
+| `togglebar`         | —                | Show/hide bar                            |
+| `nextwallpaper`     | —                | Load new random wallpaper                |
+| `screenshot`        | 0–3              | Capture full/monitor/window/select       |
+| `colorpicker`       | —                | Pick a color under cursor                |
+| `state`             | —                | Write a state dump to `fiforeplypath`    |
+| `quit`              | —                | Quit dwm (`1` = restart)                 |
 
 Examples:
 
@@ -248,6 +265,24 @@ table.
 Note: `screenshot 3` (select) and `colorpicker` block dwm's event loop
 until the interaction completes, same as a mouse-drag resize would — don't
 trigger them from something expecting an instant return.
+
+### Querying state back out
+
+The command fifo is one-way (script → dwm). For the other direction, send
+`state` and then read `/tmp/dwm.fifo.reply` (path set via `fiforeplypath`):
+
+```sh
+echo "state" > /tmp/dwm.fifo
+cat /tmp/dwm.fifo.reply
+# mon=0 tags=1 layout=[]= urgent=0 title=st
+```
+
+The reply fifo is opened `O_RDWR|O_NONBLOCK` the same way the command fifo
+is, so writing to it never blocks dwm even if nothing is reading it. Any
+unread previous reply is drained before the new one is written, so it
+can't grow unbounded — but that also means a reply you don't read within
+one `state` call is gone, so read it right after sending the command
+rather than polling it independently.
 
 ## Autostart
 

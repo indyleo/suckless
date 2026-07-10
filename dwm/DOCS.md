@@ -274,6 +274,9 @@ can check/close it directly, same pattern as the wallpaper globals above.
   `O_RDWR` (rather than `O_RDONLY`) is deliberate: a FIFO opened read-only
   blocks until a writer attaches, and errors when the last writer detaches.
   Opening it read-write sidesteps both, so the `run()` loop never stalls.
+  The same function also creates/opens a second FIFO at `fiforeplypath`
+  into `fiforeplyfd`, using the identical `O_RDWR | O_NONBLOCK` trick, for
+  the query side described below.
 - `readfifo()` is called every iteration of `run()`. It performs a
   non-blocking `read()` into a small static buffer, then processes any
   complete (`\n`-terminated) lines it finds, leaving partial lines in the
@@ -288,7 +291,19 @@ can check/close it directly, same pattern as the wallpaper globals above.
   `Arg`-taking functions directly, no wrapper needed. Those target
   functions (`view`, `tag`, `setmfact`, `show`, `quit`, etc.) are declared
   in `dwm.h` so `ipc.c` can call them.
-- `cleanup()` closes the fd and `unlink()`s the FIFO path on exit/restart.
+- `cleanup()` closes both fds and `unlink()`s both FIFO paths on
+  exit/restart.
+
+**Query side.** `fifopath` is write-only from the caller's perspective —
+dwm never talks back on it. The `state` command is the one exception:
+`fifostate()` (static in `ipc.c`) builds a one-line summary (monitor,
+tagset, layout symbol, urgent tag bitmask, focused client title) and
+`write()`s it to `fiforeplyfd`. Before writing, it drains any bytes still
+unread from a previous `state` call — since the fifo is opened `O_RDWR` by
+dwm itself, a write with no external reader would otherwise just
+accumulate in the pipe buffer indefinitely rather than blocking or
+failing. This makes `fiforeplypath` last-write-wins: read it immediately
+after sending `state`, don't treat it as a persistent state file.
 
 See `WIKI.md` → "FIFO Commands" for the full command table and usage
 examples.
@@ -303,6 +318,11 @@ examples.
    are already visible to `ipc.c`.
 3. Add a row to `fifocmds[]` in `ipc.c`: `{"yourcmd", yourfunc, argtype}`.
 4. Rebuild. No other wiring needed — `readfifo()`'s dispatch loop is generic.
+
+If your command needs to report something back (rather than just act),
+follow the `fifostate()` pattern instead of adding output to the regular
+command path: write to `fiforeplyfd`, guard against `fiforeplyfd < 0`, and
+drain unread bytes first so repeated unread queries can't grow the pipe.
 
 ## Adding a new patch
 

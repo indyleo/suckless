@@ -73,7 +73,12 @@ struct Monitor {
   int stw;
 };
 
-enum { SchemeNorm, SchemeSel, SchemeHid }; /* color schemes, indexes `scheme` */
+enum {
+  SchemeNorm,
+  SchemeSel,
+  SchemeHid,
+  SchemeUrg
+}; /* color schemes, indexes `scheme` */
 
 #define ISVISIBLE(C) ((C->tags & C->mon->tagset[C->mon->seltags]))
 
@@ -105,7 +110,11 @@ void hide(const Arg *arg);
 void showall(const Arg *arg);
 void killclient(const Arg *arg);
 void togglescratch(const Arg *arg);
+void hideallscratchpads(const Arg *arg);
 void togglebar(const Arg *arg);
+void switchcol(const Arg *arg);
+void cyclelayout(const Arg *arg);
+void toggleselwin(const Arg *arg);
 void quit(const Arg *arg);
 
 #endif /* DWM_H */

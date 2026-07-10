@@ -15,9 +15,11 @@
 #include "util.h"
 #include "wallpaper.h"
 
-extern const char *fifopath; /* set in config.h, included once by dwm.c */
+extern const char *fifopath;      /* set in config.h, included once by dwm.c */
+extern const char *fiforeplypath; /* set in config.h, included once by dwm.c */
 
 int fifofd = -1;
+int fiforeplyfd = -1;
 
 typedef struct {
   const char *cmd;
@@ -39,6 +41,34 @@ static void fifotogglescratch(const Arg *arg) {
   togglescratch(&((Arg){.ui = (unsigned int)arg->i}));
 }
 
+/* query side: writes "mon=.. tags=.. layout=.. urgent=.. title=.." to
+ * fiforeplypath so a status bar / script can read dwm's state back out
+ * instead of only being able to push commands in. */
+static void fifostate(const Arg *arg) {
+  char buf[512], discard[512];
+  Client *c;
+  unsigned int urg = 0;
+  int len;
+
+  if (fiforeplyfd < 0)
+    return;
+
+  for (c = selmon->clients; c; c = c->next)
+    if (c->isurgent)
+      urg |= c->tags;
+
+  /* drain any unread previous reply so the pipe buffer can't grow
+   * unbounded if nothing is reading it */
+  while (read(fiforeplyfd, discard, sizeof(discard)) > 0)
+    ;
+
+  len = snprintf(buf, sizeof(buf), "mon=%d tags=%u layout=%s urgent=%u title=%s\n",
+                 selmon->num, selmon->tagset[selmon->seltags], selmon->ltsymbol,
+                 urg, selmon->sel ? selmon->sel->name : "");
+  if (len > 0)
+    write(fiforeplyfd, buf, (size_t)len);
+}
+
 static FifoCmd fifocmds[] = {
     /* cmd                function              argtype */
     /* tag/view */
@@ -49,6 +79,7 @@ static FifoCmd fifocmds[] = {
     /* layout */
     {"setmfact", setmfact, 3},     /* setmfact 0.6      */
     {"incnmaster", incnmaster, 1}, /* incnmaster 1/-1   */
+    {"cyclelayout", cyclelayout, 1}, /* cyclelayout 1/-1  */
     {"zoom", zoom, 0},
     {"togglefloating", togglefloating, 0},
     {"togglefullscreen", fullscreen, 0},
@@ -56,13 +87,16 @@ static FifoCmd fifocmds[] = {
     {"focusstackvis", focusstackvis, 1}, /* focusstackvis 1/-1 */
     {"focusmon", focusmon, 1},           /* focusmon 1/-1     */
     {"tagmon", tagmon, 1},               /* tagmon 1/-1       */
+    {"switchcol", switchcol, 0},
     /* window visibility */
     {"show", show, 0},
     {"hide", hide, 0},
     {"showall", showall, 0},
+    {"togglewin", toggleselwin, 0}, /* toggles the focused client */
     {"killclient", killclient, 0},
     /* scratchpads */
     {"togglescratch", fifotogglescratch, 1}, /* togglescratch 0-7 */
+    {"hideallscratch", hideallscratchpads, 0},
     /* bar */
     {"togglebar", togglebar, 0},
     /* wallpaper */
@@ -71,6 +105,8 @@ static FifoCmd fifocmds[] = {
     {"screenshot", takescreenshot,
      1}, /* screenshot 0=full 1=screen 2=window 3=select */
     {"colorpicker", pickcolor, 0}, /* colorpicker */
+    /* query */
+    {"state", fifostate, 0}, /* writes state line to fiforeplypath */
     /* session */
     {"quit", quit, 0}, /* quit 1 = restart  */
 };
@@ -130,4 +166,16 @@ void setupfifo(void) {
   fifofd = open(fifopath, O_RDWR | O_NONBLOCK);
   if (fifofd < 0)
     fprintf(stderr, "dwm: could not open fifo %s\n", fifopath);
+
+  if (stat(fiforeplypath, &st) != 0) {
+    if (mkfifo(fiforeplypath, 0600) != 0) {
+      fprintf(stderr, "dwm: could not create fifo %s\n", fiforeplypath);
+      return;
+    }
+  }
+  /* same O_RDWR trick: keeps a write() from the `state` command from
+   * blocking or SIGPIPE'ing even if nothing is currently reading */
+  fiforeplyfd = open(fiforeplypath, O_RDWR | O_NONBLOCK);
+  if (fiforeplyfd < 0)
+    fprintf(stderr, "dwm: could not open fifo %s\n", fiforeplypath);
 }

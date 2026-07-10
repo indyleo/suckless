@@ -11,6 +11,7 @@ static const int topbar = 1;  /* 0 means bottom bar */
 const char *wallpaperdir = "~/Pictures/Wallpapers/gruvbox";
 static const int wallpaperinterval = 900; /* seconds, 0 to disable timer */
 const char *fifopath = "/tmp/dwm.fifo";
+const char *fiforeplypath = "/tmp/dwm.fifo.reply";
 static const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
@@ -29,6 +30,10 @@ static const char gruvbox_hidfgcolor[] = "#928374";     // gruvbox faded fg
 static const char gruvbox_hidbgcolor[] = "#1d2021";     // hard contrast bg
 static const char gruvbox_hidbordercolor[] = "#3c3836"; // same as norm border
 
+static const char gruvbox_urgfgcolor[] = "#fbf1c7";     // near-white fg
+static const char gruvbox_urgbgcolor[] = "#cc241d";     // gruvbox red
+static const char gruvbox_urgbordercolor[] = "#fb4934"; // bright red border
+
 /* Gruvbox color scheme table */
 static const char *colors[][3] = {
     /*               fg               bg                border               */
@@ -38,6 +43,8 @@ static const char *colors[][3] = {
                    gruvbox_selbordercolor}, /* selected */
     [SchemeHid] = {gruvbox_hidfgcolor, gruvbox_hidbgcolor,
                    gruvbox_hidbordercolor}, /* hidden */
+    [SchemeUrg] = {gruvbox_urgfgcolor, gruvbox_urgbgcolor,
+                   gruvbox_urgbordercolor}, /* urgent */
 };
 
 const char *spcmd1[] = {"st", "-c", "termsc,Termsc", NULL};
@@ -152,6 +159,8 @@ static const Key keys[] = {
     {MODKEY | ALTKEY | SHIFTKEY, XK_t, setlayout, {.v = &layouts[0]}},
     {MODKEY | ALTKEY | SHIFTKEY, XK_f, setlayout, {.v = &layouts[1]}},
     {MODKEY | ALTKEY | SHIFTKEY, XK_m, setlayout, {.v = &layouts[2]}},
+    {MODKEY | ALTKEY, XK_space, cyclelayout, {.i = +1}},
+    {MODKEY | ALTKEY | SHIFTKEY, XK_space, cyclelayout, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_f, fullscreen, {0}},
     {MODKEY | SHIFTKEY, XK_space, togglefloating, {0}},
     {MODKEY, XK_comma, focusmon, {.i = -1}},
@@ -261,6 +270,7 @@ static const Key keys[] = {
     {MODKEY, XK_d, togglescratch, {.ui = 5}}, /* discordo */
     {MODKEY, XK_c, togglescratch, {.ui = 6}}, /* twitch-tui */
     {MODKEY, XK_m, togglescratch, {.ui = 7}}, /* musicsc */
+    {MODKEY | SHIFTKEY, XK_t, hideallscratchpads, {0}}, /* hide all scratchpads */
 };
 
 /* button definitions */

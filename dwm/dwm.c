@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details.
  *
  * dynamic window manager is designed like any other X client as well. It is
@@ -187,7 +186,7 @@ static int drawstatusbar(Monitor *m, int bh, char *text);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
 static void focus(Client *c);
-static void switchcol(const Arg *arg);
+void switchcol(const Arg *arg);
 static void focusin(XEvent *e);
 void focusmon(const Arg *arg);
 void focusstackvis(const Arg *arg);
@@ -230,6 +229,7 @@ static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 void fullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
+void cyclelayout(const Arg *arg);
 void setmfact(const Arg *arg);
 static void applygeomchange(void);
 static void rrscreenchangenotify(XEvent *e);
@@ -251,9 +251,11 @@ static void tile(Monitor *m);
 void togglebar(const Arg *arg);
 void togglefloating(const Arg *arg);
 void togglescratch(const Arg *arg);
+void hideallscratchpads(const Arg *arg);
 void toggletag(const Arg *arg);
 void toggleview(const Arg *arg);
 static void togglewin(const Arg *arg);
+void toggleselwin(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
@@ -729,6 +731,9 @@ void cleanup(void) {
   if (fifofd >= 0)
     close(fifofd);
   unlink(fifopath);
+  if (fiforeplyfd >= 0)
+    close(fiforeplyfd);
+  unlink(fiforeplypath);
   free(scheme);
   XDestroyWindow(dpy, wmcheckwin);
   drw_free(drw);
@@ -1103,9 +1108,10 @@ void drawbar(Monitor *m) {
       continue;
 
     w = TEXTW(tags[i]);
-    drw_setscheme(
-        drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-    drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+    drw_setscheme(drw, scheme[urg & 1 << i          ? SchemeUrg
+                               : m->tagset[m->seltags] & 1 << i ? SchemeSel
+                                                                 : SchemeNorm]);
+    drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], 0);
     x += w;
   }
 
@@ -1132,6 +1138,8 @@ void drawbar(Monitor *m) {
 
         if (m->sel == c)
           scm = SchemeSel;
+        else if (c->isurgent)
+          scm = SchemeUrg;
         else if (HIDDEN(c))
           scm = SchemeHid;
         else
@@ -2103,6 +2111,20 @@ void setlayout(const Arg *arg) {
     drawbar(selmon);
 }
 
+void cyclelayout(const Arg *arg) {
+  int i;
+
+  for (i = 0; i < (int)LENGTH(layouts) && &layouts[i] != selmon->lt[selmon->sellt];
+       i++)
+    ;
+  if (i == (int)LENGTH(layouts))
+    i = 0;
+  i = (i + arg->i) % (int)LENGTH(layouts);
+  if (i < 0)
+    i += LENGTH(layouts);
+  setlayout(&((Arg){.v = &layouts[i]}));
+}
+
 void setmfact(const Arg *arg) {
   float f;
 
@@ -2427,6 +2449,16 @@ void togglescratch(const Arg *arg) {
   }
 }
 
+void hideallscratchpads(const Arg *arg) {
+  unsigned int newtagset = selmon->tagset[selmon->seltags] & ~SPTAGMASK;
+
+  if (newtagset && newtagset != selmon->tagset[selmon->seltags]) {
+    selmon->tagset[selmon->seltags] = newtagset;
+    focus(NULL);
+    arrange(selmon);
+  }
+}
+
 void toggletag(const Arg *arg) {
   unsigned int newtags;
 
@@ -2492,6 +2524,15 @@ void togglewin(const Arg *arg) {
     focus(c);
     restack(selmon);
   }
+}
+
+void toggleselwin(const Arg *arg) {
+  Arg a;
+
+  if (!selmon->sel)
+    return;
+  a.v = selmon->sel;
+  togglewin(&a);
 }
 
 void unfocus(Client *c, int setfocus) {
