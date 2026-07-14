@@ -108,7 +108,7 @@ static const int lockfullscreen =
 
 static const Layout layouts[] = {
     /* symbol   name       arrange function */
-    {"", "tile", tile}, /* first entry is default */
+    {"", "tile", tile},  /* first entry is default */
     {"", "float", NULL}, /* no layout function means floating behavior */
     {"󰊓", "monocle", monocle},
 };
@@ -189,7 +189,7 @@ static const Key keys[] = {
     /* Applications */
     {MODKEY, XK_Return, spawn, SHCMD("st")},
     {MODKEY, XK_f, spawn, SHCMD("thunar")},
-    {MODKEY, XK_b, spawn, SHCMD("qutebrowser")},
+    {MODKEY, XK_b, spawn, SHCMD("librewolf")},
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("vesktop")},
     {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
 
@@ -270,7 +270,10 @@ static const Key keys[] = {
     {MODKEY, XK_d, togglescratch, {.ui = 5}}, /* discordo */
     {MODKEY, XK_c, togglescratch, {.ui = 6}}, /* twitch-tui */
     {MODKEY, XK_m, togglescratch, {.ui = 7}}, /* musicsc */
-    {MODKEY | SHIFTKEY, XK_t, hideallscratchpads, {0}}, /* hide all scratchpads */
+    {MODKEY | SHIFTKEY,
+     XK_t,
+     hideallscratchpads,
+     {0}}, /* hide all scratchpads */
 };
 
 /* button definitions */
