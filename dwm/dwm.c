@@ -1108,9 +1108,9 @@ void drawbar(Monitor *m) {
       continue;
 
     w = TEXTW(tags[i]);
-    drw_setscheme(drw, scheme[urg & 1 << i          ? SchemeUrg
-                               : m->tagset[m->seltags] & 1 << i ? SchemeSel
-                                                                 : SchemeNorm]);
+    drw_setscheme(drw, scheme[urg & 1 << i                     ? SchemeUrg
+                              : m->tagset[m->seltags] & 1 << i ? SchemeSel
+                                                               : SchemeNorm]);
     drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], 0);
     x += w;
   }
@@ -1254,6 +1254,7 @@ void switchcol(const Arg *arg) {
   for (c = nexttiled(selmon->clients); c; c = nexttiled(c->next), i++) {
     if ((i >= selmon->nmaster) != col) {
       focus(c);
+      XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w / 2, c->h / 2);
       restack(selmon);
       break;
     }
@@ -1649,8 +1650,8 @@ void monocle(Monitor *m) {
     if (ISVISIBLE(c))
       n++;
   if (n > 0) /* keep the layout icon, append the client count after it */
-    snprintf(m->ltsymbol, sizeof m->ltsymbol, "%s[%d]",
-             m->lt[m->sellt]->symbol, n);
+    snprintf(m->ltsymbol, sizeof m->ltsymbol, "%s[%d]", m->lt[m->sellt]->symbol,
+             n);
   for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
     resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
 }
@@ -2115,7 +2116,8 @@ void setlayout(const Arg *arg) {
 void cyclelayout(const Arg *arg) {
   int i;
 
-  for (i = 0; i < (int)LENGTH(layouts) && &layouts[i] != selmon->lt[selmon->sellt];
+  for (i = 0;
+       i < (int)LENGTH(layouts) && &layouts[i] != selmon->lt[selmon->sellt];
        i++)
     ;
   if (i == (int)LENGTH(layouts))
