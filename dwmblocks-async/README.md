@@ -11,24 +11,39 @@ on the root window, which dwm reads for its bar.
 
 ## Blocks (current config)
 
-| Icon | Command | Interval | Signal |
-|---|---|---|---|
-| `` | `mediactl state-title 35` | on signal only | 23 |
-| `` | `sysstats volume` | on signal only | 24 |
-| `` | `sysstats brightness` | on signal only | 25 |
-| `` | `sysstats battery` | 15s | — |
-| `` | `sysstats date_time` | 30s | — |
+| Icon | Command                   | Interval       | Signal | Clickable |
+| ---- | ------------------------- | -------------- | ------ | --------- |
+| ``   | `mediactl state-title 35` | on signal only | 23     | Yes       |
+| ``   | `sysstats volume`         | on signal only | 24     | Yes       |
+| ``   | `sysstats brightness`     | on signal only | 25     | Yes       |
+| ``   | `sysstats battery`        | 15s            | —      | No        |
+| ``   | `sysstats date_time`      | 30s            | —      | No        |
 
-Blocks are separated by ` \|\| ` in the bar. No leading or trailing delimiter.
+Blocks are separated by `\|\|` in the bar. No leading or trailing delimiter.
+
+## Clickable blocks
+
+`CLICKABLE_BLOCKS 1` — clicking or scrolling a block runs its command again
+with `BLOCK_BUTTON` set (1=left, 2=middle, 3=right, 4=scroll-up,
+5=scroll-down); the script decides what that means. Current mapping (lives
+in the block scripts themselves, see `sysctl`/`sysstats`/`mediactl`):
+
+| Block      | Left             | Right                           | Scroll      |
+| ---------- | ---------------- | ------------------------------- | ----------- |
+| media      | play/pause       | —                               | prev / next |
+| volume     | mute toggle      | open `wiremix` mixer scratchpad | ±5%         |
+| brightness | dim/undim toggle | —                               | ±5%         |
+
+Battery and date/time aren't clickable — they're on signal `0`, which dwm's
+click handler ignores unconditionally. See [WIKI.md](WIKI.md) for the full
+mechanism.
 
 ## Updating blocks
 
 Signal-driven blocks (interval = 0) only update when explicitly triggered:
 
 ```sh
-# Update volume block (signal 24)
-kill -44 $(pidof dwmblocks)   # SIGRTMIN+24 = 34+24 = 58... use pkill instead:
-pkill -RTMIN+24 dwmblocks
+pkill -RTMIN+24 dwmblocks   # refresh volume block
 
 # Or from dwm's statuscmd patch — clicking a block sends its signal automatically
 ```

@@ -92,6 +92,11 @@ and bind `togglescratch` with `{.ui = N}` in `keys[]`.
 `MODKEY+SHIFT+t` (`hideallscratchpads`) collapses every currently visible
 scratchpad out of view in one call — handy before a screen share.
 
+Note: scratchpad 3 (`wiremixsc`) can also be toggled from outside a
+keybind entirely — it's how the status bar's volume block opens the mixer
+on right-click, via `echo "togglescratch 3" > /tmp/dwm.fifo`. Any external
+script can pop a scratchpad this way, not just dwm's own keybindings.
+
 ## Window rules
 
 ```c
@@ -125,7 +130,7 @@ static const int   lockfullscreen = 1;   /* 1 = fullscreen client keeps focus */
 
 static const Layout layouts[] = {
     /* symbol   name       arrange function */
-    {"", "tile", tile}, /* first entry is default */
+    {"", "tile", tile},  /* first entry is default */
     {"", "float", NULL}, /* no layout function means floating behavior */
     {"󰊓", "monocle", monocle},
 };
@@ -186,7 +191,8 @@ than calling apps directly.
 
 **Media/volume/mic/brightness** — XF86 keys are bound where the hardware
 sends them; `MODKEY+ALT`/`MODKEY+SHIFT` combos are provided as a fallback
-for keyboards without media keys.
+for keyboards without media keys. The status bar itself is also
+interactive for these — see the "Status text" row in Mouse bindings below.
 
 **Screenshots**
 
@@ -205,18 +211,27 @@ of an image thumbnail.
 
 ## Mouse bindings
 
-| Click target  | Button               | Action                                   |
-| ------------- | -------------------- | ---------------------------------------- |
-| Layout symbol | Left                 | Cycle to tile layout                     |
-| Layout symbol | Right                | Cycle to monocle                         |
-| Window title  | Left                 | Toggle window (scratchpad-style)         |
-| Window title  | Middle               | Zoom                                     |
-| Status text   | Left/Middle/Right    | Sent to status script via `sigstatusbar` |
-| Client window | `MODKEY`+Left        | Move (drag)                              |
-| Client window | `MODKEY`+Middle      | Toggle floating                          |
-| Client window | `MODKEY`+Right       | Resize (drag)                            |
-| Tag bar       | Left/Right           | View / toggle-view tag                   |
-| Tag bar       | `MODKEY`+Left/Middle | Tag / toggle-tag window                  |
+| Click target  | Button                           | Action                                                                 |
+| ------------- | -------------------------------- | ---------------------------------------------------------------------- |
+| Layout symbol | Left                             | Cycle to tile layout                                                   |
+| Layout symbol | Right                            | Cycle to monocle                                                       |
+| Window title  | Left                             | Toggle window (scratchpad-style)                                       |
+| Window title  | Middle                           | Zoom                                                                   |
+| Status text   | Left/Middle/Right/Scroll up/down | Sent to whichever block script is under the cursor, via `sigstatusbar` |
+| Client window | `MODKEY`+Left                    | Move (drag)                                                            |
+| Client window | `MODKEY`+Middle                  | Toggle floating                                                        |
+| Client window | `MODKEY`+Right                   | Resize (drag)                                                          |
+| Tag bar       | Left/Right                       | View / toggle-view tag                                                 |
+| Tag bar       | `MODKEY`+Left/Middle             | Tag / toggle-tag window                                                |
+
+Unlike the other rows, "Status text" isn't one fixed action — dwm only
+identifies _which block_ was clicked (by the signal number embedded in
+that segment of the status string) and forwards the button number to it.
+What actually happens is entirely up to that block's own script via
+`$BLOCK_BUTTON`. See the dwmblocks-async repo's WIKI/README for the
+current per-block mapping (volume, brightness, media, etc.) — blocks with
+signal `0` in dwmblocks' `BLOCKS()` config can't be clicked at all, dwm
+ignores clicks on that segment unconditionally.
 
 ## FIFO commands (IPC)
 
@@ -227,35 +242,35 @@ event loop tick (~10ms latency). Send a command by writing a line to it:
 echo "<command> [arg]" > /tmp/dwm.fifo
 ```
 
-| Command             | Arg              | Effect                                 |
-| ------------------- | ---------------- | --------------------------------------- |
-| `view`              | 0–4              | Switch to tag                            |
-| `tag`               | 0–4              | Move window to tag                       |
-| `toggleview`        | 0–4              | Add/remove tag from current view         |
-| `toggletag`         | 0–4              | Toggle tag on focused window             |
-| `setmfact`          | float e.g. `0.6` | Set master area size                     |
-| `incnmaster`        | `1` or `-1`      | Add/remove master client                 |
-| `cyclelayout`       | `1` or `-1`      | Cycle to next/prev layout                |
-| `zoom`              | —                | Swap focused window with master          |
-| `togglefloating`    | —                | Toggle float on focused window           |
-| `togglefullscreen`  | —                | Toggle fullscreen                        |
-| `focusstackvis`     | `1` or `-1`      | Focus next/prev visible window           |
-| `focusmon`          | `1` or `-1`      | Focus next/prev monitor                  |
-| `tagmon`            | `1` or `-1`      | Send window to next/prev monitor         |
-| `switchcol`         | —                | Focus first window in the other column   |
-| `show`              | —                | Show focused window                      |
-| `hide`              | —                | Hide focused window                      |
-| `showall`           | —                | Show all hidden windows                  |
-| `togglewin`         | —                | Toggle hide/show on the focused window   |
-| `killclient`        | —                | Close focused window                     |
-| `togglescratch`     | 0–7              | Toggle scratchpad by index                |
-| `hideallscratch`    | —                | Hide every visible scratchpad            |
-| `togglebar`         | —                | Show/hide bar                            |
-| `nextwallpaper`     | —                | Load new random wallpaper                |
-| `screenshot`        | 0–3              | Capture full/monitor/window/select       |
-| `colorpicker`       | —                | Pick a color under cursor                |
-| `state`             | —                | Write a state dump to `fiforeplypath`    |
-| `quit`              | —                | Quit dwm (`1` = restart)                 |
+| Command            | Arg              | Effect                                 |
+| ------------------ | ---------------- | -------------------------------------- |
+| `view`             | 0–4              | Switch to tag                          |
+| `tag`              | 0–4              | Move window to tag                     |
+| `toggleview`       | 0–4              | Add/remove tag from current view       |
+| `toggletag`        | 0–4              | Toggle tag on focused window           |
+| `setmfact`         | float e.g. `0.6` | Set master area size                   |
+| `incnmaster`       | `1` or `-1`      | Add/remove master client               |
+| `cyclelayout`      | `1` or `-1`      | Cycle to next/prev layout              |
+| `zoom`             | —                | Swap focused window with master        |
+| `togglefloating`   | —                | Toggle float on focused window         |
+| `togglefullscreen` | —                | Toggle fullscreen                      |
+| `focusstackvis`    | `1` or `-1`      | Focus next/prev visible window         |
+| `focusmon`         | `1` or `-1`      | Focus next/prev monitor                |
+| `tagmon`           | `1` or `-1`      | Send window to next/prev monitor       |
+| `switchcol`        | —                | Focus first window in the other column |
+| `show`             | —                | Show focused window                    |
+| `hide`             | —                | Hide focused window                    |
+| `showall`          | —                | Show all hidden windows                |
+| `togglewin`        | —                | Toggle hide/show on the focused window |
+| `killclient`       | —                | Close focused window                   |
+| `togglescratch`    | 0–7              | Toggle scratchpad by index             |
+| `hideallscratch`   | —                | Hide every visible scratchpad          |
+| `togglebar`        | —                | Show/hide bar                          |
+| `nextwallpaper`    | —                | Load new random wallpaper              |
+| `screenshot`       | 0–3              | Capture full/monitor/window/select     |
+| `colorpicker`      | —                | Pick a color under cursor              |
+| `state`            | —                | Write a state dump to `fiforeplypath`  |
+| `quit`             | —                | Quit dwm (`1` = restart)               |
 
 Examples:
 
@@ -263,6 +278,7 @@ Examples:
 echo "view 2" > /tmp/dwm.fifo
 echo "setmfact 0.65" > /tmp/dwm.fifo
 echo "nextwallpaper" > /tmp/dwm.fifo
+echo "togglescratch 3" > /tmp/dwm.fifo
 ```
 
 This is intended for scripting — bind it to acpi events, a rofi menu,
