@@ -11,7 +11,6 @@ PROCS=(
 DAEMON_PROCS=(
     "clip daemon"
     "organizer.py --daemon"
-    "python3 -m http.server 8080 --bind 127.0.0.1 --directory ~/.config/startpage"
     "picom"
 )
 
