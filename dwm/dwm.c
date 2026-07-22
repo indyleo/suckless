@@ -288,7 +288,6 @@ static pid_t winpid(Window w);
 static const char broken[] = "broken";
 static char stext[1024];
 static int statussig;
-static int statusw;
 static pid_t statuspid = -1;
 int screen;
 int sw, sh;       /* X display screen geometry width, height */
@@ -653,7 +652,7 @@ void buttonpress(XEvent *e) {
 
     /* status text */
     if (ev->x > title_end) {
-      int x = selmon->ww - statusw;
+      int x = selmon->ww - selmon->stw;
       click = ClkStatusText;
 
       char *text, *s, ch;
