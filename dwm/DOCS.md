@@ -115,6 +115,88 @@ Per-tag state (layout, mfact, nmaster, selected client) is tracked via the
 `Pertag` struct attached to each `Monitor`, populated/restored on `view()` —
 this is the `pertag` patch's mechanism.
 
+## Status bar rendering & clicks (`status2d` + `statuscmd` patches)
+
+Functions: `drawbar()`, `drawstatusbar()` (status2d escape-code parsing),
+`buttonpress()`, `sigstatusbar()`, `getstatusbarpid()`. All still in
+`dwm.c` — these are two of the merged suckless patches, not a custom
+module, so they weren't split into their own files like wallpaper/ipc/
+screenshot were.
+
+- `drawstatusbar()` draws the raw text dwmblocks writes to the root
+  window's name (`stext`), parsing inline `^c#hex^` / `^b#hex^` / `^f<N>^`
+  escape codes for foreground/background color and horizontal offset (the
+  `status2d` patch) as it goes. It returns the pixel width of what it drew.
+- `drawbar()` calls it and stores the result on the monitor:
+  `m->stw = m->ww - drawstatusbar(...)`. `m->stw` is the authoritative
+  "how wide is the status text" value for that monitor — `title_end`
+  (used to decide whether a click landed in the status region at all) is
+  computed from it: `title_end = m->ww - m->stw`.
+- `buttonpress()` re-walks `stext` on a click inside that region, this
+  time looking for the raw control bytes dwmblocks embeds ahead of each
+  clickable block's output (see the dwmblocks-async repo's `DOCS.md` for
+  the embedding side). Whichever byte the click's x-coordinate falls
+  under becomes `statussig`.
+- `sigstatusbar()` (wired via the `buttons[]` table's
+  `{ClkStatusText, 0, ButtonN, sigstatusbar, {.i = N}}` entries) turns
+  that into `sigqueue(getstatusbarpid(), SIGRTMIN + statussig,
+{.sival_int = N})` — the button number rides along as the signal's
+  payload. `getstatusbarpid()` caches the resolved PID and re-validates
+  it against `/proc/<pid>/cmdline` before reusing it, falling back to
+  `pidof -s dwmblocks` if that check fails.
+- If `statussig` ends up `0` — either the click landed outside any
+  clickable block, or that block was defined with signal `0` in
+  dwmblocks' `BLOCKS()` — `sigstatusbar()` returns immediately without
+  queuing anything. There's no such thing as a real "signal 0" block; `0`
+  is the sentinel dwmblocks uses for "not clickable."
+
+### Known bug (fixed): status-click x-origin read the wrong variable
+
+`buttonpress()`'s `ClkStatusText` branch computes its scan's starting
+x-coordinate as:
+
+```c
+int x = selmon->ww - statusw;
+```
+
+For this to work, `statusw` needs to be the same _file-scope_ storage
+that `drawbar()` writes to — and it is declared at file scope
+(`static int statusw;`) for exactly that reason. But `drawbar()` actually
+does:
+
+```c
+int statusw = m->ww - drawstatusbar(m, bh, stext);  /* local — shadows the global */
+m->stw = statusw;
+```
+
+That `int statusw = ...` is a _local_ declaration that shadows the
+file-scope one for the rest of `drawbar()`'s body. The real width only
+ever gets written into `m->stw`; the file-scope `statusw` that
+`buttonpress()` reads is never assigned anywhere in the file and stays at
+its zero-initialized default forever. `x` in `buttonpress()` therefore
+always evaluates to `selmon->ww` — the monitor's far right edge — instead
+of the actual left edge of the status text. Since that's `>=` any valid
+on-screen `ev->x`, the scan loop's `x <= ev->x` condition fails before
+its first iteration, `statussig` is left at `0`, and `sigstatusbar()`
+silently no-ops every time.
+
+Net effect: status-text clicks did nothing at all, with no error anywhere
+— while every other clickable bar region (tags, layout symbol, window
+title) worked fine, since none of them touch this variable. Easy to miss
+precisely because the rest of the bar's click handling looks completely
+correct.
+
+**Fix:** read the monitor field `drawbar()` actually populates, instead
+of the dead global:
+
+```c
+int x = selmon->ww - selmon->stw;
+```
+
+and delete the now-unused `static int statusw;` file-scope declaration
+entirely (leaving it in place still compiles, but trips
+`-Wunused-variable`).
+
 ## Wallpaper engine (`wallpaper.c` / `wallpaper.h`, custom, not a suckless patch)
 
 Functions: `setrandomwallpaper()`, `nextwallpaper()`, `applywallpaperresult()`,
