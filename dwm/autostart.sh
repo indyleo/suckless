@@ -57,8 +57,6 @@ if command_exists nvidia-settings; then
     nvidia-settings --assign CurrentMetaMode="nvidia-auto-select +0+0 {ForceFullCompositionPipeline=On}"
 fi
 
-# Start compositor
-
 # Load X resources
 [[ -f "$HOME/.Xresources" ]] && xrdb -load "$HOME/.Xresources"
 
