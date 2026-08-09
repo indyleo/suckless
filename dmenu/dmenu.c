@@ -684,8 +684,9 @@ static void keypress(XKeyEvent *ev) {
     if (sel && !(ev->state & ShiftMask) && sel->flatpak_id) {
       if (fork() == 0) {
         setsid();
+        close(ConnectionNumber(dpy));
         execlp("flatpak", "flatpak", "run", sel->flatpak_id, NULL);
-        exit(1);
+        _exit(1);
       }
     } else {
       puts((sel && !(ev->state & ShiftMask)) ? sel->text : text);
