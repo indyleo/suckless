@@ -9,10 +9,10 @@
 #ifndef DWM_H
 #define DWM_H
 
-#include <sys/types.h> /* pid_t */
-#include <X11/Xlib.h>
 #include <X11/Xft/Xft.h> /* drw.h assumes Xft's types are already visible */
-#include "drw.h"          /* Clr, for the `scheme` global */
+#include <X11/Xlib.h>
+#include "drw.h"         /* Clr, for the `scheme` global */
+#include <sys/types.h> /* pid_t */
 
 typedef union {
   int i;
@@ -46,6 +46,11 @@ typedef struct {
   const char *name;   /* plain-text name, e.g. for the fifo state reply */
   void (*arrange)(Monitor *);
 } Layout;
+
+typedef struct {
+  const char *icon; /* shown in the bar */
+  const char *name; /* plain-text name, e.g. for the fifo state reply */
+} Tag;
 
 typedef struct Pertag Pertag;
 struct Monitor {

@@ -70,7 +70,11 @@ static const char *const autostart[] = {
 };
 
 /* tagging */
-static const char *tags[] = {"󰖟", "󰙯", "", "", "󰨇"};
+const Tag tags[] = {
+    {"󰖟", "web"}, {"󰙯", "chat"}, {"", "dev"},
+    {"", "game"}, {"󰨇", "vm"},
+};
+const int tagslen = LENGTH(tags);
 
 static const Rule rules[] = {
     /* xprop(1):

@@ -15,8 +15,10 @@
 #include "util.h"
 #include "wallpaper.h"
 
-extern const char *fifopath;      /* set in config.h, included once by dwm.c */
-extern const char *fiforeplypath; /* set in config.h, included once by dwm.c */
+extern const char *fifopath;
+extern const char *fiforeplypath;
+extern const Tag tags[];
+extern const int tagslen;
 
 int fifofd = -1;
 int fiforeplyfd = -1;
@@ -45,10 +47,11 @@ static void fifotogglescratch(const Arg *arg) {
  * fiforeplypath so a status bar / script can read dwm's state back out
  * instead of only being able to push commands in. */
 static void fifostate(const Arg *arg) {
-  char buf[512], discard[512];
+  char buf[512], discard[512], tagnames[256] = "";
   Client *c;
-  unsigned int urg = 0, nvis = 0;
-  int len;
+  unsigned int urg = 0, nvis = 0, seltags;
+  int len, first = 1;
+  size_t off = 0;
 
   if (fiforeplyfd < 0)
     return;
@@ -60,16 +63,28 @@ static void fifostate(const Arg *arg) {
       nvis++;
   }
 
+  seltags = selmon->tagset[selmon->seltags];
+  for (unsigned int i = 0; i < (unsigned int)tagslen && off < sizeof(tagnames);
+       i++) {
+    if (seltags & (1 << i)) {
+      int n = snprintf(tagnames + off, sizeof(tagnames) - off, "%s%s",
+                       first ? "" : "+", tags[i].name);
+      if (n > 0)
+        off += (size_t)n < sizeof(tagnames) - off ? (size_t)n
+                                                  : sizeof(tagnames) - off;
+      first = 0;
+    }
+  }
+
   /* drain any unread previous reply so the pipe buffer can't grow
    * unbounded if nothing is reading it */
   while (read(fiforeplyfd, discard, sizeof(discard)) > 0)
     ;
 
   len = snprintf(buf, sizeof(buf),
-                 "mon=%d tags=%u layout=%s clients=%u urgent=%u title=%s\n",
-                 selmon->num, selmon->tagset[selmon->seltags],
-                 selmon->lt[selmon->sellt]->name, nvis, urg,
-                 selmon->sel ? selmon->sel->name : "");
+                 "mon=%d tags=%s layout=%s clients=%u urgent=%u title=%s\n",
+                 selmon->num, tagnames, selmon->lt[selmon->sellt]->name, nvis,
+                 urg, selmon->sel ? selmon->sel->name : "");
   if (len > 0)
     write(fiforeplyfd, buf, (size_t)len);
 }

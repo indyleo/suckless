@@ -603,7 +603,7 @@ void buttonpress(XEvent *e) {
     for (i = 0; i < LENGTH(tags); i++) {
       if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
         continue;
-      x += TEXTW(tags[i]);
+      x += TEXTW(tags[i].icon);
       if (ev->x < x) {
         click = ClkTagBar;
         arg.ui = 1 << i;
@@ -1106,11 +1106,11 @@ void drawbar(Monitor *m) {
     if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
       continue;
 
-    w = TEXTW(tags[i]);
+    w = TEXTW(tags[i].icon);
     drw_setscheme(drw, scheme[urg & 1 << i                     ? SchemeUrg
                               : m->tagset[m->seltags] & 1 << i ? SchemeSel
                                                                : SchemeNorm]);
-    drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], 0);
+    drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i].icon, 0);
     x += w;
   }
 
