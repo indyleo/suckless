@@ -6,11 +6,11 @@
  * through wpqueue, and the main thread (in run()) turns those into
  * pixmaps and composites them onto the root window.
  */
+#include <Imlib2.h>
 #include <X11/Xatom.h>
+#include <X11/Xft/Xft.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <X11/Xft/Xft.h>
-#include <Imlib2.h>
 #include <dirent.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -37,6 +37,7 @@ typedef struct WallpaperCacheEntry {
 } WallpaperCacheEntry;
 
 #define WALLPAPER_CACHE_MAX 64
+#define WALLPAPER_MAX_MON 32
 
 extern const char *wallpaperdir; /* set in config.h, included once by dwm.c */
 
@@ -46,14 +47,27 @@ static volatile int wpthreadrunning = 0;
 pthread_mutex_t wplock = PTHREAD_MUTEX_INITIALIZER;
 WallpaperResult *wpqueue = NULL;
 
-static Pixmap currentwallpaper[32] = {0};
-static char lastwallpaper[32][2048] = {{0}};
-static int wprenderw[32] = {0};
-static int wprenderh[32] = {0};
+static Pixmap currentwallpaper[WALLPAPER_MAX_MON] = {0};
+static char lastwallpaper[WALLPAPER_MAX_MON][2048] = {{0}};
+static int wprenderw[WALLPAPER_MAX_MON] = {0};
+static int wprenderh[WALLPAPER_MAX_MON] = {0};
 static WallpaperCacheEntry *wpcache = NULL;
 static int wpcachecount = 0;
 static unsigned long wpcacheclock = 0;
 static Pixmap rootwallpaper = 0;
+static int wpseeded = 0; /* rand() seeded once, not per-monitor */
+
+static int wpmonvalid(int num) { return num >= 0 && num < WALLPAPER_MAX_MON; }
+
+static int wpmonok(int num) {
+  if (!wpmonvalid(num)) {
+    fprintf(stderr,
+            "dwm: monitor %d exceeds wallpaper cache limit (%d), skipping\n",
+            num, WALLPAPER_MAX_MON);
+    return 0;
+  }
+  return 1;
+}
 
 static void *wallpaperworker(void *arg) {
   WallpaperJobSpec *jobs = arg;
@@ -117,10 +131,13 @@ static void rebuildrootwallpaper(void) {
     XFreePixmap(dpy, rootwallpaper);
   rootwallpaper = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
   GC gc = XCreateGC(dpy, root, 0, NULL);
-  for (Monitor *m = mons; m; m = m->next)
+  for (Monitor *m = mons; m; m = m->next) {
+    if (!wpmonvalid(m->num))
+      continue;
     if (currentwallpaper[m->num])
       XCopyArea(dpy, currentwallpaper[m->num], rootwallpaper, gc, 0, 0, m->mw,
                 m->mh, m->mx, m->my);
+  }
   XFreeGC(dpy, gc);
   Atom prop_root = XInternAtom(dpy, "_XROOTPMAP_ID", False);
   Atom prop_esetroot = XInternAtom(dpy, "ESETROOT_PMAP_ID", False);
@@ -144,9 +161,12 @@ static Pixmap wallpapercache_lookup(const char *path, int w, int h) {
 }
 
 static int wallpapercache_ispinned(Pixmap pm) {
-  for (Monitor *m = mons; m; m = m->next)
+  for (Monitor *m = mons; m; m = m->next) {
+    if (!wpmonvalid(m->num))
+      continue;
     if (currentwallpaper[m->num] == pm)
       return 1;
+  }
   return 0;
 }
 
@@ -194,8 +214,9 @@ void applywallpaperresult(WallpaperResult *res) {
   for (m = mons; m; m = m->next)
     if (m->num == res->monnum)
       break;
-  if (!m) {
-    /* monitor was unplugged while the job was in flight */
+  if (!m || !wpmonok(m->num)) {
+    /* monitor was unplugged while the job was in flight, or its index
+     * exceeds what the fixed-size wallpaper arrays can hold */
     free(res->data);
     return;
   }
@@ -257,6 +278,8 @@ static void dispatchwallpaperjobs(Monitor **list, const char **paths, int n) {
 
   for (int i = 0; i < n; i++) {
     Monitor *m = list[i];
+    if (!wpmonok(m->num))
+      continue;
     Pixmap cached = wallpapercache_lookup(paths[i], m->mw, m->mh);
     if (cached != None) {
       /* already rendered at this exact resolution — skip the worker entirely */
@@ -330,6 +353,8 @@ void refreshdamagedwallpapers(void) {
   int n = 0;
 
   for (Monitor *m = mons; m; m = m->next) {
+    if (!wpmonok(m->num))
+      continue;
     int damaged = (currentwallpaper[m->num] == None) ||
                   (wprenderw[m->num] != m->mw) || (wprenderh[m->num] != m->mh);
     if (!damaged)
@@ -369,7 +394,10 @@ void refreshdamagedwallpapers(void) {
           free(files[i]);
         continue;
       }
-      srand(time(NULL) ^ (unsigned)m->num);
+      if (!wpseeded) {
+        srand(time(NULL));
+        wpseeded = 1;
+      }
       int pick = rand() % count;
       snprintf(path, 2048, "%s/%s", dir, files[pick]);
       snprintf(lastwallpaper[m->num], sizeof(lastwallpaper[m->num]), "%s",
@@ -442,8 +470,13 @@ void setrandomwallpaper(void) {
   char **paths = ecalloc(nmon, sizeof(char *));
   int n = 0;
 
-  srand(time(NULL));
+  if (!wpseeded) {
+    srand(time(NULL));
+    wpseeded = 1;
+  }
   for (Monitor *m = mons; m; m = m->next) {
+    if (!wpmonok(m->num))
+      continue;
     int pick;
     if (count == 1)
       pick = 0;

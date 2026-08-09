@@ -2,10 +2,10 @@
  *
  * See screenshot.h for the public entry points.
  */
+#include <Imlib2.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
-#include <Imlib2.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,17 +19,29 @@
 
 static void selectregion(int *rx, int *ry, int *rw, int *rh);
 
+static void mkdir_p(char *path) {
+  struct stat st;
+  for (char *p = path + 1; *p; p++) {
+    if (*p == '/') {
+      *p = '\0';
+      if (stat(path, &st) != 0)
+        mkdir(path, 0755);
+      *p = '/';
+    }
+  }
+  if (stat(path, &st) != 0)
+    mkdir(path, 0755);
+}
+
 static void screenshotpath(char *buf, size_t len) {
   const char *home = getenv("HOME");
   char dir[1024];
-  struct stat st;
   time_t t;
   struct tm tmv;
   char ts[64];
 
   snprintf(dir, sizeof dir, "%s/Pictures/Screenshots", home ? home : ".");
-  if (stat(dir, &st) != 0)
-    mkdir(dir, 0755); /* -p not needed, Pictures/ should already exist */
+  mkdir_p(dir);
 
   t = time(NULL);
   localtime_r(&t, &tmv);

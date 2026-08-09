@@ -82,8 +82,8 @@ static FifoCmd fifocmds[] = {
     {"toggleview", fifotoggletag, 1},   /* toggleview 0-4    */
     {"toggletag", fifotogglewintag, 1}, /* toggletag 0-4     */
     /* layout */
-    {"setmfact", setmfact, 3},     /* setmfact 0.6      */
-    {"incnmaster", incnmaster, 1}, /* incnmaster 1/-1   */
+    {"setmfact", setmfact, 3},       /* setmfact 0.6      */
+    {"incnmaster", incnmaster, 1},   /* incnmaster 1/-1   */
     {"cyclelayout", cyclelayout, 1}, /* cyclelayout 1/-1  */
     {"zoom", zoom, 0},
     {"togglefloating", togglefloating, 0},
@@ -123,6 +123,13 @@ void readfifo(void) {
   char *nl;
   Arg arg;
   unsigned int i;
+
+  if (buflen >= sizeof(buf) - 1) {
+    /* a line without '\n' filled the buffer — drop it so the fifo
+     * doesn't wedge permanently */
+    fprintf(stderr, "dwm: fifo line too long, discarding\n");
+    buflen = 0;
+  }
 
   n = read(fifofd, buf + buflen, sizeof(buf) - buflen - 1);
   if (n <= 0)
