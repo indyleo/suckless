@@ -82,7 +82,14 @@ static const Rule rules[] = {
      *	WM_NAME(STRING) = title
      */
     /* class     instance      title           tags mask  isfloating  isterminal
-                     noswallow  monitor */
+                     noswallow  monitor  w  h   x   y  setpos  center
+       w/h: 0 = keep the client's requested size
+       x/y: only applied when setpos=1; offset from the monitor's
+            work-area origin (top-left), same idea as Hyprland's `move`
+       setpos: 1 = place at x,y instead of dwm's default centering
+       center: 1 = explicitly center (dwm's default anyway; mostly for
+               readability, or to force-center a rule that would
+               otherwise not match the defaults) */
     {"Gimp", NULL, NULL, 0, 1, 0, 0, -1},
     {"Firefox", NULL, NULL, 1 << 8, 0, 0, -1, -1},
     {"St", NULL, NULL, 0, 0, 1, 0, -1},
@@ -98,6 +105,14 @@ static const Rule rules[] = {
     {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
     {"musicsc", NULL, NULL, SPTAG(7), 1, -1},
     {"Dragon", NULL, NULL, 0, 1, -1},
+
+    /* Picture-in-Picture: float, pin to a fixed 480x270 size, and place
+       it 14px from the left / 12px from the top of the work area —
+       translated from the Hyprland rule you posted (size 480,270 /
+       move 14,12). dwm matches title by substring, so no ^...$ anchors
+       needed. Note: dwm has no "pin" (stay visible across tag
+       switches) concept, so this part only covers size + move. */
+    {NULL, NULL, "Picture-in-Picture", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1, 0},
 };
 
 /* layout(s) */

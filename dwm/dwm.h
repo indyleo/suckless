@@ -33,6 +33,8 @@ struct Client {
   unsigned int tags;
   int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen,
       issteam, isterminal, noswallow;
+  int rulex, ruley, rulesetpos; /* set by applyrules() from a matching
+                                    Rule's x/y/setpos (the "move" rule) */
   pid_t pid;
   Client *next;
   Client *snext;

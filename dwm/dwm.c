@@ -147,6 +147,16 @@ typedef struct {
   int isterminal;
   int noswallow;
   int monitor;
+  /* --- size / move / center (Hyprland-style placement rules) --- */
+  int w, h;   /* 0 = don't override the client's requested size */
+  int x, y;   /* offset from the monitor's work-area origin; only used
+                 when setpos is 1 */
+  int setpos; /* 1 = apply x,y as an absolute "move" (like Hyprland's
+                 `move`); 0 = leave positioning to dwm's default */
+  int center; /* 1 = explicitly center in the monitor's work area
+                 (this is dwm's default anyway, so it's mostly here for
+                 readability / to override a setpos on a later-matching
+                 rule) */
 } Rule;
 
 /* Scratchpads */
@@ -402,6 +412,23 @@ void applyrules(Client *c) {
       c->noswallow = r->noswallow;
       c->isfloating = r->isfloating;
       c->tags |= r->tags;
+
+      /* size */
+      if (r->w)
+        c->w = r->w;
+      if (r->h)
+        c->h = r->h;
+
+      /* move / center: manage() consults these after applyrules()
+         returns, since it's the one that does the final placement */
+      if (r->center)
+        c->rulesetpos = 0; /* fall through to dwm's default centering */
+      else if (r->setpos) {
+        c->rulex = r->x;
+        c->ruley = r->y;
+        c->rulesetpos = 1;
+      }
+
       if ((r->tags & SPTAGMASK) && r->isfloating) {
         c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
         c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
@@ -1589,8 +1616,13 @@ void manage(Window w, XWindowAttributes *wa) {
   }
   setclienttagprop(c);
 
-  c->x = c->mon->mx + (c->mon->mw - WIDTH(c)) / 2;
-  c->y = c->mon->my + (c->mon->mh - HEIGHT(c)) / 2;
+  if (c->rulesetpos) {
+    c->x = c->mon->wx + c->rulex;
+    c->y = c->mon->wy + c->ruley;
+  } else {
+    c->x = c->mon->mx + (c->mon->mw - WIDTH(c)) / 2;
+    c->y = c->mon->my + (c->mon->mh - HEIGHT(c)) / 2;
+  }
 
   XSelectInput(dpy, w,
                EnterWindowMask | FocusChangeMask | PropertyChangeMask |
