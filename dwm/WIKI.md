@@ -63,12 +63,29 @@ itself unless you're also adding a new `Scheme*`.
 ## Tags
 
 ```c
-static const char *tags[] = {"󰖟", "󰙯", "", "", "󰨇"};
+typedef struct {
+  const char *icon; /* shown in the bar */
+  const char *name; /* plain-text name, e.g. for the fifo state reply */
+} Tag;
+
+const Tag tags[] = {
+    {"󰖟", "web"}, {"󰙯", "chat"}, {"", "dev"},
+    {"", "game"}, {"󰨇", "vm"},
+};
+const int tagslen = LENGTH(tags);
 ```
 
-Five tags, labeled with Nerd Font glyphs rather than numbers. Keybinds still
-refer to them by index 0–4 (see Keybindings below), regardless of the glyph
-shown in the bar.
+Five tags, each with two labels: `icon` (a Nerd Font glyph, drawn in the
+bar via `drawbar()`) and `name` (a plain-text name used anywhere a glyph
+isn't renderable or parseable — currently only the FIFO `state` reply, see
+"Querying state back out" below). Keybinds still refer to tags by index
+0–4 (see Keybindings below), regardless of either label.
+
+`tagslen` is computed automatically from the array length — add or remove
+a `{icon, name}` pair and everything downstream (bar rendering, keybind
+generation via `TAGKEYS`, the FIFO reply, the compile-time 31-tag limit
+check) adjusts on its own. You do still need to add/remove the matching
+`TAGKEYS(XK_n, N)` line in `keys[]` by hand if you change the count.
 
 ## Scratchpads
 
@@ -101,16 +118,80 @@ script can pop a scratchpad this way, not just dwm's own keybindings.
 
 ```c
 static const Rule rules[] = {
-    /* class       instance  title   tags mask  isfloating  isterminal  noswallow  monitor */
+    /* class     instance      title           tags mask  isfloating  isterminal
+                     noswallow  monitor  w  h   x   y  setpos  center  forcefullscreen
+       w/h: 0 = keep the client's requested size
+       x/y: only applied when setpos=1; offset from the monitor's
+            work-area origin (top-left)
+       setpos: 1 = place at x,y instead of dwm's default centering
+       center: 1 = explicitly center (dwm's default anyway; mostly for
+               readability, or to force-center a rule that would
+               otherwise not match the defaults)
+       forcefullscreen: 1 = go fullscreen immediately on open */
     {"Gimp",       NULL,     NULL,   0,         1,          0,          0,  -1},
     {"Firefox",    NULL,     NULL,   1 << 8,    0,          0,          -1, -1},
     {"St",         NULL,     NULL,   0,         0,          1,          0,  -1},
+    {NULL, NULL, "^Picture-in-Picture$", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1, 0},
+    {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1},
     ...
 };
 ```
 
-Match by WM class/instance/title (any can be `NULL` = wildcard). Notable
-entries:
+Rules have 15 positional fields; trailing fields you don't need can simply
+be omitted — C zero-fills the rest of the struct (`0` for numeric fields,
+`NULL` for pointers), which for every trailing field here means "don't
+override, use dwm's default behavior."
+
+### Matching (`class` / `instance` / `title`)
+
+Any of the three can be `NULL` (wildcard, matches everything). Non-`NULL`
+fields are **full PCRE2 regular expressions**, not plain substrings —
+anchors (`^`/`$`), character classes, alternation, and lookaround
+(`(?!...)`, `(?=...)`) all work exactly like they would in Hyprland's
+`windowrule` matching. An unanchored literal like `"Firefox"` still behaves
+like the old plain substring match, since PCRE2 without anchors searches
+for the pattern anywhere in the string — so existing simple rules didn't
+need to change.
+
+Each rule's pattern is compiled once (cached internally, keyed per rule/
+field) the first time a matching window is opened, not re-compiled on every
+window open. If a pattern fails to compile (bad regex syntax), dwm prints
+an error to stderr naming the pattern and the byte offset of the problem,
+and that rule simply never matches (it doesn't crash or skip other rules).
+
+**Requires `libpcre2-8`** — see [Requirements](README.md#requirements).
+
+### Size / move / center
+
+- `w`, `h` — override the client's requested size in pixels. `0` leaves
+  the app's own requested size alone.
+- `x`, `y`, `setpos` — `setpos = 1` places the window at `(x, y)` measured
+  from the top-left of the monitor's work area (below the bar, inside
+  gaps), instead of dwm's default "center it" behavior. This is the
+  `move` equivalent from Hyprland's rule syntax.
+- `center` — explicit opt-in to centering. Since centering is already
+  dwm's default for new windows, this mostly exists for readability, or to
+  force a window back to centered if an earlier-matching rule set
+  `setpos`.
+
+There's no dwm equivalent for Hyprland's `pin` (keep a window visible
+across tag/workspace switches) — that would need extra state tracked
+through `arrange()`/`showhide()`, not just a `Rule` field, and isn't
+implemented here.
+
+### Forcefullscreen
+
+`forcefullscreen = 1` calls the same `setfullscreen()` path a client's own
+`_NET_WM_STATE_FULLSCREEN` request would trigger, applied right after the
+window's monitor and geometry are finalized in `manage()`. Useful for
+apps (like Steam games) that don't request fullscreen themselves but you
+always want fullscreened on open.
+
+The Steam example above uses a negative lookahead (`(?!0$)`) to
+fullscreen every `steam_app_NNNNN` window except `steam_app_0`, which some
+Steam launch paths use for the client UI itself rather than an actual game.
+
+### Notable existing entries
 
 - `Firefox` is forced to tag index 8 (a "hidden" tag beyond the 5 visible
   ones) — useful for keeping a browser parked off your main tags.
@@ -298,8 +379,13 @@ The command fifo is one-way (script → dwm). For the other direction, send
 ```sh
 echo "state" > /tmp/dwm.fifo
 cat /tmp/dwm.fifo.reply
-# mon=0 tags=1 layout=monocle clients=3 urgent=0 title=st
+# mon=0 tags=web layout=monocle clients=3 urgent=0 title=st
 ```
+
+`tags` here is built from each visible tag's `name` (not `icon`, and not a
+raw bitmask) — if multiple tags are being viewed at once (e.g. after
+`MODKEY+CTRL+2` toggle-views tag 2 on top of tag 1), they're joined with
+`+`: `tags=web+chat`.
 
 `clients` is the visible-client count on the current tag — the same count
 monocle's bar symbol shows as `[N]`, just available to scripts without

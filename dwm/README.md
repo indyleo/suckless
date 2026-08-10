@@ -15,23 +15,24 @@ external IPC control.
 
 ## Feature summary
 
-| Category      | Feature                                                            | Source              |
-| ------------- | ------------------------------------------------------------------ | ------------------- |
-| Layout        | Per-tag layout/mfact/nmaster memory                                | `pertag` patch      |
-| Layout        | Gaps between windows                                               | `uselessgap` patch  |
-| Layout        | Move windows within the stack                                      | `movestack` patch   |
-| Layout        | Attach new clients below the active one                            | `attachbelow` patch |
-| Windows       | Terminal scratchpads (toggle-able floating apps)                   | `scratchpads` patch |
-| Windows       | Terminal swallows GUI child windows                                | `swallow` patch     |
-| Bar           | 2D-drawn status bar (icons/colors in status text)                  | `status2d` patch    |
-| Bar           | Clickable status segments                                          | `statuscmd` patch   |
-| Wallpaper     | Async Imlib2 loader — no event loop blocking on image decode       | custom              |
-| Wallpaper     | Random wallpaper rotation on a timer                               | custom              |
-| Wallpaper     | Manual "next wallpaper" keybind                                    | custom              |
-| IPC           | FIFO-based remote control (`/tmp/dwm.fifo`)                        | custom              |
-| Multi-monitor | Automatic monitor hotplug detection via RandR                      | custom              |
-| Session       | Custom autostart process management                                | `autostart.sh`      |
-| Utilities     | Native screenshot capture (full/monitor/window/select) + colorpicker, clipboard, notify | custom |
+| Category      | Feature                                                                                                | Source              |
+| ------------- | ------------------------------------------------------------------------------------------------------ | ------------------- |
+| Layout        | Per-tag layout/mfact/nmaster memory                                                                    | `pertag` patch      |
+| Layout        | Gaps between windows                                                                                   | `uselessgap` patch  |
+| Layout        | Move windows within the stack                                                                          | `movestack` patch   |
+| Layout        | Attach new clients below the active one                                                                | `attachbelow` patch |
+| Windows       | Terminal scratchpads (toggle-able floating apps)                                                       | `scratchpads` patch |
+| Windows       | Terminal swallows GUI child windows                                                                    | `swallow` patch     |
+| Windows       | Window rules match via PCRE2 regex (incl. lookaround), with size/move/center/forcefullscreen overrides | custom              |
+| Bar           | 2D-drawn status bar (icons/colors in status text)                                                      | `status2d` patch    |
+| Bar           | Clickable status segments                                                                              | `statuscmd` patch   |
+| Wallpaper     | Async Imlib2 loader — no event loop blocking on image decode                                           | custom              |
+| Wallpaper     | Random wallpaper rotation on a timer                                                                   | custom              |
+| Wallpaper     | Manual "next wallpaper" keybind                                                                        | custom              |
+| IPC           | FIFO-based remote control (`/tmp/dwm.fifo`)                                                            | custom              |
+| Multi-monitor | Automatic monitor hotplug detection via RandR                                                          | custom              |
+| Session       | Custom autostart process management                                                                    | `autostart.sh`      |
+| Utilities     | Native screenshot capture (full/monitor/window/select) + colorpicker, clipboard, notify                | custom              |
 
 See **[DOCS.md](DOCS.md)** for how the code is organized and **[WIKI.md](WIKI.md)**
 for how to configure it.
@@ -43,6 +44,8 @@ for how to configure it.
 - Xft + fontconfig (font rendering)
 - Imlib2 (wallpaper rendering **and** screenshot capture)
 - libxcb + xcb-res (used for process/PID lookups, e.g. swallow)
+- PCRE2 (`libpcre2-8`, headers via `libpcre2-dev`) — regex matching for
+  window rules (`class`/`instance`/`title`), including lookaround
 
 ### Runtime (not linked, called via exec)
 
@@ -54,7 +57,7 @@ On Debian/Ubuntu-style systems:
 
 ```sh
 sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
-                  libxcb1-dev libxcb-res0-dev xclip libnotify-bin dunst
+                  libxcb1-dev libxcb-res0-dev libpcre2-dev xclip libnotify-bin dunst
 ```
 
 ## Building

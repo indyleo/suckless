@@ -103,7 +103,16 @@ that event — this is stock dwm's dispatch mechanism, untouched by this fork.
 
 - `manage()` — a new window is adopted: rules are applied (`applyrules()`),
   size hints read, and it's attached to the client list (`attach()` /
-  `attachBelow()` depending on the `attachbelow` setting).
+  `attachBelow()` depending on the `attachbelow` setting). If the matched
+  rule set `forcefullscreen`, `setfullscreen()` is called here too, right
+  after `arrange(c->mon)` so the client's monitor/geometry are already
+  final — same code path a client's own `_NET_WM_STATE_FULLSCREEN`
+  request would hit.
+- `applyrules()` — matches the new client's WM class/instance/title against
+  `rules[]` using PCRE2 (`regexmatch()`), not plain substring matching.
+  Each rule's compiled pattern is cached in a static per-rule/per-field
+  array (`rulecache`) so it's only compiled once, on first use, not on
+  every window open.
 - `unmanage()` — window is destroyed or withdrawn; detached from client and
   stacking lists.
 - `focus()` / `unfocus()` — input focus and border-color changes.

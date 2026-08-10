@@ -32,6 +32,7 @@ A dynamic window manager for X, enhanced with:
 - 📥 **Attach new clients below the active one** (`attachbelow` patch)
 - 🖥️ **Terminal scratchpads** (toggle-able floating apps) (`scratchpads` patch)
 - 🤖 **Terminal swallows GUI child windows** (`swallow` patch)
+- 🔍 **Window rules match via PCRE2 regex** (anchors, lookaround, etc.), with **size/move/center/forcefullscreen** overrides
 - 📊 **2D-drawn status bar** (icons/colors in status text) (`status2d` patch)
 - 🖱️ **Clickable status segments** (`statuscmd` patch)
 - 🖼️ **Async Imlib2 wallpaper loader** (no event loop blocking)
@@ -107,7 +108,7 @@ Typical dependencies on Debian/Ubuntu:
 ```bash
 sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
                  libxcb1-dev libxcb-res0-dev libxext-dev libfontconfig-dev \
-                 libharfbuzz-dev
+                 libharfbuzz-dev libpcre2-dev
 ```
 
 ## Building & Installation
