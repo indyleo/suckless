@@ -150,15 +150,17 @@ typedef struct {
   int noswallow;
   int monitor;
   /* --- size / move / center (Hyprland-style placement rules) --- */
-  int w, h;   /* 0 = don't override the client's requested size */
-  int x, y;   /* offset from the monitor's work-area origin; only used
-                 when setpos is 1 */
-  int setpos; /* 1 = apply x,y as an absolute "move" (like Hyprland's
-                 `move`); 0 = leave positioning to dwm's default */
-  int center; /* 1 = explicitly center in the monitor's work area
-                 (this is dwm's default anyway, so it's mostly here for
-                 readability / to override a setpos on a later-matching
-                 rule) */
+  int w, h;            /* 0 = don't override the client's requested size */
+  int x, y;            /* offset from the monitor's work-area origin; only used
+                          when setpos is 1 */
+  int setpos;          /* 1 = apply x,y as an absolute "move" (like Hyprland's
+                          `move`); 0 = leave positioning to dwm's default */
+  int center;          /* 1 = explicitly center in the monitor's work area
+                          (this is dwm's default anyway, so it's mostly here for
+                          readability / to override a setpos on a later-matching
+                          rule) */
+  int forcefullscreen; /* 1 = force the client fullscreen on open, like
+                           Hyprland's `fullscreen` rule */
 } Rule;
 
 /* Scratchpads */
@@ -462,6 +464,10 @@ void applyrules(Client *c) {
         c->ruley = r->y;
         c->rulesetpos = 1;
       }
+
+      /* fullscreen: manage() applies this once the client's monitor is
+         final, since setfullscreen() needs c->mon's geometry */
+      c->ruleforcefullscreen = r->forcefullscreen;
 
       if ((r->tags & SPTAGMASK) && r->isfloating) {
         c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
@@ -1681,6 +1687,8 @@ void manage(Window w, XWindowAttributes *wa) {
     unfocus(selmon->sel, 0);
   c->mon->sel = c;
   arrange(c->mon);
+  if (c->ruleforcefullscreen)
+    setfullscreen(c, 1);
   XMapWindow(dpy, c->win);
   if (!HIDDEN(c))
     XMapWindow(dpy, c->win);

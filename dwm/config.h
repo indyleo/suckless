@@ -83,13 +83,13 @@ static const Rule rules[] = {
      */
     /* class     instance      title           tags mask  isfloating  isterminal
                      noswallow  monitor  w  h   x   y  setpos  center
-       w/h: 0 = keep the client's requested size
-       x/y: only applied when setpos=1; offset from the monitor's
-            work-area origin (top-left), same idea as Hyprland's `move`
-       setpos: 1 = place at x,y instead of dwm's default centering
-       center: 1 = explicitly center (dwm's default anyway; mostly for
-               readability, or to force-center a rule that would
-               otherwise not match the defaults) */
+       forcefullscreen w/h: 0 = keep the client's requested size x/y: only
+       applied when setpos=1; offset from the monitor's work-area origin
+       (top-left), same idea as Hyprland's `move` setpos: 1 = place at x,y
+       instead of dwm's default centering center: 1 = explicitly center (dwm's
+       default anyway; mostly for readability, or to force-center a rule that
+       would otherwise not match the defaults) forcefullscreen: 1 = go
+       fullscreen immediately on open, like Hyprland's `fullscreen` rule */
     {"Gimp", NULL, NULL, 0, 1, 0, 0, -1},
     {"Firefox", NULL, NULL, 1 << 8, 0, 0, -1, -1},
     {"St", NULL, NULL, 0, 0, 1, 0, -1},
@@ -116,12 +116,19 @@ static const Rule rules[] = {
     {NULL, NULL, "^Picture-in-Picture$", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1,
      0},
 
-    /* Steam games auto-float off (i.e. tiled/normal) for every
-       steam_app_NNNNN window except steam_app_0 (the Steam client
-       itself reports class steam_app_0 in some launch paths) —
-       translated 1:1 from your Hyprland negative-lookahead rule:
-       class ^steam_app_(?!0$)[0-9]+$ */
-    {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1},
+    /* Steam games auto-fullscreen for every steam_app_NNNNN window
+       except steam_app_0 (the Steam client itself reports class
+       steam_app_0 in some launch paths) — translated 1:1 from your
+       Hyprland negative-lookahead rule: class ^steam_app_(?!0$)[0-9]+$ */
+    {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0,
+     1},
+
+    /* SC2 / Brood War report class "steam_app_default", so the rule
+       above already catches them — these title-matching fallbacks are
+       here in case Valve ever changes the class string, same as in
+       your Hyprland config. */
+    {NULL, NULL, "^StarCraft II$", 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1},
+    {NULL, NULL, "^Brood War$", 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1},
 };
 
 /* layout(s) */

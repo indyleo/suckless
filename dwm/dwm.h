@@ -35,6 +35,7 @@ struct Client {
       issteam, isterminal, noswallow;
   int rulex, ruley, rulesetpos; /* set by applyrules() from a matching
                                     Rule's x/y/setpos (the "move" rule) */
+  int ruleforcefullscreen; /* set by applyrules() from Rule.forcefullscreen */
   pid_t pid;
   Client *next;
   Client *snext;
