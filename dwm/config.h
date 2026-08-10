@@ -109,10 +109,19 @@ static const Rule rules[] = {
     /* Picture-in-Picture: float, pin to a fixed 480x270 size, and place
        it 14px from the left / 12px from the top of the work area —
        translated from the Hyprland rule you posted (size 480,270 /
-       move 14,12). dwm matches title by substring, so no ^...$ anchors
-       needed. Note: dwm has no "pin" (stay visible across tag
-       switches) concept, so this part only covers size + move. */
-    {NULL, NULL, "Picture-in-Picture", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1, 0},
+       move 14,12). class/instance/title are now full PCRE2 regex, so
+       ^...$ anchors work exactly like in Hyprland. Note: dwm has no
+       "pin" (stay visible across tag switches) concept, so this only
+       covers size + move. */
+    {NULL, NULL, "^Picture-in-Picture$", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1,
+     0},
+
+    /* Steam games auto-float off (i.e. tiled/normal) for every
+       steam_app_NNNNN window except steam_app_0 (the Steam client
+       itself reports class steam_app_0 in some launch paths) —
+       translated 1:1 from your Hyprland negative-lookahead rule:
+       class ^steam_app_(?!0$)[0-9]+$ */
+    {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1},
 };
 
 /* layout(s) */

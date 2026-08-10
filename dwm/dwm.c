@@ -30,6 +30,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <locale.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -385,6 +387,35 @@ static void autostart_exec() {
   }
 }
 
+/* Matches `subject` against the PCRE2 `pattern` (supports full PCRE2 syntax,
+ * including lookaround, unlike dwm's old plain strstr matching). `*cache`
+ * holds the compiled pattern between calls so each rule's regex is only
+ * compiled once, the first time it's needed, not on every window open. */
+static int regexmatch(const char *pattern, const char *subject,
+                      pcre2_code **cache) {
+  int rc;
+  pcre2_match_data *md;
+
+  if (!*cache) {
+    int errornumber;
+    PCRE2_SIZE erroroffset;
+    *cache = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, 0,
+                           &errornumber, &erroroffset, NULL);
+    if (!*cache) {
+      PCRE2_UCHAR errbuf[256];
+      pcre2_get_error_message(errornumber, errbuf, sizeof(errbuf));
+      fprintf(stderr, "dwm: bad rule regex \"%s\" at offset %zu: %s\n", pattern,
+              erroroffset, (char *)errbuf);
+      return 0;
+    }
+  }
+  md = pcre2_match_data_create_from_pattern(*cache, NULL);
+  rc = pcre2_match(*cache, (PCRE2_SPTR)subject, PCRE2_ZERO_TERMINATED, 0, 0, md,
+                   NULL);
+  pcre2_match_data_free(md);
+  return rc >= 0;
+}
+
 /* function implementations */
 void applyrules(Client *c) {
   const char *class, *instance;
@@ -392,6 +423,9 @@ void applyrules(Client *c) {
   const Rule *r;
   Monitor *m;
   XClassHint ch = {NULL, NULL};
+  /* one compiled-pattern slot per rule per field (class/instance/title),
+   * persists across calls so patterns are compiled at most once */
+  static pcre2_code *rulecache[LENGTH(rules)][3];
 
   /* rule matching */
   c->isfloating = 0;
@@ -405,9 +439,9 @@ void applyrules(Client *c) {
 
   for (i = 0; i < LENGTH(rules); i++) {
     r = &rules[i];
-    if ((!r->title || strstr(c->name, r->title)) &&
-        (!r->class || strstr(class, r->class)) &&
-        (!r->instance || strstr(instance, r->instance))) {
+    if ((!r->title || regexmatch(r->title, c->name, &rulecache[i][2])) &&
+        (!r->class || regexmatch(r->class, class, &rulecache[i][0])) &&
+        (!r->instance || regexmatch(r->instance, instance, &rulecache[i][1]))) {
       c->isterminal = r->isterminal;
       c->noswallow = r->noswallow;
       c->isfloating = r->isfloating;
