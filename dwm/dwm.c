@@ -732,9 +732,9 @@ void buttonpress(XEvent *e) {
           x += TEXTW(text) - lrpad;
           *s = ch;
           text = s + 1;
+          statussig = ch;
           if (x >= ev->x)
             break;
-          statussig = ch;
         } else if (*s == '^') {
           *s = '\0';
           x += TEXTW(text) - lrpad;
