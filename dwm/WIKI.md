@@ -125,21 +125,45 @@ keybindings.
 ## Status bar blocks
 
 ```c
+const char *statusdelim = " || ";  /* visible separator printed between blocks */
+const int statusmaxlen = 45;        /* max Unicode codepoints kept per block */
+const int statusclickable = 1;      /* 0 disables click-routing entirely */
+const int statusleaddelim = 0;      /* 1 = print statusdelim before the first block too */
+const int statustraildelim = 0;     /* 1 = print statusdelim after the last block too */
+
 static const StatusBlock statusblocks[] = {
-    /* icon  cmd                                interval(s) */
-    {"", "sysctl vol --status", 0},   /* refreshed by the OSD, see below */
-    {"", "sysctl bri --status", 0},   /* refreshed by the OSD, see below */
-    {"", "mediactl --source song --status", 5},
-    {"", "sysctl bat --status", 30},
-    {"", "sysctl wifi --status", 20},
-    {"", "sysctl bt --status", 20},
-    {"", "date '+%a %d %b  %H:%M'", 15},
+    /* icon  cmd                      interval(s) */
+    {"", "mediactl state-title", 0},  /* refreshed by a track-change hook */
+    {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
+    {"", "sysstats brightness", 0},   /* refreshed by the OSD, see below */
+    {"", "sysstats battery", 15},
+    {"", "sysstats date_time", 30},
 };
 ```
 
 This replaces the old dwmblocks binary — there's nothing external to
-install or autostart anymore, the bar builds its own text in-process.
-Each row is `{icon, cmd, interval}`:
+install or autostart anymore, the bar builds its own text in-process. The
+five knobs above mirror dwmblocks-async's `config.h` (`DELIMITER`,
+`MAX_BLOCK_OUTPUT_LENGTH`, `CLICKABLE_BLOCKS`, `LEADING_DELIMITER`,
+`TRAILING_DELIMITER`) one-for-one:
+
+- `statusdelim` — the visible text printed between blocks (`" || "`
+  above). This is separate from the invisible click-routing byte each
+  block also gets — changing this only changes what you see, not how
+  clicks are resolved.
+- `statusmaxlen` — each block's trimmed output is truncated to this many
+  Unicode codepoints (not bytes — a 4-byte emoji still counts as one),
+  so one runaway block can't push everything else off the bar.
+- `statusclickable` — set to `0` to disable click-routing bar-wide (no
+  block ever receives `$BLOCK_BUTTON`, and clicking the status area does
+  nothing). Leave at `1` for the normal per-block click behavior
+  described below.
+- `statusleaddelim` / `statustraildelim` — whether `statusdelim` also
+  appears before the first block / after the last one. Both default to
+  `0` (no leading/trailing separator), matching dwmblocks-async's
+  defaults.
+
+Each `statusblocks[]` row is `{icon, cmd, interval}`:
 
 - `icon` — a short glyph/prefix, purely cosmetic, can be `""`.
 - `cmd` — a full shell command (`popen`'d, so pipes and quoting work);
@@ -152,6 +176,12 @@ Each row is `{icon, cmd, interval}`:
   (the `statusblock N` FIFO command, or the OSD popup below poking its
   matching block after a volume/brightness change).
 
+The `mediactl state-title` block above has `interval = 0` on purpose —
+under dwmblocks it was refreshed by a real-time signal fired whenever the
+track changed. There's no signal to send anymore; point whatever watches
+your media player at `echo "statusblock 0" > /tmp/dwm.fifo` instead (`0`
+being that block's index in the array above).
+
 On click, the block's `cmd` is rerun with `BLOCK_BUTTON` set in its
 environment to the button number (1 = left, 2 = middle, 3 = right, 4/5 =
 scroll up/down) — same convention the old dwmblocks setup used, so a
@@ -160,7 +190,8 @@ right-click opens a mixer) doesn't need to change. See "Mouse bindings"
 below for how a click gets routed to the right block in the first place.
 
 To add a block: add a row to `statusblocks[]`. No index anywhere else to
-update — the bar, click routing, and the FIFO/OSD refresh path all size
+update except any `osds[]`/`OsdItem.blockidx` entry that should point at
+it — the bar, click routing, and the FIFO/OSD refresh path all size
 themselves off the array automatically (`statusblockslen`), up to a hard
 cap of 31 blocks.
 
@@ -175,11 +206,11 @@ enum {
 
 static const OsdItem osds[] = {
     /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
-    {"VOL", volupcmd,     volgetcmd, 0},
-    {"VOL", voldowncmd,   volgetcmd, 0},
-    {"VOL", voltogglecmd, volgetcmd, 0},
-    {"BRI", briupcmd,     brigetcmd, 1},
-    {"BRI", bridowncmd,   brigetcmd, 1},
+    {"VOL", volupcmd,     volgetcmd, 1},   /* statusblocks[1] = "sysstats volume" */
+    {"VOL", voldowncmd,   volgetcmd, 1},
+    {"VOL", voltogglecmd, volgetcmd, 1},
+    {"BRI", briupcmd,     brigetcmd, 2},   /* statusblocks[2] = "sysstats brightness" */
+    {"BRI", bridowncmd,   brigetcmd, 2},
     {"MIC", micupcmd,     micgetcmd, -1},
     {"MIC", micdowncmd,   micgetcmd, -1},
     {"MIC", mictogglecmd, micgetcmd, -1},

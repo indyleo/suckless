@@ -33,6 +33,14 @@ typedef struct {
  * status bar should realistically show anyway. */
 #define STATUSBAR_MAXBLOCKS 31
 
+/* The knobs below mirror dwmblocks-async's config.h (DELIMITER,
+ * MAX_BLOCK_OUTPUT_LENGTH, CLICKABLE_BLOCKS, LEADING_DELIMITER,
+ * TRAILING_DELIMITER) but as ordinary config.h values with external
+ * linkage instead of preprocessor macros -- config.h is #include-d only
+ * once (from dwm.c), so a #define here wouldn't be visible from
+ * statusbar.c the way a plain extern is. See config.h for their values;
+ * statusbar.c declares matching `extern`s at the top of the file. */
+
 void statusbar_init(void); /* called once from setup(), after updatebars() */
 void statusbar_tick(void); /* called every run() loop iteration; cheap --
                              * only does work for blocks whose interval

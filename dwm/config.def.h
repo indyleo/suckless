@@ -170,22 +170,35 @@ static const Layout layouts[] = {
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                       \
   }
 
-/* status bar blocks -- replaces dwmblocks. Each block is a shell command;
- * interval is in seconds (0 = only updates on click, or when something
- * calls statusbar_refresh(), e.g. the OSD block below). BLOCK_BUTTON is
- * set in the environment on click (1-5), same as dwmblocks. Adjust the
- * commands below to match your own `sysctl`/`mediactl` tooling -- these
- * assume a `--status`/`--get` style query flag exists; swap in
- * amixer/brightnessctl/whatever you actually have if not. */
+/* status bar blocks -- replaces dwmblocks. Mirrors dwmblocks-async's
+ * config.h knobs (see statusbar.h for how these cross into statusbar.c):
+ *   DELIMITER               -> statusdelim
+ *   MAX_BLOCK_OUTPUT_LENGTH -> statusmaxlen
+ *   CLICKABLE_BLOCKS        -> statusclickable
+ *   LEADING_DELIMITER       -> statusleaddelim
+ *   TRAILING_DELIMITER      -> statustraildelim
+ * Each statusblocks[] row is {icon, cmd, interval}. interval is in
+ * seconds; 0 = only updates on click, or when something calls
+ * statusbar_refresh() (the `statusblock N` FIFO command, or the OSD
+ * popup poking its matching block after a volume/brightness change --
+ * see osds[] below). BLOCK_BUTTON is set in cmd's environment on click,
+ * same as dwmblocks. */
+const char *statusdelim = " || ";
+const int statusmaxlen = 45;
+const int statusclickable = 1;
+const int statusleaddelim = 0;
+const int statustraildelim = 0;
+
 const StatusBlock statusblocks[] = {
-    /* icon  cmd                                interval(s) */
-    {"", "sysctl vol --status", 0},   /* refreshed by the OSD, see below */
-    {"", "sysctl bri --status", 0},   /* refreshed by the OSD, see below */
-    {"", "mediactl --source song --status", 5},
-    {"", "sysctl bat --status", 30},
-    {"", "sysctl wifi --status", 20},
-    {"", "sysctl bt --status", 20},
-    {"", "date '+%a %d %b  %H:%M'", 15},
+    /* icon  cmd                      interval(s) */
+    {"", "mediactl state-title", 0},  /* refreshed by a track-change hook,
+                                        * e.g. `echo "statusblock 0" >
+                                        * /tmp/dwm.fifo` from whatever
+                                        * watches MPRIS -- see WIKI.md */
+    {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
+    {"", "sysstats brightness", 0},   /* refreshed by the OSD, see below */
+    {"", "sysstats battery", 15},
+    {"", "sysstats date_time", 30},
 };
 const int statusblockslen = LENGTH(statusblocks);
 
@@ -193,6 +206,12 @@ const int statusblockslen = LENGTH(statusblocks);
  * first, getcmd is then read back for the level bar (stdout parsed as an
  * int 0-100); blockidx points at the matching statusblocks[] entry above
  * so the bar updates immediately instead of waiting out its interval.
+ * NOTE: getcmd must print a bare integer -- `sysstats volume` above is
+ * for the *bar's* display and likely prints an icon/percentage string,
+ * not a bare number, so it can't be reused here as-is. Point volgetcmd/
+ * brigetcmd/micgetcmd at whatever raw/machine-readable query your
+ * volume/brightness/mic tooling actually offers (a `--raw` flag on
+ * sysstats if it has one, or amixer/brightnessctl/wpctl directly).
  * Order here defines the OsdTrig indices used in keys[] below. */
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
 static const char *voldowncmd[] = {"sysctl", "vol", "-d", "5", NULL};
@@ -219,12 +238,12 @@ enum {
 
 const OsdItem osds[] = {
     /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
-    {"VOL", volupcmd, volgetcmd, 0},
-    {"VOL", voldowncmd, volgetcmd, 0},
-    {"VOL", voltogglecmd, volgetcmd, 0},
-    {"BRI", briupcmd, brigetcmd, 1},
-    {"BRI", bridowncmd, brigetcmd, 1},
-    {"MIC", micupcmd, micgetcmd, -1},
+    {"VOL", volupcmd, volgetcmd, 1},   /* statusblocks[1] = "sysstats volume" */
+    {"VOL", voldowncmd, volgetcmd, 1},
+    {"VOL", voltogglecmd, volgetcmd, 1},
+    {"BRI", briupcmd, brigetcmd, 2},   /* statusblocks[2] = "sysstats brightness" */
+    {"BRI", bridowncmd, brigetcmd, 2},
+    {"MIC", micupcmd, micgetcmd, -1},  /* no matching bar block */
     {"MIC", micdowncmd, micgetcmd, -1},
     {"MIC", mictogglecmd, micgetcmd, -1},
 };

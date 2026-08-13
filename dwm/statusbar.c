@@ -27,9 +27,48 @@
 
 extern const StatusBlock statusblocks[];
 extern const int statusblockslen;
+extern const char *statusdelim;   /* visible separator printed between
+                                    * blocks, e.g. " | " -- mirrors
+                                    * dwmblocks-async's DELIMITER */
+extern const int statusmaxlen;    /* max Unicode codepoints kept per
+                                    * block's trimmed output -- mirrors
+                                    * MAX_BLOCK_OUTPUT_LENGTH */
+extern const int statusclickable; /* 0 disables click-routing entirely
+                                    * (no delimiter bytes are embedded, so
+                                    * buttonpress()'s scan never finds one
+                                    * and sigstatusbar() no-ops) -- mirrors
+                                    * CLICKABLE_BLOCKS */
+extern const int statusleaddelim; /* 1 = also print statusdelim before
+                                    * the first block -- mirrors
+                                    * LEADING_DELIMITER */
+extern const int statustraildelim; /* 1 = also print statusdelim after
+                                     * the last block -- mirrors
+                                     * TRAILING_DELIMITER */
 
 static char blocktext[STATUSBAR_MAXBLOCKS][256];
 static time_t lastrun[STATUSBAR_MAXBLOCKS];
+
+/* Truncates s in place to at most n Unicode codepoints (not bytes),
+ * without splitting a multi-byte UTF-8 sequence -- continuation bytes
+ * are 10xxxxxx (0x80-0xBF), so only bytes that *aren't* continuation
+ * bytes count as the start of a new codepoint. */
+static void utf8truncate(char *s, int n) {
+  int cp = 0;
+  unsigned char *p = (unsigned char *)s;
+
+  if (n < 0)
+    return;
+  while (*p) {
+    if ((*p & 0xC0) != 0x80) { /* start of a new codepoint */
+      if (cp == n) {
+        *p = '\0';
+        return;
+      }
+      cp++;
+    }
+    p++;
+  }
+}
 
 /* Runs one block's command and stores its (icon-prefixed, trimmed)
  * output in blocktext[i]. button > 0 sets BLOCK_BUTTON for the command,
@@ -60,29 +99,46 @@ static void runblock(int i, int button) {
 
   snprintf(blocktext[i], sizeof(blocktext[i]), "%s%s",
            statusblocks[i].icon ? statusblocks[i].icon : "", out);
+  utf8truncate(blocktext[i], statusmaxlen);
   lastrun[i] = time(NULL);
 }
 
-/* Concatenates blocktext[] into dwm's stext, separated by a literal space
- * and a trailing delimiter byte (value i+1) per block -- the same shape
- * dwmblocks produced, so dwm.c's existing status-bar parsing/click code
- * needs no changes. */
+/* Concatenates blocktext[] into dwm's stext, separated by statusdelim
+ * (visible) and -- when statusclickable is set -- a trailing delimiter
+ * byte (value i+1, invisible, stripped from display) per block, so
+ * dwm.c's existing status-bar parsing/click code needs no changes. */
 static void rebuild(void) {
   static char buf[1024];
   size_t off = 0;
   int i, n;
 
+  if (statusleaddelim) {
+    n = snprintf(buf + off, sizeof(buf) - off, "%s", statusdelim);
+    if (n > 0)
+      off += (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
+  }
+
   for (i = 0; i < statusblockslen && i < STATUSBAR_MAXBLOCKS; i++) {
     if (off >= sizeof(buf) - 2)
       break;
-    if (i > 0)
-      buf[off++] = ' ';
+    if (i > 0) {
+      n = snprintf(buf + off, sizeof(buf) - off, "%s", statusdelim);
+      if (n > 0)
+        off += (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
+    }
     n = snprintf(buf + off, sizeof(buf) - off, "%s", blocktext[i]);
     if (n > 0)
       off += (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
-    if (off < sizeof(buf) - 1)
+    if (statusclickable && off < sizeof(buf) - 1)
       buf[off++] = (char)(i + 1);
   }
+
+  if (statustraildelim && off < sizeof(buf) - 1) {
+    n = snprintf(buf + off, sizeof(buf) - off, "%s", statusdelim);
+    if (n > 0)
+      off += (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
+  }
+
   buf[off] = '\0';
   setstatustext(buf);
 }
