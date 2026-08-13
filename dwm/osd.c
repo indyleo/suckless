@@ -95,25 +95,29 @@ static int runargv_getint(const char *const argv[]) {
 static void osdpaint(const char *label, int level) {
   int labelw, barx, barw, bary, fillw, lvl;
 
+  /* OSD background */
   drw_setscheme(osddrw, scheme[SchemeNorm]);
   drw_rect(osddrw, 0, 0, OSD_W, OSD_WIN_H, 1, 0);
-  drw_setscheme(osddrw, scheme[SchemeSel]);
-  drw_rect(osddrw, 0, 0, OSD_W, OSD_WIN_H, 0, 0);
 
+  /* Label */
   labelw = drw_fontset_getwidth(osddrw, label) + OSD_PAD;
   drw_setscheme(osddrw, scheme[SchemeNorm]);
   drw_text(osddrw, OSD_PAD, 0, labelw, OSD_WIN_H, 0, label, 0);
 
+  /* Progress bar */
   barx = OSD_PAD + labelw;
   barw = OSD_W - barx - OSD_PAD;
   bary = (OSD_WIN_H - OSD_BARH) / 2;
 
-  drw_setscheme(osddrw, scheme[level < 0 ? SchemeUrg : SchemeHid]);
+  /* Track */
+  drw_setscheme(osddrw, scheme[SchemeHid]);
   drw_rect(osddrw, barx, bary, barw, OSD_BARH, 1, 0);
 
+  /* Fill */
   if (level >= 0) {
     lvl = level > 100 ? 100 : level;
     fillw = barw * lvl / 100;
+
     drw_setscheme(osddrw, scheme[SchemeSel]);
     if (fillw > 0)
       drw_rect(osddrw, barx, bary, fillw, OSD_BARH, 1, 0);
@@ -125,6 +129,7 @@ static void osdpaint(const char *label, int level) {
     XMapRaised(dpy, osdwin);
     osdvisible = 1;
   }
+
   clock_gettime(CLOCK_MONOTONIC, &osdshownat);
 }
 
@@ -139,17 +144,17 @@ void osdsetup(void) {
   int y = selmon->my + selmon->mh - OSD_WIN_H - OSD_MARGIN_BOTTOM;
 
   osdwin = XCreateWindow(dpy, root, x, y, OSD_W, OSD_WIN_H, 0,
-                          DefaultDepth(dpy, screen), CopyFromParent,
-                          DefaultVisual(dpy, screen),
-                          CWOverrideRedirect | CWBackPixel | CWEventMask, &wa);
+                         DefaultDepth(dpy, screen), CopyFromParent,
+                         DefaultVisual(dpy, screen),
+                         CWOverrideRedirect | CWBackPixel | CWEventMask, &wa);
   XSetClassHint(dpy, osdwin, &ch);
 
   osddrw = drw_create(dpy, screen, osdwin, OSD_W, OSD_WIN_H);
   drw_fontset_create(osddrw, fonts, fontslen); /* non-fatal if this fails
-                                                 * a second time -- dwm
-                                                 * already died in setup()
-                                                 * if fonts don't load at
-                                                 * all */
+                                                * a second time -- dwm
+                                                * already died in setup()
+                                                * if fonts don't load at
+                                                * all */
   osdvisible = 0;
 }
 
