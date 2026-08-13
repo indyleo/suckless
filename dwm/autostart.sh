@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 
 # Vars
@@ -64,5 +63,8 @@ fi
 systemctl --user import-environment DISPLAY
 
 # Start all processes
+export NOTIFY_ENABLED=0 # media OSD (mediaosd.c) replaces medianotify's
+# desktop popups; it still handles state tracking
+# and triggers the OSD regardless of this
 start_processes
 start_daemons
