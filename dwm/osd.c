@@ -143,10 +143,11 @@ void osdsetup(void) {
   int x = selmon->mx + (selmon->mw - OSD_W) / 2;
   int y = selmon->my + selmon->mh - OSD_WIN_H - OSD_MARGIN_BOTTOM;
 
-  osdwin = XCreateWindow(dpy, root, x, y, OSD_W, OSD_WIN_H, 0,
+  osdwin = XCreateWindow(dpy, root, x, y, OSD_W, OSD_WIN_H, 2,
                          DefaultDepth(dpy, screen), CopyFromParent,
                          DefaultVisual(dpy, screen),
                          CWOverrideRedirect | CWBackPixel | CWEventMask, &wa);
+  XSetWindowBorder(dpy, osdwin, scheme[SchemeSel][ColBorder].pixel);
   XSetClassHint(dpy, osdwin, &ch);
 
   osddrw = drw_create(dpy, screen, osdwin, OSD_W, OSD_WIN_H);
