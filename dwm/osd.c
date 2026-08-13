@@ -97,7 +97,7 @@ static void osdpaint(const char *label, int level) {
 
   /* OSD background */
   drw_setscheme(osddrw, scheme[SchemeNorm]);
-  drw_rect(osddrw, 0, 0, OSD_W, OSD_WIN_H, 1, 0);
+  drw_rect(osddrw, 0, 0, OSD_W, OSD_WIN_H, 1, 1);
 
   /* Label */
   labelw = drw_fontset_getwidth(osddrw, label) + OSD_PAD;
@@ -111,7 +111,7 @@ static void osdpaint(const char *label, int level) {
 
   /* Track */
   drw_setscheme(osddrw, scheme[SchemeHid]);
-  drw_rect(osddrw, barx, bary, barw, OSD_BARH, 1, 0);
+  drw_rect(osddrw, barx, bary, barw, OSD_BARH, 1, 1);
 
   /* Fill */
   if (level >= 0) {
@@ -120,7 +120,7 @@ static void osdpaint(const char *label, int level) {
 
     drw_setscheme(osddrw, scheme[SchemeSel]);
     if (fillw > 0)
-      drw_rect(osddrw, barx, bary, fillw, OSD_BARH, 1, 0);
+      drw_rect(osddrw, barx, bary, fillw, OSD_BARH, 1, 1);
   }
 
   drw_map(osddrw, osdwin, 0, 0, OSD_W, OSD_WIN_H);
