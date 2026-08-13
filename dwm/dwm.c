@@ -61,6 +61,7 @@
 #include "drw.h"
 #include "dwm.h"
 #include "ipc.h"
+#include "mediaosd.h"
 #include "movestack.h"
 #include "osd.h"
 #include "screenshot.h"
@@ -792,6 +793,7 @@ void cleanup(void) {
     cleanupmon(mons);
 
   osdcleanup();
+  mediaosdcleanup();
   for (i = 0; i < CurLast; i++)
     drw_cur_free(drw, cursor[i]);
   for (i = 0; i < LENGTH(colors) + 1; i++)
@@ -2017,6 +2019,7 @@ void run(void) {
       readfifo();
     statusbar_tick();
     osdtick();
+    mediaosdtick();
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       if (rrbase >= 0 && ev.type == rrbase + RRScreenChangeNotify)
@@ -2278,6 +2281,7 @@ void setup(void) {
   statusbar_init(); /* overwrites the placeholder updatestatus() just set
                      * with real block output */
   osdsetup();
+  mediaosdsetup();
   /* supporting window for NetWMCheck */
   wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
   XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,

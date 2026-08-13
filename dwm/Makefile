@@ -4,7 +4,7 @@
 
 include config.mk
 
-SRC = drw.c dwm.c ipc.c movestack.c osd.c screenshot.c statusbar.c util.c wallpaper.c
+SRC = drw.c dwm.c ipc.c mediaosd.c movestack.c osd.c screenshot.c statusbar.c util.c wallpaper.c
 OBJ = ${SRC:.c=.o}
 
 VERBOSE := 0

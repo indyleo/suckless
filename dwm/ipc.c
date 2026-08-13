@@ -12,6 +12,7 @@
 
 #include "dwm.h"
 #include "ipc.h"
+#include "mediaosd.h"
 #include "osd.h"
 #include "screenshot.h"
 #include "statusbar.h"
@@ -128,8 +129,11 @@ static FifoCmd fifocmds[] = {
     {"statusblock", statusbar_refresh, 1}, /* statusblock N, -1 = all */
     /* osd */
     {"osd", osdtrigger, 1}, /* osd N -- N is an index into osds[], e.g.
-                              * the OsdVolUp/OsdBriDown/... enum values in
-                              * config.h */
+                             * the OsdVolUp/OsdBriDown/... enum values in
+                             * config.h */
+    {"mediaosd", mediaosdtrigger, 0}, /* mediaosd -- pushed by medianotify
+                                       * on every real track/status
+                                       * change; arg is ignored */
     /* screenshots */
     {"screenshot", takescreenshot,
      1}, /* screenshot 0=full 1=screen 2=window 3=select */
