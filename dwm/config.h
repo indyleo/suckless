@@ -17,8 +17,8 @@ const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
 const int fontslen = LENGTH(fonts); /* external linkage (dropped `static`
-                                      * above) so osd.c can build its own
-                                      * font set to match the bar's */
+                                     * above) so osd.c can build its own
+                                     * font set to match the bar's */
 /* Gruvbox color variables */
 static const char gruvbox_normfgcolor[] = "#ebdbb2"; // light fg
 static const char gruvbox_normbgcolor[] = "#282828"; // dark bg
@@ -191,14 +191,13 @@ const int statustraildelim = 0;
 
 const StatusBlock statusblocks[] = {
     /* icon  cmd                      interval(s) */
-    {"", "mediactl state-title", 0},  /* refreshed by a track-change hook,
-                                        * e.g. `echo "statusblock 0" >
-                                        * /tmp/dwm.fifo` from whatever
-                                        * watches MPRIS -- see WIKI.md */
-    {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
-    {"", "sysstats brightness", 0},   /* refreshed by the OSD, see below */
-    {"", "sysstats battery", 15},
-    {"", "sysstats date_time", 30},
+    {"", "mediactl state-title", 0}, /* refreshed by a track-change hook,
+                                      * e.g. `echo "statusblock 0" >
+                                      * /tmp/dwm.fifo` from whatever
+                                      * watches MPRIS -- see WIKI.md */
+    {"", "sysstats volume", 0},      /* refreshed by the OSD, see below */
+    {"", "sysstats brightness", 0},  /* refreshed by the OSD, see below */
+    {"", "sysstats battery", 15},    {"", "sysstats date_time", 30},
 };
 const int statusblockslen = LENGTH(statusblocks);
 
@@ -216,15 +215,14 @@ const int statusblockslen = LENGTH(statusblocks);
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
 static const char *voldowncmd[] = {"sysctl", "vol", "-d", "5", NULL};
 static const char *voltogglecmd[] = {"sysctl", "vol", "--toggle", NULL};
-static const char *volgetcmd[] = {"sysctl", "vol", "--get", NULL};
 static const char *briupcmd[] = {"sysctl", "bri", "-i", "5", NULL};
 static const char *bridowncmd[] = {"sysctl", "bri", "-d", "5", NULL};
-static const char *brigetcmd[] = {"sysctl", "bri", "--get", NULL};
 static const char *micupcmd[] = {"sysctl", "mic", "-i", "5", NULL};
 static const char *micdowncmd[] = {"sysctl", "mic", "-d", "5", NULL};
 static const char *mictogglecmd[] = {"sysctl", "mic", "--toggle", NULL};
-static const char *micgetcmd[] = {"sysctl", "mic", "--get", NULL};
-
+static const char *volgetcmd[] = {"sysstats", "vol_raw", NULL};
+static const char *micgetcmd[] = {"sysstats", "mic_raw", NULL};
+static const char *brigetcmd[] = {"sysstats", "bri_raw", NULL};
 enum {
   OsdVolUp,
   OsdVolDown,
@@ -238,12 +236,13 @@ enum {
 
 const OsdItem osds[] = {
     /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
-    {"VOL", volupcmd, volgetcmd, 1},   /* statusblocks[1] = "sysstats volume" */
+    {"VOL", volupcmd, volgetcmd, 1}, /* statusblocks[1] = "sysstats volume" */
     {"VOL", voldowncmd, volgetcmd, 1},
     {"VOL", voltogglecmd, volgetcmd, 1},
-    {"BRI", briupcmd, brigetcmd, 2},   /* statusblocks[2] = "sysstats brightness" */
+    {"BRI", briupcmd, brigetcmd,
+     2}, /* statusblocks[2] = "sysstats brightness" */
     {"BRI", bridowncmd, brigetcmd, 2},
-    {"MIC", micupcmd, micgetcmd, -1},  /* no matching bar block */
+    {"MIC", micupcmd, micgetcmd, -1}, /* no matching bar block */
     {"MIC", micdowncmd, micgetcmd, -1},
     {"MIC", mictogglecmd, micgetcmd, -1},
 };
