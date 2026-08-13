@@ -139,7 +139,7 @@ void osdsetup(void) {
       .background_pixel = scheme[SchemeNorm][ColBg].pixel,
       .event_mask = ExposureMask,
   };
-  XClassHint ch = {"dwm", "dwm"};
+  XClassHint ch = {"dwm-osd", "dwm-osd"};
   int x = selmon->mx + (selmon->mw - OSD_W) / 2;
   int y = selmon->my + selmon->mh - OSD_WIN_H - OSD_MARGIN_BOTTOM;
 
