@@ -27,23 +27,23 @@
 
 extern const StatusBlock statusblocks[];
 extern const int statusblockslen;
-extern const char *statusdelim;   /* visible separator printed between
+extern const char *statusdelim;    /* visible separator printed between
                                     * blocks, e.g. " | " -- mirrors
                                     * dwmblocks-async's DELIMITER */
-extern const int statusmaxlen;    /* max Unicode codepoints kept per
+extern const int statusmaxlen;     /* max Unicode codepoints kept per
                                     * block's trimmed output -- mirrors
                                     * MAX_BLOCK_OUTPUT_LENGTH */
-extern const int statusclickable; /* 0 disables click-routing entirely
+extern const int statusclickable;  /* 0 disables click-routing entirely
                                     * (no delimiter bytes are embedded, so
                                     * buttonpress()'s scan never finds one
                                     * and sigstatusbar() no-ops) -- mirrors
                                     * CLICKABLE_BLOCKS */
-extern const int statusleaddelim; /* 1 = also print statusdelim before
+extern const int statusleaddelim;  /* 1 = also print statusdelim before
                                     * the first block -- mirrors
                                     * LEADING_DELIMITER */
 extern const int statustraildelim; /* 1 = also print statusdelim after
-                                     * the last block -- mirrors
-                                     * TRAILING_DELIMITER */
+                                    * the last block -- mirrors
+                                    * TRAILING_DELIMITER */
 
 static char blocktext[STATUSBAR_MAXBLOCKS][256];
 static time_t lastrun[STATUSBAR_MAXBLOCKS];
@@ -124,7 +124,8 @@ static void rebuild(void) {
     if (i > 0) {
       n = snprintf(buf + off, sizeof(buf) - off, "%s", statusdelim);
       if (n > 0)
-        off += (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
+        off +=
+            (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
     }
     n = snprintf(buf + off, sizeof(buf) - off, "%s", blocktext[i]);
     if (n > 0)
@@ -168,10 +169,19 @@ void statusbar_tick(void) {
 }
 
 void statusbar_handleclick(int statussig, int button) {
-  int idx = statussig - 1;
-  if (idx < 0 || idx >= statusblockslen)
+  /* statussig starts at 1, so index 0 is statussig - 1 */
+  int blockidx = statussig - 1;
+
+  /* Use your existing length variable since sizeof() fails on incomplete types
+   */
+  if (blockidx < 0 || blockidx >= statusblockslen) {
     return;
-  runblock(idx, button);
+  }
+
+  /* Execute the block command based on the index and button pressed */
+  runblock(blockidx, button);
+
+  /* Optional: Only rebuild if the click actually updates the block's state */
   rebuild();
 }
 

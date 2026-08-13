@@ -2276,7 +2276,7 @@ void setup(void) {
   updatebars();
   updatestatus();
   statusbar_init(); /* overwrites the placeholder updatestatus() just set
-                      * with real block output */
+                     * with real block output */
   osdsetup();
   /* supporting window for NetWMCheck */
   wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
@@ -2380,10 +2380,11 @@ void sigterm(int unused) {
 void sigalrm(int unused) { wallpaperupdate = 1; }
 
 void sigstatusbar(const Arg *arg) {
-  if (!statussig)
-    return;
-  statusbar_handleclick(statussig, arg->i);
-  statussig = 0;
+  /* statussig 0 means no valid block was clicked (e.g., clicking padding) */
+  if (statussig > 0) {
+    /* arg->i holds the mouse button (1=Left, 2=Middle, 3=Right) */
+    statusbar_handleclick(statussig, arg->i);
+  }
 }
 
 void spawn(const Arg *arg) {
