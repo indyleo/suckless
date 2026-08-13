@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details.
  *
  * dynamic window manager is designed like any other X client as well. It is
@@ -61,7 +62,9 @@
 #include "dwm.h"
 #include "ipc.h"
 #include "movestack.h"
+#include "osd.h"
 #include "screenshot.h"
+#include "statusbar.h"
 #include "util.h"
 #include "wallpaper.h"
 
@@ -209,7 +212,6 @@ static void focusstack(int inc, int vis);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
-static pid_t getstatusbarpid();
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
@@ -302,7 +304,6 @@ static pid_t winpid(Window w);
 static const char broken[] = "broken";
 static char stext[1024];
 static int statussig;
-static pid_t statuspid = -1;
 int screen;
 int sw, sh;       /* X display screen geometry width, height */
 static int bh;    /* bar height */
@@ -790,6 +791,7 @@ void cleanup(void) {
   while (mons)
     cleanupmon(mons);
 
+  osdcleanup();
   for (i = 0; i < CurLast; i++)
     drw_cur_free(drw, cursor[i]);
   for (i = 0; i < LENGTH(colors) + 1; i++)
@@ -1409,28 +1411,6 @@ Atom getatomprop(Client *c, Atom prop) {
   return atom;
 }
 
-pid_t getstatusbarpid() {
-  char buf[32], *str = buf, *c;
-  FILE *fp;
-
-  if (statuspid > 0) {
-    snprintf(buf, sizeof(buf), "/proc/%u/cmdline", statuspid);
-    if ((fp = fopen(buf, "r"))) {
-      fgets(buf, sizeof(buf), fp);
-      while ((c = strchr(str, '/')))
-        str = c + 1;
-      fclose(fp);
-      if (!strcmp(str, STATUSBAR))
-        return statuspid;
-    }
-  }
-  if (!(fp = popen("pidof -s " STATUSBAR, "r")))
-    return -1;
-  fgets(buf, sizeof(buf), fp);
-  pclose(fp);
-  return strtoul(buf, NULL, 10);
-}
-
 int getrootptr(int *x, int *y) {
   int di;
   unsigned int dui;
@@ -2035,6 +2015,8 @@ void run(void) {
     }
     if (fifofd >= 0)
       readfifo();
+    statusbar_tick();
+    osdtick();
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       if (rrbase >= 0 && ev.type == rrbase + RRScreenChangeNotify)
@@ -2293,6 +2275,9 @@ void setup(void) {
   /* init bars */
   updatebars();
   updatestatus();
+  statusbar_init(); /* overwrites the placeholder updatestatus() just set
+                      * with real block output */
+  osdsetup();
   /* supporting window for NetWMCheck */
   wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
   XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
@@ -2395,15 +2380,10 @@ void sigterm(int unused) {
 void sigalrm(int unused) { wallpaperupdate = 1; }
 
 void sigstatusbar(const Arg *arg) {
-  union sigval sv;
-
   if (!statussig)
     return;
-  sv.sival_int = arg->i;
-  if ((statuspid = getstatusbarpid()) <= 0)
-    return;
-
-  sigqueue(statuspid, SIGRTMIN + statussig, sv);
+  statusbar_handleclick(statussig, arg->i);
+  statussig = 0;
 }
 
 void spawn(const Arg *arg) {
@@ -2856,6 +2836,14 @@ void updatestatus(void) {
   Monitor *m;
   if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
     strcpy(stext, "dwm-" VERSION);
+  for (m = mons; m; m = m->next)
+    drawbar(m);
+}
+
+void setstatustext(const char *s) {
+  Monitor *m;
+  strncpy(stext, s, sizeof(stext) - 1);
+  stext[sizeof(stext) - 1] = '\0';
   for (m = mons; m; m = m->next)
     drawbar(m);
 }

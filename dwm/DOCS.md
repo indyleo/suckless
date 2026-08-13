@@ -1,3 +1,4 @@
+
 # DOCS — Code Layout & Internals
 
 This document describes how the source is organized, for anyone (including
@@ -13,6 +14,8 @@ future-you) editing `dwm.c` directly. Configuration values live in
 | `wallpaper.c` / `.h`  | Async Imlib2 wallpaper engine (custom, not a suckless patch)                                                                                                     |
 | `ipc.c` / `.h`        | FIFO-based remote control (custom, not a suckless patch)                                                                                                         |
 | `screenshot.c` / `.h` | Screenshot capture + colorpicker (custom, not a suckless patch)                                                                                                  |
+| `statusbar.c` / `.h`  | Built-in status bar blocks -- replaces the dwmblocks binary (custom, not a suckless patch)                                                                       |
+| `osd.c` / `.h`        | Volume/brightness/mic on-screen-display popup (custom, not a suckless patch)                                                                                     |
 | `movestack.c` / `.h`  | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h`                             |
 | `drw.c` / `drw.h`     | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface                                                                                  |
 | `util.c` / `util.h`   | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)                                                                                      |
@@ -25,13 +28,14 @@ future-you) editing `dwm.c` directly. Configuration values live in
 
 ### Why the split
 
-`dwm.c` used to contain everything, including three sizeable, largely
-self-contained subsystems (wallpaper, IPC, screenshots) that don't touch
-client/layout internals. Those three got pulled into their own `.c`/`.h`
-pairs to keep `dwm.c` itself focused on the actual window manager.
-`movestack.c` was already a separate file but was previously `#include`d
-as text from `config.h` rather than compiled as its own translation unit
--- it's now wired up the same way as the other three.
+`dwm.c` used to contain everything, including several sizeable, largely
+self-contained subsystems (wallpaper, IPC, screenshots, and now the status
+bar blocks and OSD popup) that don't touch client/layout internals. Those
+got pulled into their own `.c`/`.h` pairs to keep `dwm.c` itself focused
+on the actual window manager. `movestack.c` was already a separate file
+but was previously `#include`d as text from `config.h` rather than
+compiled as its own translation unit -- it's now wired up the same way as
+the others.
 
 `dwm.h` exists solely so those modules have something to compile against.
 It is **not** a general-purpose dwm header -- it only exposes what's
@@ -59,7 +63,8 @@ main()
   ├─ XOpenDisplay()
   ├─ checkotherwm()        — refuse to start if another WM owns the display
   ├─ autostart_exec()      — run autostart.sh
-  ├─ setup()               — screen geometry, atoms, cursors, the bar, signal handlers
+  ├─ setup()               — screen geometry, atoms, cursors, the bar, signal handlers,
+  │                          statusbar_init() (statusbar.c), osdsetup() (osd.c)
   ├─ setupfifo()           — create/open the IPC FIFO (ipc.c)
   ├─ scan()                — adopt any windows already mapped
   ├─ setrandomwallpaper()  — initial wallpaper draw (wallpaper.c)
@@ -79,6 +84,8 @@ void run(void) {
   while (running) {
     if (wallpaperupdate) { wallpaperupdate = 0; setrandomwallpaper(); }
     if (fifofd >= 0) readfifo();
+    statusbar_tick(); /* statusbar.c: reruns any block whose interval elapsed */
+    osdtick();         /* osd.c: unmaps the popup once its timeout elapsed */
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       handler[ev.type](&ev);
@@ -91,9 +98,15 @@ void run(void) {
 
 This is **not** a `select()`/`epoll()` loop — it's a busy-poll with a 10ms
 sleep when there's nothing to do. That's why adding new event sources (the
-wallpaper timer flag, the FIFO) was just a matter of checking a flag/fd at
-the top of the loop rather than restructuring it. Latency for FIFO commands
-and signal-triggered wallpaper changes is bounded by that 10ms tick.
+wallpaper timer flag, the FIFO, the status blocks, the OSD auto-hide) was
+just a matter of checking a flag/fd/elapsed-time at the top of the loop
+rather than restructuring it. Latency for FIFO commands, signal-triggered
+wallpaper changes, block reruns, and OSD hiding is all bounded by that
+10ms tick. `statusbar_tick()` and `osdtick()` are both cheap on every
+iteration where nothing's actually due -- the former is a handful of
+`time(NULL)` comparisons, the latter one `clock_gettime()` comparison --
+so neither needed its own signal/timer plumbing the way the wallpaper
+rotation did.
 
 `handler[]` is a lookup table indexed by X11 event type (`ButtonPress`,
 `KeyPress`, `PropertyNotify`, etc.) mapping to the function that handles
@@ -124,40 +137,47 @@ Per-tag state (layout, mfact, nmaster, selected client) is tracked via the
 `Pertag` struct attached to each `Monitor`, populated/restored on `view()` —
 this is the `pertag` patch's mechanism.
 
-## Status bar rendering & clicks (`status2d` + `statuscmd` patches)
+## Status bar rendering & clicks (`status2d` + `statuscmd` patches, now feeding from `statusbar.c`)
 
 Functions: `drawbar()`, `drawstatusbar()` (status2d escape-code parsing),
-`buttonpress()`, `sigstatusbar()`, `getstatusbarpid()`. All still in
-`dwm.c` — these are two of the merged suckless patches, not a custom
-module, so they weren't split into their own files like wallpaper/ipc/
-screenshot were.
+`buttonpress()`, `sigstatusbar()`, `setstatustext()`. All still in
+`dwm.c` — `drawstatusbar()`/`buttonpress()` are two of the merged
+suckless patches, not a custom module, so they weren't split into their
+own files like wallpaper/ipc/screenshot/statusbar/osd were. What *did*
+change: this used to be dwmblocks-fed (an external binary wrote to the
+root window's name via `xsetroot`); it's now fed by `statusbar.c` calling
+`setstatustext()` directly, in-process. `drawstatusbar()`'s parsing and
+`buttonpress()`'s click-region detection don't know or care where the
+text came from and are otherwise unmodified.
 
-- `drawstatusbar()` draws the raw text dwmblocks writes to the root
-  window's name (`stext`), parsing inline `^c#hex^` / `^b#hex^` / `^f<N>^`
-  escape codes for foreground/background color and horizontal offset (the
-  `status2d` patch) as it goes. It returns the pixel width of what it drew.
+- `drawstatusbar()` draws whatever's currently in `stext`, parsing inline
+  `^c#hex^` / `^b#hex^` / `^f<N>^` escape codes for foreground/background
+  color and horizontal offset (the `status2d` patch) as it goes. It
+  returns the pixel width of what it drew.
 - `drawbar()` calls it and stores the result on the monitor:
   `m->stw = m->ww - drawstatusbar(...)`. `m->stw` is the authoritative
   "how wide is the status text" value for that monitor — `title_end`
   (used to decide whether a click landed in the status region at all) is
   computed from it: `title_end = m->ww - m->stw`.
-- `buttonpress()` re-walks `stext` on a click inside that region, this
-  time looking for the raw control bytes dwmblocks embeds ahead of each
-  clickable block's output (see the dwmblocks-async repo's `DOCS.md` for
-  the embedding side). Whichever byte the click's x-coordinate falls
-  under becomes `statussig`.
+- `buttonpress()` re-walks `stext` on a click inside that region, looking
+  for the raw delimiter bytes `statusbar.c`'s `rebuild()` embeds after
+  each block's output (value `i+1` for block index `i`, same convention
+  dwmblocks used). Whichever byte the click's x-coordinate falls under
+  becomes `statussig`.
 - `sigstatusbar()` (wired via the `buttons[]` table's
-  `{ClkStatusText, 0, ButtonN, sigstatusbar, {.i = N}}` entries) turns
-  that into `sigqueue(getstatusbarpid(), SIGRTMIN + statussig,
-{.sival_int = N})` — the button number rides along as the signal's
-  payload. `getstatusbarpid()` caches the resolved PID and re-validates
-  it against `/proc/<pid>/cmdline` before reusing it, falling back to
-  `pidof -s dwmblocks` if that check fails.
-- If `statussig` ends up `0` — either the click landed outside any
-  clickable block, or that block was defined with signal `0` in
-  dwmblocks' `BLOCKS()` — `sigstatusbar()` returns immediately without
-  queuing anything. There's no such thing as a real "signal 0" block; `0`
-  is the sentinel dwmblocks uses for "not clickable."
+  `{ClkStatusText, 0, ButtonN, sigstatusbar, {.i = N}}` entries) now
+  calls `statusbar_handleclick(statussig, arg->i)` directly instead of
+  signaling an external process — no pid to resolve, no
+  `SIGRTMIN`/`sigqueue()`, no `getstatusbarpid()` (deleted). The button
+  number is passed straight through as a function argument instead of
+  riding along as a signal payload.
+- If `statussig` ends up `0` — the click landed outside any block's
+  region — `sigstatusbar()` returns immediately. There's no "block 0";
+  delimiter bytes start at `1` (see `statusbar.c`'s `rebuild()`), so `0`
+  is naturally never a valid block index.
+
+See "Built-in status bar blocks" below for what `statusbar_handleclick()`
+actually does once it's called.
 
 ### Known bug (fixed): status-click x-origin read the wrong variable
 
@@ -205,6 +225,100 @@ int x = selmon->ww - selmon->stw;
 and delete the now-unused `static int statusw;` file-scope declaration
 entirely (leaving it in place still compiles, but trips
 `-Wunused-variable`).
+
+## Built-in status bar blocks (`statusbar.c` / `statusbar.h`, custom, replaces dwmblocks)
+
+Functions: `statusbar_init()`, `statusbar_tick()`, `statusbar_handleclick()`,
+`statusbar_refresh()` are the public surface (declared in `statusbar.h`,
+called from `dwm.c`'s `setup()`/`run()`/`sigstatusbar()` and from
+`ipc.c`'s `fifocmds[]` table); `runblock()` and `rebuild()` are `static`
+inside `statusbar.c`.
+
+- `statusblocks[]` (`config.h`) is an array of `{icon, cmd, interval}`.
+  `cmd` is a full shell command (run via `popen("sh -c ...")`, so pipes/
+  quoting/`awk` etc. all work) — only its first line of stdout is kept,
+  trailing newlines trimmed. `interval` is in seconds; `0` means the
+  block only updates on click or an explicit `statusbar_refresh()` call.
+- `runblock(i, button)` runs `statusblocks[i].cmd`, prefixing it with
+  `BLOCK_BUTTON=<button>` in the environment when called from a click —
+  same convention dwmblocks used, so any existing block script that reads
+  `$BLOCK_BUTTON` doesn't need to change. Output goes into
+  `blocktext[i]`, prefixed with that block's `icon`.
+- `rebuild()` concatenates `blocktext[]` into a single buffer — a space,
+  then each block's text, then a literal delimiter byte `(char)(i+1)` —
+  and hands it to `setstatustext()` (`dwm.c`), which copies it into
+  `stext` and calls `drawbar()` for every monitor. This is the exact
+  shape dwmblocks used to produce, which is why `drawstatusbar()`/
+  `buttonpress()` in `dwm.c` needed no changes (see above).
+- `statusbar_init()` runs every block once and calls `rebuild()`; called
+  from `setup()` right after `updatebars()`/`updatestatus()`, so the
+  placeholder `"dwm-VERSION"` text `updatestatus()` sets is immediately
+  overwritten with real block output.
+- `statusbar_tick()` — called every `run()` iteration — compares
+  `time(NULL)` against each block's last-run timestamp and reruns any
+  block whose `interval` has elapsed, then calls `rebuild()` once if
+  anything changed. Second-granularity is deliberate: this only needs to
+  be "close enough" for things like a clock or battery percentage, and
+  avoids a signal/timer per block.
+- `statusbar_handleclick(statussig, button)` is what `sigstatusbar()`
+  (`dwm.c`) now calls directly instead of signaling an external pid —
+  converts the delimiter byte back to a block index (`statussig - 1`),
+  reruns just that block with `button` set, and rebuilds.
+- `statusbar_refresh(arg)` — `arg->i` = a specific block index, or `-1`
+  for all — reruns and rebuilds outside the click path. Used by the
+  `statusblock N` FIFO command and by `osd.c` (see below) to keep a bar
+  block in sync immediately after a volume/brightness change, rather than
+  waiting out that block's own interval.
+
+Blocks are capped at `STATUSBAR_MAXBLOCKS` (31, see `statusbar.h`) —
+delimiter bytes are literal values `1..31` (anything `< ' '` is stripped
+from what's actually *drawn* by `drawstatusbar()`, but still walked by
+`buttonpress()` to resolve which block was clicked), so that's a hard
+ceiling, not a tunable.
+
+## On-screen display / OSD popup (`osd.c` / `osd.h`, custom, not a suckless patch)
+
+Functions: `osdsetup()`, `osdcleanup()`, `osdtrigger()`, `osdtick()` are
+the public surface (declared in `osd.h`); `runargv_wait()`,
+`runargv_getint()`, `osdpaint()` are `static` inside `osd.c`.
+
+- `osds[]` (`config.h`) is an array of `{label, changecmd, getcmd,
+  blockidx}`. `changecmd`/`getcmd` are `NULL`-terminated argv arrays
+  (exec'd directly via `fork()`+`execvp()`, no shell) rather than the
+  shell-string commands `statusblocks[]` uses — this fires on every
+  repeat of a held-down volume key, so skipping `sh -c` matters more here
+  than it does for a once-every-15-seconds clock block.
+- `osdtrigger(arg)` (`arg->i` = index into `osds[]`, bound directly in
+  `keys[]`) runs `changecmd` via `runargv_wait()` (fork, `execvp`,
+  `waitpid` — blocks the event loop for the duration, which in practice
+  is sub-tens-of-ms for something like `amixer`/a thin wrapper script),
+  then reads `getcmd`'s stdout back as an int via `runargv_getint()` (a
+  `pipe()` + the same fork/exec/wait shape), then calls `osdpaint()`. If
+  `o->blockidx >= 0`, it also calls `statusbar_refresh()` for that index
+  so the bar doesn't visibly lag a beat behind the popup.
+- `osdpaint()` draws directly into `osddrw` — a **separate** `Drw`
+  context from the bar's (`drw` in `dwm.c`), created once in `osdsetup()`
+  with its own font set loaded from `fonts[]`/`fontslen` (given external
+  linkage in `config.h` for exactly this reason, same pattern as
+  `wallpaperdir`/`fifopath`). Deliberately not sharing the bar's `Drw`:
+  the bar's pixmap is sized/resized for the bar window, and reusing it
+  for a differently-sized popup would mean save/restore dancing around
+  `drawbar()`'s own state every time either one draws. A second small
+  `Drw` costs one extra font load at startup and avoids that class of bug
+  entirely.
+- The popup itself is a small override-redirect window created once in
+  `osdsetup()` (bottom-center of `selmon`, sized/positioned via the
+  `OSD_W`/`OSD_WIN_H`/`OSD_MARGIN_BOTTOM` `#define`s at the top of
+  `osd.c` — not `config.h`, since these are layout constants rather than
+  something you'd realistically want a different value per monitor/theme
+  for) — `XMapRaised()`d on first paint, left mapped for repeat triggers.
+- `osdtick()` — called every `run()` iteration — compares
+  `CLOCK_MONOTONIC` against the last paint time and `XUnmapWindow()`s the
+  popup once `OSD_TIMEOUT_MS` (1200ms) has elapsed. `CLOCK_MONOTONIC`
+  rather than `time()` because this needs sub-second precision and
+  shouldn't jump if the system clock does.
+- `osdcleanup()` (`cleanup()`, `dwm.c`) frees `osddrw` and destroys the
+  popup window on exit/restart.
 
 ## Wallpaper engine (`wallpaper.c` / `wallpaper.h`, custom, not a suckless patch)
 
@@ -405,8 +519,9 @@ examples.
    you need, add a one-line wrapper in `ipc.c` near `fifoviewtag`/`fifotagtag`.
 2. If the target function lives in `dwm.c` and isn't already declared in
    `dwm.h`, add its prototype there (drop `static` from its forward
-   declaration in `dwm.c` too). Functions in `wallpaper.h`/`screenshot.h`
-   are already visible to `ipc.c`.
+   declaration in `dwm.c` too). Functions in
+   `wallpaper.h`/`screenshot.h`/`statusbar.h`/`osd.h` are already visible
+   to `ipc.c`.
 3. Add a row to `fifocmds[]` in `ipc.c`: `{"yourcmd", yourfunc, argtype}`.
 4. Rebuild. No other wiring needed — `readfifo()`'s dispatch loop is generic.
 

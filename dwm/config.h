@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
@@ -12,9 +13,12 @@ const char *wallpaperdir = "~/Pictures/Wallpapers/gruvbox";
 static const int wallpaperinterval = 900; /* seconds, 0 to disable timer */
 const char *fifopath = "/tmp/dwm.fifo";
 const char *fiforeplypath = "/tmp/dwm.fifo.reply";
-static const char *fonts[] = {
+const char *fonts[] = {
     "MesloLGS Nerd Font Mono:pixelsize=12",
     "NotoColorEmoji:pixelsize=12:antialias=true:autohint=true"};
+const int fontslen = LENGTH(fonts); /* external linkage (dropped `static`
+                                      * above) so osd.c can build its own
+                                      * font set to match the bar's */
 /* Gruvbox color variables */
 static const char gruvbox_normfgcolor[] = "#ebdbb2"; // light fg
 static const char gruvbox_normbgcolor[] = "#282828"; // dark bg
@@ -166,7 +170,65 @@ static const Layout layouts[] = {
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                       \
   }
 
-#define STATUSBAR "dwmblocks"
+/* status bar blocks -- replaces dwmblocks. Each block is a shell command;
+ * interval is in seconds (0 = only updates on click, or when something
+ * calls statusbar_refresh(), e.g. the OSD block below). BLOCK_BUTTON is
+ * set in the environment on click (1-5), same as dwmblocks. Adjust the
+ * commands below to match your own `sysctl`/`mediactl` tooling -- these
+ * assume a `--status`/`--get` style query flag exists; swap in
+ * amixer/brightnessctl/whatever you actually have if not. */
+const StatusBlock statusblocks[] = {
+    /* icon  cmd                                interval(s) */
+    {"", "sysctl vol --status", 0},   /* refreshed by the OSD, see below */
+    {"", "sysctl bri --status", 0},   /* refreshed by the OSD, see below */
+    {"", "mediactl --source song --status", 5},
+    {"", "sysctl bat --status", 30},
+    {"", "sysctl wifi --status", 20},
+    {"", "sysctl bt --status", 20},
+    {"", "date '+%a %d %b  %H:%M'", 15},
+};
+const int statusblockslen = LENGTH(statusblocks);
+
+/* on-screen-display popups for volume/brightness/mic. changecmd runs
+ * first, getcmd is then read back for the level bar (stdout parsed as an
+ * int 0-100); blockidx points at the matching statusblocks[] entry above
+ * so the bar updates immediately instead of waiting out its interval.
+ * Order here defines the OsdTrig indices used in keys[] below. */
+static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
+static const char *voldowncmd[] = {"sysctl", "vol", "-d", "5", NULL};
+static const char *voltogglecmd[] = {"sysctl", "vol", "--toggle", NULL};
+static const char *volgetcmd[] = {"sysctl", "vol", "--get", NULL};
+static const char *briupcmd[] = {"sysctl", "bri", "-i", "5", NULL};
+static const char *bridowncmd[] = {"sysctl", "bri", "-d", "5", NULL};
+static const char *brigetcmd[] = {"sysctl", "bri", "--get", NULL};
+static const char *micupcmd[] = {"sysctl", "mic", "-i", "5", NULL};
+static const char *micdowncmd[] = {"sysctl", "mic", "-d", "5", NULL};
+static const char *mictogglecmd[] = {"sysctl", "mic", "--toggle", NULL};
+static const char *micgetcmd[] = {"sysctl", "mic", "--get", NULL};
+
+enum {
+  OsdVolUp,
+  OsdVolDown,
+  OsdVolToggle,
+  OsdBriUp,
+  OsdBriDown,
+  OsdMicUp,
+  OsdMicDown,
+  OsdMicToggle
+}; /* indices into osds[], referenced from keys[] as {.i = OsdVolUp} etc. */
+
+const OsdItem osds[] = {
+    /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
+    {"VOL", volupcmd, volgetcmd, 0},
+    {"VOL", voldowncmd, volgetcmd, 0},
+    {"VOL", voltogglecmd, volgetcmd, 0},
+    {"BRI", briupcmd, brigetcmd, 1},
+    {"BRI", bridowncmd, brigetcmd, 1},
+    {"MIC", micupcmd, micgetcmd, -1},
+    {"MIC", micdowncmd, micgetcmd, -1},
+    {"MIC", mictogglecmd, micgetcmd, -1},
+};
+const int osdslen = LENGTH(osds);
 
 /* commands */
 static char dmenumon[2] =
@@ -240,26 +302,26 @@ static const Key keys[] = {
 
     /* System */
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
-    {0, XF86XK_MonBrightnessUp, spawn, SHCMD("sysctl bri -i 5")},
-    {0, XF86XK_MonBrightnessDown, spawn, SHCMD("sysctl bri -d 5")},
+    {0, XF86XK_MonBrightnessUp, osdtrigger, {.i = OsdBriUp}},
+    {0, XF86XK_MonBrightnessDown, osdtrigger, {.i = OsdBriDown}},
     {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
     {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
 
     /* Volume */
-    {MODKEY | ALTKEY, XK_Up, spawn, SHCMD("sysctl vol -i 5")},
-    {MODKEY | ALTKEY, XK_Down, spawn, SHCMD("sysctl vol -d 5")},
-    {MODKEY | ALTKEY, XK_m, spawn, SHCMD("sysctl vol --toggle")},
-    {ALTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl vol -i 5")},
-    {ALTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl vol -d 5")},
-    {ALTKEY, XF86XK_AudioMute, spawn, SHCMD("sysctl vol --toggle")},
+    {MODKEY | ALTKEY, XK_Up, osdtrigger, {.i = OsdVolUp}},
+    {MODKEY | ALTKEY, XK_Down, osdtrigger, {.i = OsdVolDown}},
+    {MODKEY | ALTKEY, XK_m, osdtrigger, {.i = OsdVolToggle}},
+    {ALTKEY, XF86XK_AudioRaiseVolume, osdtrigger, {.i = OsdVolUp}},
+    {ALTKEY, XF86XK_AudioLowerVolume, osdtrigger, {.i = OsdVolDown}},
+    {ALTKEY, XF86XK_AudioMute, osdtrigger, {.i = OsdVolToggle}},
 
     /* Microphone */
-    {MODKEY | SHIFTKEY, XK_Up, spawn, SHCMD("sysctl mic -i 5")},
-    {MODKEY | SHIFTKEY, XK_Down, spawn, SHCMD("sysctl mic -d 5")},
-    {MODKEY | SHIFTKEY, XK_m, spawn, SHCMD("sysctl mic --toggle")},
-    {SHIFTKEY, XF86XK_AudioRaiseVolume, spawn, SHCMD("sysctl mic -i 5")},
-    {SHIFTKEY, XF86XK_AudioLowerVolume, spawn, SHCMD("sysctl mic -d 5")},
-    {0, XF86XK_AudioMicMute, spawn, SHCMD("sysctl mic --toggle")},
+    {MODKEY | SHIFTKEY, XK_Up, osdtrigger, {.i = OsdMicUp}},
+    {MODKEY | SHIFTKEY, XK_Down, osdtrigger, {.i = OsdMicDown}},
+    {MODKEY | SHIFTKEY, XK_m, osdtrigger, {.i = OsdMicToggle}},
+    {SHIFTKEY, XF86XK_AudioRaiseVolume, osdtrigger, {.i = OsdMicUp}},
+    {SHIFTKEY, XF86XK_AudioLowerVolume, osdtrigger, {.i = OsdMicDown}},
+    {0, XF86XK_AudioMicMute, osdtrigger, {.i = OsdMicToggle}},
 
     /* Media - Song */
     {MODKEY, XK_Right, spawn, SHCMD("mediactl --source song next")},

@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details.
  *
  * See ipc.h for the public entry points.
@@ -11,7 +12,9 @@
 
 #include "dwm.h"
 #include "ipc.h"
+#include "osd.h"
 #include "screenshot.h"
+#include "statusbar.h"
 #include "util.h"
 #include "wallpaper.h"
 
@@ -121,6 +124,12 @@ static FifoCmd fifocmds[] = {
     {"togglebar", togglebar, 0},
     /* wallpaper */
     {"nextwallpaper", nextwallpaper, 0},
+    /* status bar */
+    {"statusblock", statusbar_refresh, 1}, /* statusblock N, -1 = all */
+    /* osd */
+    {"osd", osdtrigger, 1}, /* osd N -- N is an index into osds[], e.g.
+                              * the OsdVolUp/OsdBriDown/... enum values in
+                              * config.h */
     /* screenshots */
     {"screenshot", takescreenshot,
      1}, /* screenshot 0=full 1=screen 2=window 3=select */

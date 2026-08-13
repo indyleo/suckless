@@ -1,3 +1,4 @@
+
 # WIKI — Configuration Reference
 
 All configuration lives in `config.h` and takes effect on rebuild
@@ -41,6 +42,11 @@ static const char *fonts[] = {
 
 Multiple fonts act as fallbacks in order — the second entry here exists so
 emoji in window titles/status text render instead of showing tofu boxes.
+
+`fonts[]` (and a companion `fontslen`) are declared without `static` here
+deliberately — `osd.c` builds its own small font set from the same list
+so the OSD popup's text matches the bar's, see "On-screen display (OSD)"
+below.
 
 Colors are Gruvbox by default, defined as three named variables (fg/bg/border)
 per state, then assembled into the `colors[][3]` table:
@@ -110,9 +116,117 @@ and bind `togglescratch` with `{.ui = N}` in `keys[]`.
 scratchpad out of view in one call — handy before a screen share.
 
 Note: scratchpad 3 (`wiremixsc`) can also be toggled from outside a
-keybind entirely — it's how the status bar's volume block opens the mixer
-on right-click, via `echo "togglescratch 3" > /tmp/dwm.fifo`. Any external
-script can pop a scratchpad this way, not just dwm's own keybindings.
+keybind entirely — it's how the status bar's volume block can open the
+mixer on right-click, by having that block's `statusblocks[]` command run
+`echo "togglescratch 3" > /tmp/dwm.fifo` when `$BLOCK_BUTTON` is 3. Any
+external script can pop a scratchpad this way, not just dwm's own
+keybindings.
+
+## Status bar blocks
+
+```c
+static const StatusBlock statusblocks[] = {
+    /* icon  cmd                                interval(s) */
+    {"", "sysctl vol --status", 0},   /* refreshed by the OSD, see below */
+    {"", "sysctl bri --status", 0},   /* refreshed by the OSD, see below */
+    {"", "mediactl --source song --status", 5},
+    {"", "sysctl bat --status", 30},
+    {"", "sysctl wifi --status", 20},
+    {"", "sysctl bt --status", 20},
+    {"", "date '+%a %d %b  %H:%M'", 15},
+};
+```
+
+This replaces the old dwmblocks binary — there's nothing external to
+install or autostart anymore, the bar builds its own text in-process.
+Each row is `{icon, cmd, interval}`:
+
+- `icon` — a short glyph/prefix, purely cosmetic, can be `""`.
+- `cmd` — a full shell command (`popen`'d, so pipes and quoting work);
+  only its first line of stdout is used. It can emit the same
+  `^c#hex^`/`^b#hex^`/`^f<N>^` color codes the rest of the bar
+  understands (see Fonts & Colors above) — those are stripped from width
+  calculations but change the block's own color.
+- `interval` — seconds between automatic reruns. `0` means the block
+  only updates when clicked, or when something explicitly refreshes it
+  (the `statusblock N` FIFO command, or the OSD popup below poking its
+  matching block after a volume/brightness change).
+
+On click, the block's `cmd` is rerun with `BLOCK_BUTTON` set in its
+environment to the button number (1 = left, 2 = middle, 3 = right, 4/5 =
+scroll up/down) — same convention the old dwmblocks setup used, so a
+block script that branches on `$BLOCK_BUTTON` (e.g. left-click mutes,
+right-click opens a mixer) doesn't need to change. See "Mouse bindings"
+below for how a click gets routed to the right block in the first place.
+
+To add a block: add a row to `statusblocks[]`. No index anywhere else to
+update — the bar, click routing, and the FIFO/OSD refresh path all size
+themselves off the array automatically (`statusblockslen`), up to a hard
+cap of 31 blocks.
+
+## On-screen display (OSD)
+
+```c
+enum {
+  OsdVolUp, OsdVolDown, OsdVolToggle,
+  OsdBriUp, OsdBriDown,
+  OsdMicUp, OsdMicDown, OsdMicToggle
+};
+
+static const OsdItem osds[] = {
+    /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
+    {"VOL", volupcmd,     volgetcmd, 0},
+    {"VOL", voldowncmd,   volgetcmd, 0},
+    {"VOL", voltogglecmd, volgetcmd, 0},
+    {"BRI", briupcmd,     brigetcmd, 1},
+    {"BRI", bridowncmd,   brigetcmd, 1},
+    {"MIC", micupcmd,     micgetcmd, -1},
+    {"MIC", micdowncmd,   micgetcmd, -1},
+    {"MIC", mictogglecmd, micgetcmd, -1},
+};
+```
+
+A small popup (bottom-center of the screen) that flashes a label and a
+percentage bar for ~1.2s whenever you raise/lower/toggle volume,
+brightness, or mic. Each `osds[]` row is `{label, changecmd, getcmd,
+blockidx}`:
+
+- `label` — short text shown in the popup, e.g. `"VOL"`.
+- `changecmd` — argv array run first (the thing that actually raises/
+  lowers/toggles the value).
+- `getcmd` — argv array run afterward; its stdout must be a bare integer
+  0–100 (no `%`, no units) for the level bar. Pass `NULL` to skip the bar
+  and just flash the label.
+- `blockidx` — index into `statusblocks[]` above to refresh immediately
+  afterward, so the bar doesn't lag a beat behind the popup, or `-1` if
+  nothing in the bar mirrors this control.
+
+Both `changecmd` and `getcmd` are plain argv arrays (`{"sysctl", "vol",
+"-i", "5", NULL}`), not shell strings — no shell is invoked, so no
+quoting/pipes, but also no per-keypress `sh -c` overhead, which matters
+since these fire on every repeat of a held-down key.
+
+The `enum` above just gives the array indices readable names —
+`keys[]` binds each control with `{.i = OsdVolUp}` etc.:
+
+| Key                                          | Action        |
+| --------------------------------------------- | ------------- |
+| `MODKEY+ALT+Up` / `XF86AudioRaiseVolume`      | Volume up     |
+| `MODKEY+ALT+Down` / `XF86AudioLowerVolume`    | Volume down   |
+| `MODKEY+ALT+m` / `XF86AudioMute`              | Volume toggle |
+| `XF86MonBrightnessUp`                         | Brightness up |
+| `XF86MonBrightnessDown`                       | Brightness down |
+| `MODKEY+SHIFT+Up` / `SHIFT+XF86AudioRaiseVolume` | Mic up     |
+| `MODKEY+SHIFT+Down` / `SHIFT+XF86AudioLowerVolume` | Mic down |
+| `MODKEY+SHIFT+m` / `XF86AudioMicMute`         | Mic toggle    |
+
+The popup's size, position, and timeout are `#define`s at the top of
+`osd.c` (`OSD_W`/`OSD_WIN_H`/`OSD_MARGIN_BOTTOM`/`OSD_TIMEOUT_MS`) rather
+than `config.h` values — edit those directly and rebuild if you want a
+different size/position/duration.
+
+Can also be triggered outside a keybind via the FIFO: `echo "osd 2" >
+/tmp/dwm.fifo` fires `osds[2]` (`OsdVolToggle` per the enum above).
 
 ## Window rules
 
@@ -272,8 +386,10 @@ than calling apps directly.
 
 **Media/volume/mic/brightness** — XF86 keys are bound where the hardware
 sends them; `MODKEY+ALT`/`MODKEY+SHIFT` combos are provided as a fallback
-for keyboards without media keys. The status bar itself is also
-interactive for these — see the "Status text" row in Mouse bindings below.
+for keyboards without media keys. These all trigger the on-screen-display
+popup rather than a plain `spawn` — see "On-screen display (OSD)" above
+for the full key table. The status bar itself is also interactive for
+these — see the "Status text" row in Mouse bindings below.
 
 **Screenshots**
 
@@ -298,7 +414,7 @@ of an image thumbnail.
 | Layout symbol | Right                            | Cycle to monocle                                                       |
 | Window title  | Left                             | Toggle window (scratchpad-style)                                       |
 | Window title  | Middle                           | Zoom                                                                   |
-| Status text   | Left/Middle/Right/Scroll up/down | Sent to whichever block script is under the cursor, via `sigstatusbar` |
+| Status text   | Left/Middle/Right/Scroll up/down | Reruns whichever block is under the cursor, via `sigstatusbar` → `statusbar_handleclick` |
 | Client window | `MODKEY`+Left                    | Move (drag)                                                            |
 | Client window | `MODKEY`+Middle                  | Toggle floating                                                        |
 | Client window | `MODKEY`+Right                   | Resize (drag)                                                          |
@@ -306,13 +422,13 @@ of an image thumbnail.
 | Tag bar       | `MODKEY`+Left/Middle             | Tag / toggle-tag window                                                |
 
 Unlike the other rows, "Status text" isn't one fixed action — dwm only
-identifies _which block_ was clicked (by the signal number embedded in
-that segment of the status string) and forwards the button number to it.
-What actually happens is entirely up to that block's own script via
-`$BLOCK_BUTTON`. See the dwmblocks-async repo's WIKI/README for the
-current per-block mapping (volume, brightness, media, etc.) — blocks with
-signal `0` in dwmblocks' `BLOCKS()` config can't be clicked at all, dwm
-ignores clicks on that segment unconditionally.
+identifies _which block_ was clicked (by the delimiter byte embedded
+after that segment of the status string) and reruns that block's
+`statusblocks[]` command with `$BLOCK_BUTTON` set to the button number.
+What actually happens is entirely up to that command — see "Status bar
+blocks" above for the current block list. Clicks that land outside any
+block's region are ignored (`statussig` stays `0`, which is never a valid
+block index — see `DOCS.md` for why).
 
 ## FIFO commands (IPC)
 
@@ -350,6 +466,8 @@ echo "<command> [arg]" > /tmp/dwm.fifo
 | `nextwallpaper`    | —                | Load new random wallpaper              |
 | `screenshot`       | 0–3              | Capture full/monitor/window/select     |
 | `colorpicker`      | —                | Pick a color under cursor              |
+| `statusblock`      | 0–N, or `-1`     | Rerun one status bar block, or all     |
+| `osd`              | 0–N              | Trigger an OSD popup by `osds[]` index |
 | `state`            | —                | Write a state dump to `fiforeplypath`  |
 | `quit`             | —                | Quit dwm (`1` = restart)               |
 
@@ -360,6 +478,8 @@ echo "view 2" > /tmp/dwm.fifo
 echo "setmfact 0.65" > /tmp/dwm.fifo
 echo "nextwallpaper" > /tmp/dwm.fifo
 echo "togglescratch 3" > /tmp/dwm.fifo
+echo "statusblock -1" > /tmp/dwm.fifo   # rerun every status bar block
+echo "osd 0" > /tmp/dwm.fifo            # OsdVolUp, per the enum in config.h
 ```
 
 This is intended for scripting — bind it to acpi events, a rofi menu,
@@ -404,5 +524,9 @@ rather than polling it independently.
 
 `autostart.sh` runs once at dwm startup (called from `main()` before the
 event loop starts). Put any background processes you want running every
-session in there (compositor, wallpaper helper daemons, notification
-daemon, etc.) rather than in `.xinitrc`, so they're tied to dwm's lifecycle.
+session in there (compositor, notification daemon, etc.) rather than in
+`.xinitrc`, so they're tied to dwm's lifecycle.
+
+`dwmblocks` is no longer in `PROCS` — the status bar builds its own
+content in-process now (see "Status bar blocks" above), there's nothing
+external left to autostart for it.

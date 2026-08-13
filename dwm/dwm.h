@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details.
  *
  * Shared surface between dwm.c and the modules split out of it
@@ -125,5 +126,8 @@ void switchcol(const Arg *arg);
 void cyclelayout(const Arg *arg);
 void toggleselwin(const Arg *arg);
 void quit(const Arg *arg);
+void setstatustext(const char *s); /* statusbar.c pushes rebuilt status
+                                     * text into dwm's stext + redraws all
+                                     * bars through this */
 
 #endif /* DWM_H */

@@ -35,6 +35,8 @@ A dynamic window manager for X, enhanced with:
 - 🔍 **Window rules match via PCRE2 regex** (anchors, lookaround, etc.), with **size/move/center/forcefullscreen** overrides
 - 📊 **2D-drawn status bar** (icons/colors in status text) (`status2d` patch)
 - 🖱️ **Clickable status segments** (`statuscmd` patch)
+- 🧱 **Built-in status bar blocks** — per-block interval/click, no external binary required
+- 🔊 **On-screen-display popup** for volume/brightness/mic
 - 🖼️ **Async Imlib2 wallpaper loader** (no event loop blocking)
 - 🔄 **Automatic wallpaper rotation** on a timer
 - 🖼️ **Manual "next wallpaper" keybind**
@@ -55,6 +57,12 @@ An asynchronous status bar for dwm, featuring:
 - 🔁 **Externally triggerable updates** via signals
 - 🔄 **Compatible with i3blocks scripts**
 - ⚡ Optimized to eliminate status bar flickering
+
+> **Note:** the `dwm` build above no longer depends on this — its status
+> bar blocks and click handling are now built directly into `dwm` itself
+> (see `dwm`'s feature list above). `dwmblocks-async` is kept here as a
+> standalone tool for anyone using it with a different dwm build, or who
+> prefers a separate status bar process.
 
 [dwmblocks-async/README.md](dwmblocks-async/README.md)
 

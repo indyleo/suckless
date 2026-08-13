@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 
 # Vars
@@ -6,7 +7,6 @@ PROCS=(
     lxqt-policykit-agent
     udiskie
     medianotify
-    dwmblocks
 )
 DAEMON_PROCS=(
     "clip daemon"

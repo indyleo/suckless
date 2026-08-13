@@ -26,6 +26,8 @@ external IPC control.
 | Windows       | Window rules match via PCRE2 regex (incl. lookaround), with size/move/center/forcefullscreen overrides | custom              |
 | Bar           | 2D-drawn status bar (icons/colors in status text)                                                      | `status2d` patch    |
 | Bar           | Clickable status segments                                                                              | `statuscmd` patch   |
+| Bar           | Built-in status bar blocks (per-block interval/click, no external binary)                              | custom              |
+| Bar           | On-screen-display popup for volume/brightness/mic                                                      | custom              |
 | Wallpaper     | Async Imlib2 loader — no event loop blocking on image decode                                           | custom              |
 | Wallpaper     | Random wallpaper rotation on a timer                                                                   | custom              |
 | Wallpaper     | Manual "next wallpaper" keybind                                                                        | custom              |
@@ -52,6 +54,10 @@ for how to configure it.
 - `xclip` — screenshot/colorpicker clipboard copy
 - `notify-send` (from `libnotify-bin`) + a running notification daemon
   (e.g. `dunst`) — screenshot and colorpicker notifications
+
+No status bar helper is required anymore — the bar builds its own content
+in-process (see "Bar" in the feature table above), so there's nothing
+equivalent to dwmblocks to install or autostart.
 
 On Debian/Ubuntu-style systems:
 
@@ -94,6 +100,10 @@ ls -l /tmp/dwm.fifo
 # Try the IPC layer
 echo "view 1" > /tmp/dwm.fifo
 echo "nextwallpaper" > /tmp/dwm.fifo
+
+# Rerun every status bar block, and fire an OSD popup
+echo "statusblock -1" > /tmp/dwm.fifo
+echo "osd 0" > /tmp/dwm.fifo
 ```
 
 ## License
