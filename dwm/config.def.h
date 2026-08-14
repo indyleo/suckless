@@ -209,7 +209,8 @@ const StatusBlock statusblocks[] = {
                                       * watches MPRIS -- see WIKI.md */
     {"", "sysstats microphone", 0},  /* refreshed by the OSD, see below */
     {"", "sysstats volume", 0},      /* refreshed by the OSD, see below */
-    {"", "sysstats date_time", 30},
+    {"", "sysstats brightness", 0},  /* refreshed by the OSD, see below */
+    {"", "sysstats battery", 15},    {"", "sysstats date_time", 30},
 };
 const int statusblockslen = LENGTH(statusblocks);
 
