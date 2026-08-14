@@ -101,6 +101,7 @@ static const Rule rules[] = {
     {"^Alacritty$", NULL, NULL, 0, 0, 1, 0, -1},
     {"^org\\.wezfurlong\\.wezterm$", NULL, NULL, 0, 0, 1, 0, -1},
     {NULL, NULL, "^Event Tester$", 0, 0, 0, 1, -1}, /* xev */
+    {"^feishin$", NULL, NULL, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
 
     /* Scratchpads: st's -c takes "instance,Class" (see spcmdN above),
      * so these must match against *instance*, not class -- the class
@@ -133,7 +134,7 @@ static const Rule rules[] = {
 
     /* Steam games auto-fullscreen for every steam_app_NNNNN window
        except steam_app_0 (the Steam client itself reports class
-       steam_app_0 in some launch paths) — translated 1:1 from your
+       steam_app_0 in some launch paths) — translated 1:1 from my
        Hyprland negative-lookahead rule: class ^steam_app_(?!0$)[0-9]+$ */
     {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0,
      1},
@@ -206,9 +207,9 @@ const StatusBlock statusblocks[] = {
                                       * e.g. `echo "statusblock 0" >
                                       * /tmp/dwm.fifo` from whatever
                                       * watches MPRIS -- see WIKI.md */
+    {"", "sysstats microphone", 0},  /* refreshed by the OSD, see below */
     {"", "sysstats volume", 0},      /* refreshed by the OSD, see below */
-    {"", "sysstats brightness", 0},  /* refreshed by the OSD, see below */
-    {"", "sysstats battery", 15},    {"", "sysstats date_time", 30},
+    {"", "sysstats date_time", 30},
 };
 const int statusblockslen = LENGTH(statusblocks);
 
