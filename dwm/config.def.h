@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
@@ -51,18 +50,20 @@ static const char *colors[][3] = {
                    gruvbox_urgbordercolor}, /* urgent */
 };
 
-const char *spcmd1[] = {"st", "-c", "termsc,Termsc", NULL};
-const char *spcmd2[] = {"st", "-c", "lfsc,Lfsc", "-e", "zsh", "-c", "lf", NULL};
-const char *spcmd3[] = {"st", "-c", "qalsc,Qalsc", "-e", "qalc", NULL};
-const char *spcmd4[] = {"st", "-c",      "wiremixsc,Wiremixsc",
-                        "-e", "wiremix", NULL};
-const char *spcmd5[] = {"st",  "-c", "gurks,Gurks", "-e",
-                        "zsh", "-c", "gurks",       NULL};
-const char *spcmd6[] = {"st",  "-c", "discordo,Discordo", "-e",
-                        "zsh", "-c", "discordo",          NULL};
-const char *spcmd7[] = {"st", "-c", "twitch-tui,Twitch-tui", "-e", "twt", NULL};
-const char *spcmd8[] = {"st",  "-c", "musicsc,Musicsc", "-e",
-                        "zsh", "-c", "subsonic-tui",    NULL};
+const char *spcmd1[] = {"st", "-c", "termsc", "-n", "Termsc", NULL};
+const char *spcmd2[] = {"st", "-c",  "lfsc", "-n", "Lfsc",
+                        "-e", "zsh", "-c",   "lf", NULL};
+const char *spcmd3[] = {"st", "-c", "qalsc", "-n", "Qalsc", "-e", "qalc", NULL};
+const char *spcmd4[] = {"st",        "-c", "wiremixsc", "-n",
+                        "Wiremixsc", "-e", "wiremix",   NULL};
+const char *spcmd5[] = {"st", "-c",  "gurks", "-n",    "Gurks",
+                        "-e", "zsh", "-c",    "gurks", NULL};
+const char *spcmd6[] = {"st", "-c",  "discordo", "-n",       "Discordo",
+                        "-e", "zsh", "-c",       "discordo", NULL};
+const char *spcmd7[] = {"st",         "-c", "twitch-tui", "-n",
+                        "Twitch-tui", "-e", "twt",        NULL};
+const char *spcmd8[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
+                        "-e", "zsh", "-c",      "subsonic-tui", NULL};
 static Sp scratchpads[] = {
     {"termsc", spcmd1},     {"lfsc", spcmd2},    {"qalsc", spcmd3},
     {"wiremixsc", spcmd4},  {"gurks", spcmd5},   {"discordo", spcmd6},
@@ -94,21 +95,31 @@ static const Rule rules[] = {
        default anyway; mostly for readability, or to force-center a rule that
        would otherwise not match the defaults) forcefullscreen: 1 = go
        fullscreen immediately on open, like Hyprland's `fullscreen` rule */
-    {"Gimp", NULL, NULL, 0, 1, 0, 0, -1},
-    {"Firefox", NULL, NULL, 1 << 8, 0, 0, -1, -1},
-    {"St", NULL, NULL, 0, 0, 1, 0, -1},
-    {"Alacritty", NULL, NULL, 0, 0, 1, 0, -1},
-    {"org.wezfurlong.wezterm", NULL, NULL, 0, 0, 1, 0, -1},
-    {NULL, NULL, "Event Tester", 0, 0, 0, 1, -1}, /* xev */
-    {"termsc", NULL, NULL, SPTAG(0), 1, -1},
-    {"lfsc", NULL, NULL, SPTAG(1), 1, -1},
-    {"qalsc", NULL, NULL, SPTAG(2), 1, -1},
-    {"wiremixsc", NULL, NULL, SPTAG(3), 1, -1},
-    {"gurks", NULL, NULL, SPTAG(4), 1, -1},
-    {"discord", NULL, NULL, SPTAG(5), 1, -1},
-    {"twitch-tui", NULL, NULL, SPTAG(6), 1, -1},
-    {"musicsc", NULL, NULL, SPTAG(7), 1, -1},
-    {"Dragon", NULL, NULL, 0, 1, -1},
+    {"^Gimp$", NULL, NULL, 0, 1, 0, 0, -1},
+    {"^Firefox$", NULL, NULL, 1 << 0, 0, 0, -1, -1},
+    {"^St$", NULL, NULL, 0, 0, 1, 0, -1},
+    {"^Alacritty$", NULL, NULL, 0, 0, 1, 0, -1},
+    {"^org\\.wezfurlong\\.wezterm$", NULL, NULL, 0, 0, 1, 0, -1},
+    {NULL, NULL, "^Event Tester$", 0, 0, 0, 1, -1}, /* xev */
+
+    /* Scratchpads: st's -c takes "instance,Class" (see spcmdN above),
+     * so these must match against *instance*, not class -- the class
+     * is always the capitalized form (e.g. "Termsc"), which a
+     * lowercase pattern in the class slot never matches. Each also
+     * now spells out isterminal/noswallow explicitly so the trailing
+     * -1 lands in monitor (any monitor) instead of isterminal. */
+    {"^termsc$", NULL, NULL, SPTAG(0), 1, 0, 0, -1},
+    {"^lfsc$", NULL, NULL, SPTAG(1), 1, 0, 0, -1},
+    {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1},
+    {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1},
+    {"^gurks$", NULL, NULL, SPTAG(4), 1, 0, 0, -1},
+    {"^discordo$", NULL, NULL, SPTAG(5), 1, 0, 0, -1}, /* was "discord",
+                                                        * didn't match
+                                                        * instance
+                                                        * "discordo" */
+    {"^twitch-tui", NULL, NULL, SPTAG(6), 1, 0, 0, -1},
+    {"^musicsc", NULL, NULL, SPTAG(7), 1, 0, 0, -1},
+    {"^Dragon$", NULL, NULL, 0, 1, 0, 0, -1},
 
     /* Picture-in-Picture: float, pin to a fixed 480x270 size, and place
        it 14px from the left / 12px from the top of the work area —
@@ -310,7 +321,6 @@ static const Key keys[] = {
 
     /* Launchers */
     {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
-    {MODKEY, XK_w, spawn, SHCMD("wikibook")},
     {MODKEY, XK_n, spawn, SHCMD("notebook")},
     {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clip select")},
     {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("emoji")},
