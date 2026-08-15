@@ -248,16 +248,29 @@ enum {
 }; /* indices into osds[], referenced from keys[] as {.i = OsdVolUp} etc. */
 
 const OsdItem osds[] = {
-    /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
-    {"VOL", volupcmd, volgetcmd, 1}, /* statusblocks[1] = "sysstats volume" */
-    {"VOL", voldowncmd, volgetcmd, 1},
-    {"VOL", voltogglecmd, volgetcmd, 1},
-    {"BRI", briupcmd, brigetcmd,
-     2}, /* statusblocks[2] = "sysstats brightness" */
-    {"BRI", bridowncmd, brigetcmd, 2},
-    {"MIC", micupcmd, micgetcmd, -1}, /* no matching bar block */
-    {"MIC", micdowncmd, micgetcmd, -1},
-    {"MIC", mictogglecmd, micgetcmd, -1},
+    /* label  changecmd       getcmd      blockidx  fastget
+     *
+     * fastget (osd.c) replaces getcmd's fork *and* the
+     * statusbar_refresh() shell-fork it used to trigger, with either one
+     * direct `wpctl` exec (volume/mic) or a plain sysfs read
+     * (brightness, zero forks). getcmd/blockidx stay as the fallback
+     * path if fastget's dependency (wpctl / a backlight device) is ever
+     * missing -- see osd.h. Indices below match how many actual
+     * statusblocks[] entries are active right now (mediactl state-title,
+     * sysstats microphone, sysstats volume, sysstats date_time -- see
+     * that array): VOL is blockidx 2, MIC has no bar block, BRI has none
+     * either currently since its statusblocks[] line is commented out
+     * (uncomment it -- and give it its own index -- if you want a bar
+     * pill for it too; fastget already formats brightness correctly
+     * either way). */
+    {"VOL", volupcmd, volgetcmd, 2, osd_vol_fastget},
+    {"VOL", voldowncmd, volgetcmd, 2, osd_vol_fastget},
+    {"VOL", voltogglecmd, volgetcmd, 2, osd_vol_fastget},
+    {"BRI", briupcmd, brigetcmd, -1, osd_bri_fastget},
+    {"BRI", bridowncmd, brigetcmd, -1, osd_bri_fastget},
+    {"MIC", micupcmd, micgetcmd, -1, osd_mic_fastget},
+    {"MIC", micdowncmd, micgetcmd, -1, osd_mic_fastget},
+    {"MIC", mictogglecmd, micgetcmd, -1, osd_mic_fastget},
 };
 const int osdslen = LENGTH(osds);
 

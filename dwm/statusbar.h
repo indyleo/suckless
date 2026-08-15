@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details.
  *
  * Built-in status bar blocks -- replaces dwmblocks. See statusbar.c.
@@ -55,5 +54,15 @@ void statusbar_refresh(
     const Arg *arg); /* arg->i = block index to rerun immediately, or -1
                        * for all blocks. fifo command `statusblock N` and
                        * osd.c both call this. */
+void statusbar_setblock(int idx,
+                         const char *text); /* Like statusbar_refresh()
+                       * for a single block, but skips running the
+                       * block's cmd entirely -- text is pushed straight
+                       * into that block's slot (icon prefix expected to
+                       * already be baked into text, since the caller
+                       * presumably formatted it itself). For callers
+                       * (osd.c's fast paths) that already know the
+                       * value and don't need to re-derive it by
+                       * shelling out again. */
 
 #endif /* STATUSBAR_H */

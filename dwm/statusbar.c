@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details.
  *
  * See statusbar.h for the public entry points. This replaces the
@@ -195,5 +194,14 @@ void statusbar_refresh(const Arg *arg) {
   } else {
     runblock(idx, 0);
   }
+  rebuild();
+}
+
+void statusbar_setblock(int idx, const char *text) {
+  if (idx < 0 || idx >= statusblockslen || idx >= STATUSBAR_MAXBLOCKS || !text)
+    return;
+  snprintf(blocktext[idx], sizeof(blocktext[idx]), "%s", text);
+  utf8truncate(blocktext[idx], statusmaxlen);
+  lastrun[idx] = time(NULL);
   rebuild();
 }
