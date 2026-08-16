@@ -72,6 +72,22 @@ static void utf8truncate(char *s, int n) {
 /* Runs one block's command and stores its (icon-prefixed, trimmed)
  * output in blocktext[i]. button > 0 sets BLOCK_BUTTON for the command,
  * matching dwmblocks' click-command convention. */
+/* True if s is exactly "N/A", or ends in " N/A" (space then N/A) --
+ * matches both a block whose own script emits "N/A" standalone and one
+ * that prefixes it with an icon, e.g. sysstats' brightness block on a
+ * desktop with no backlight ("<icon> N/A"). Deliberately requires a
+ * leading space (or nothing at all) before "N/A" so this can't
+ * misfire on unrelated text that happens to end in those three
+ * characters. */
+static int endswith_na(const char *s) {
+  size_t len = strlen(s);
+  if (len == 3)
+    return strcmp(s, "N/A") == 0;
+  if (len > 3 && strcmp(s + len - 3, "N/A") == 0)
+    return s[len - 4] == ' ';
+  return 0;
+}
+
 static void runblock(int i, int button) {
   char shcmd[600];
   char out[200] = "";
@@ -99,17 +115,32 @@ static void runblock(int i, int button) {
   snprintf(blocktext[i], sizeof(blocktext[i]), "%s%s",
            statusblocks[i].icon ? statusblocks[i].icon : "", out);
   utf8truncate(blocktext[i], statusmaxlen);
+
+  /* Unavailable (no battery/backlight/tool present, whatever the block
+   * checks for): collapse to nothing instead of showing a permanent
+   * dead chip. rebuild() below skips empty blocks entirely -- no text,
+   * no icon, no delimiter either side -- so the block just isn't there,
+   * the same as commenting its statusblocks[] line out, until whatever
+   * it's waiting for actually shows up. */
+  if (blocktext[i][0] == '\0' || endswith_na(blocktext[i]))
+    blocktext[i][0] = '\0';
+
   lastrun[i] = time(NULL);
 }
 
 /* Concatenates blocktext[] into dwm's stext, separated by statusdelim
  * (visible) and -- when statusclickable is set -- a trailing delimiter
  * byte (value i+1, invisible, stripped from display) per block, so
- * dwm.c's existing status-bar parsing/click code needs no changes. */
+ * dwm.c's existing status-bar parsing/click code needs no changes.
+ * Blocks with empty blocktext[] (see runblock()'s N/A collapse above)
+ * are skipped entirely, delimiter included, so an unavailable block
+ * leaves no gap or stray separator behind. */
 static void rebuild(void) {
   static char buf[1024];
   size_t off = 0;
   int i, n;
+  int wrote = 0; /* has any visible block been written yet? controls
+                  * whether the next one needs a leading delimiter */
 
   if (statusleaddelim) {
     n = snprintf(buf + off, sizeof(buf) - off, "%s", statusdelim);
@@ -120,7 +151,9 @@ static void rebuild(void) {
   for (i = 0; i < statusblockslen && i < STATUSBAR_MAXBLOCKS; i++) {
     if (off >= sizeof(buf) - 2)
       break;
-    if (i > 0) {
+    if (blocktext[i][0] == '\0')
+      continue; /* unavailable/hidden -- contributes nothing at all */
+    if (wrote) {
       n = snprintf(buf + off, sizeof(buf) - off, "%s", statusdelim);
       if (n > 0)
         off +=
@@ -131,6 +164,7 @@ static void rebuild(void) {
       off += (size_t)n < sizeof(buf) - off ? (size_t)n : sizeof(buf) - off - 1;
     if (statusclickable && off < sizeof(buf) - 1)
       buf[off++] = (char)(i + 1);
+    wrote = 1;
   }
 
   if (statustraildelim && off < sizeof(buf) - 1) {
