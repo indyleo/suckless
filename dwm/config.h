@@ -1,6 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 
-/* appearance */
+/* Appearance */
 static const unsigned int borderpx = 1; /* border pixel of windows */
 static const unsigned int gappx = 8;    /* gaps between windows */
 static const unsigned int snap = 16;    /* snap pixel */
@@ -70,11 +70,11 @@ static Sp scratchpads[] = {
     {"twitch-tui", spcmd7}, {"musicsc", spcmd8},
 };
 
-static const char *const autostart[] = {
-    "/usr/local/bin/autostart.sh", NULL, NULL /* terminate */
-};
+/* Autostart */
+static const char *const autostart[] = {"/usr/local/bin/autostart.sh", NULL,
+                                        NULL};
 
-/* tagging */
+/* Tagging */
 const Tag tags[] = {
     {"󰖟", "web"}, {"󰙯", "chat"}, {"", "dev"},
     {"", "game"}, {"󰨇", "vm"},
@@ -82,72 +82,39 @@ const Tag tags[] = {
 const int tagslen = LENGTH(tags);
 
 static const Rule rules[] = {
-    /* xprop(1):
-     *	WM_CLASS(STRING) = instance, class
-     *	WM_NAME(STRING) = title
-     */
-    /* class     instance      title           tags mask  isfloating  isterminal
-                     noswallow  monitor  w  h   x   y  setpos  center
-       forcefullscreen w/h: 0 = keep the client's requested size x/y: only
-       applied when setpos=1; offset from the monitor's work-area origin
-       (top-left), same idea as Hyprland's `move` setpos: 1 = place at x,y
-       instead of dwm's default centering center: 1 = explicitly center (dwm's
-       default anyway; mostly for readability, or to force-center a rule that
-       would otherwise not match the defaults) forcefullscreen: 1 = go
-       fullscreen immediately on open, like Hyprland's `fullscreen` rule */
-    {"^Gimp$", NULL, NULL, 0, 1, 0, 0, -1},
-    {"^Firefox$", NULL, NULL, 1 << 0, 0, 0, -1, -1},
-    {"^St$", NULL, NULL, 0, 0, 1, 0, -1},
-    {"^Alacritty$", NULL, NULL, 0, 0, 1, 0, -1},
-    {"^org\\.wezfurlong\\.wezterm$", NULL, NULL, 0, 0, 1, 0, -1},
-    {NULL, NULL, "^Event Tester$", 0, 0, 0, 1, -1}, /* xev */
+    /*  class                            instance  title                  tags
+       mask  isfloating  isterminal  noswallow  monitor    w    h    x    y
+       setpos  center  forcefullscreen */
+    {"^Gimp$", NULL, NULL, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^Firefox$", NULL, NULL, 1 << 0, 0, 0, -1, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^St$", NULL, NULL, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^Alacritty$", NULL, NULL, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^org\\.wezfurlong\\.wezterm$", NULL, NULL, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0,
+     0, 0},
+    {NULL, NULL, "^Event Tester$", 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0,
+     0}, /* xev */
     {"^feishin$", NULL, NULL, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-
-    /* Scratchpads: st's -c takes "instance,Class" (see spcmdN above),
-     * so these must match against *instance*, not class -- the class
-     * is always the capitalized form (e.g. "Termsc"), which a
-     * lowercase pattern in the class slot never matches. Each also
-     * now spells out isterminal/noswallow explicitly so the trailing
-     * -1 lands in monitor (any monitor) instead of isterminal. */
-    {"^termsc$", NULL, NULL, SPTAG(0), 1, 0, 0, -1},
-    {"^lfsc$", NULL, NULL, SPTAG(1), 1, 0, 0, -1},
-    {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1},
-    {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1},
-    {"^gurks$", NULL, NULL, SPTAG(4), 1, 0, 0, -1},
-    {"^discordo$", NULL, NULL, SPTAG(5), 1, 0, 0, -1}, /* was "discord",
-                                                        * didn't match
-                                                        * instance
-                                                        * "discordo" */
-    {"^twitch-tui", NULL, NULL, SPTAG(6), 1, 0, 0, -1},
-    {"^musicsc", NULL, NULL, SPTAG(7), 1, 0, 0, -1},
-    {"^Dragon$", NULL, NULL, 0, 1, 0, 0, -1},
-
-    /* Picture-in-Picture: float, pin to a fixed 480x270 size, and place
-       it 14px from the left / 12px from the top of the work area —
-       translated from the Hyprland rule you posted (size 480,270 /
-       move 14,12). class/instance/title are now full PCRE2 regex, so
-       ^...$ anchors work exactly like in Hyprland. Note: dwm has no
-       "pin" (stay visible across tag switches) concept, so this only
-       covers size + move. */
-    {NULL, NULL, "^Picture-in-Picture$", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1,
+    {"^Dragon$", NULL, NULL, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {NULL, NULL, "^Picture-in-Picture$", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1, 0,
      0},
-
-    /* Steam games auto-fullscreen for every steam_app_NNNNN window
-       except steam_app_0 (the Steam client itself reports class
-       steam_app_0 in some launch paths) — translated 1:1 from my
-       Hyprland negative-lookahead rule: class ^steam_app_(?!0$)[0-9]+$ */
     {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0,
      1},
-
-    /* SC2 / Brood War report class "steam_app_default", so the rule
-       above already catches them — these title-matching fallbacks are
-       here in case Valve ever changes the class string, same as in
-       your Hyprland config. */
     {NULL, NULL, "^StarCraft II$", 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1},
     {NULL, NULL, "^Brood War$", 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1},
+
+    /* Scratchpads */
+    {"^termsc$", NULL, NULL, SPTAG(0), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^lfsc$", NULL, NULL, SPTAG(1), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^gurks$", NULL, NULL, SPTAG(4), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^discordo$", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0,
+     0}, /* was "discord", didn't match instance "discordo" */
+    {"^twitch-tui", NULL, NULL, SPTAG(6), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^musicsc", NULL, NULL, SPTAG(7), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
 };
 
-/* layout(s) */
+/* Layout(s) */
 static const float mfact = 0.55; /* factor of master area size [0.05..0.95] */
 static const int nmaster = 1;    /* number of clients in master area */
 static const int resizehints =
@@ -164,7 +131,7 @@ static const Layout layouts[] = {
     {"󰊓", "monocle", monocle},
 };
 
-/* key definitions */
+/* Key Definitions */
 #include <X11/XF86keysym.h>
 #define MODKEY Mod4Mask
 #define ALTKEY Mod1Mask
@@ -176,55 +143,64 @@ static const Layout layouts[] = {
       {MODKEY | SHIFTKEY, KEY, tag, {.ui = 1 << TAG}},                         \
       {MODKEY | CTRLKEY | SHIFTKEY, KEY, toggletag, {.ui = 1 << TAG}},
 
-/* helper for spawning shell commands in the pre dwm-5.0 fashion */
+/* Helper for spawning shell commands */
 #define SHCMD(cmd)                                                             \
   {                                                                            \
     .v = (const char *[]) { "/bin/sh", "-c", cmd, NULL }                       \
   }
 
-/* status bar blocks -- replaces dwmblocks. Mirrors dwmblocks-async's
- * config.h knobs (see statusbar.h for how these cross into statusbar.c):
- *   DELIMITER               -> statusdelim
- *   MAX_BLOCK_OUTPUT_LENGTH -> statusmaxlen
- *   CLICKABLE_BLOCKS        -> statusclickable
- *   LEADING_DELIMITER       -> statusleaddelim
- *   TRAILING_DELIMITER      -> statustraildelim
- * Each statusblocks[] row is {icon, cmd, interval}. interval is in
- * seconds; 0 = only updates on click, or when something calls
- * statusbar_refresh() (the `statusblock N` FIFO command, or the OSD
- * popup poking its matching block after a volume/brightness change --
- * see osds[] below). BLOCK_BUTTON is set in cmd's environment on click,
- * same as dwmblocks. */
+/* Statusbar Config */
 const char *statusdelim = " || ";
 const int statusmaxlen = 45;
 const int statusclickable = 1;
 const int statusleaddelim = 0;
 const int statustraildelim = 0;
 
+/* Statusbar Blocks */
 const StatusBlock statusblocks[] = {
-    /* icon  cmd                      interval(s) */
-    {"", "mediactl state-title", 0}, /* refreshed by a track-change hook,
-                                      * e.g. `echo "statusblock 0" >
-                                      * /tmp/dwm.fifo` from whatever
-                                      * watches MPRIS -- see WIKI.md */
-    {"", "sysstats microphone", 0},  /* refreshed by the OSD, see below */
-    {"", "sysstats volume", 0},      /* refreshed by the OSD, see below */
-    {"", "sysstats brightness", 0},  /* refreshed by the OSD, see below */
-    {"", "sysstats battery", 15},    {"", "sysstats date_time", 30},
+    /* icon   cmd   interval(s) */
+    {"", "mediactl state-title", 0},
+    {"", "sysstats kernel", 300},
+    {"", "sysstats cpu", 3},
+    {"", "sysstats gpu", 3},
+    {"", "sysstats mem", 5},
+    {"", "sysstats disk", 10},
+    {"",
+     "o=$(sysstats battery); case \"$o\" in "
+     "\"\"|*N/A*|*No*|*Not*|*\" 0%\"|\"0%\") ;; "
+     "*) printf '%s' \"$o\" ;; "
+     "esac",
+     15},
+    {"", "sysstats brightness", 0}, // refreshed by the OSD, see below
+    {"",
+     "o=$(sysstats ethernet); case \"$o\" in "
+     "*Connected*) printf '%s' \"$o\" ;; "
+     "esac",
+     15},
+    {"",
+     "w=$(sysstats wifi); case \"$w\" in "
+     "*Offline*|*\"No tool\"*|*Disconnected*) "
+     "e=$(sysstats ethernet); case \"$e\" in "
+     "*Disconnected*) printf '%s' \"$w\" ;; "
+     "esac ;; "
+     "*) printf '%s' \"$w\" ;; "
+     "esac",
+     15},
+    {"",
+     "t=$(sysstats tail); case \"$t\" in "
+     "*\"Not connected\"*) ;; "
+     "*Connected*) printf '%s' \"$t\" ;; "
+     "esac",
+     30},
+
+    {"", "sysstats microphone", 0}, // refreshed by the OSD, see below
+    {"", "sysstats volume", 0},     // refreshed by the OSD, see below
+
+    {"", "sysstats date_time", 30},
 };
 const int statusblockslen = LENGTH(statusblocks);
 
-/* on-screen-display popups for volume/brightness/mic. changecmd runs
- * first, getcmd is then read back for the level bar (stdout parsed as an
- * int 0-100); blockidx points at the matching statusblocks[] entry above
- * so the bar updates immediately instead of waiting out its interval.
- * NOTE: getcmd must print a bare integer -- `sysstats volume` above is
- * for the *bar's* display and likely prints an icon/percentage string,
- * not a bare number, so it can't be reused here as-is. Point volgetcmd/
- * brigetcmd/micgetcmd at whatever raw/machine-readable query your
- * volume/brightness/mic tooling actually offers (a `--raw` flag on
- * sysstats if it has one, or amixer/brightnessctl/wpctl directly).
- * Order here defines the OsdTrig indices used in keys[] below. */
+/* Volume/Microphone Commands For OSD */
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
 static const char *voldowncmd[] = {"sysctl", "vol", "-d", "5", NULL};
 static const char *voltogglecmd[] = {"sysctl", "vol", "--toggle", NULL};
@@ -245,27 +221,13 @@ enum {
   OsdMicUp,
   OsdMicDown,
   OsdMicToggle
-}; /* indices into osds[], referenced from keys[] as {.i = OsdVolUp} etc. */
+}; // indices into osds[], referenced from keys[] as {.i = OsdVolUp} etc.
 
 const OsdItem osds[] = {
-    /* label  changecmd       getcmd      blockidx  fastget
-     *
-     * fastget (osd.c) replaces getcmd's fork *and* the
-     * statusbar_refresh() shell-fork it used to trigger, with either one
-     * direct `wpctl` exec (volume/mic) or a plain sysfs read
-     * (brightness, zero forks). getcmd/blockidx stay as the fallback
-     * path if fastget's dependency (wpctl / a backlight device) is ever
-     * missing -- see osd.h. Indices below match how many actual
-     * statusblocks[] entries are active right now (mediactl state-title,
-     * sysstats microphone, sysstats volume, sysstats date_time -- see
-     * that array): VOL is blockidx 2, MIC has no bar block, BRI has none
-     * either currently since its statusblocks[] line is commented out
-     * (uncomment it -- and give it its own index -- if you want a bar
-     * pill for it too; fastget already formats brightness correctly
-     * either way). */
-    {"VOL", volupcmd, volgetcmd, 2, osd_vol_fastget},
-    {"VOL", voldowncmd, volgetcmd, 2, osd_vol_fastget},
-    {"VOL", voltogglecmd, volgetcmd, 2, osd_vol_fastget},
+    // label  changecmd       getcmd      blockidx  fastget
+    {"VOL", volupcmd, volgetcmd, 12, osd_vol_fastget},
+    {"VOL", voldowncmd, volgetcmd, 12, osd_vol_fastget},
+    {"VOL", voltogglecmd, volgetcmd, 12, osd_vol_fastget},
     {"BRI", briupcmd, brigetcmd, -1, osd_bri_fastget},
     {"BRI", bridowncmd, brigetcmd, -1, osd_bri_fastget},
     {"MIC", micupcmd, micgetcmd, -1, osd_mic_fastget},
@@ -274,7 +236,7 @@ const OsdItem osds[] = {
 };
 const int osdslen = LENGTH(osds);
 
-/* commands */
+/* Commands */
 static char dmenumon[2] =
     "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = {"dmenu_run", NULL};
@@ -416,7 +378,7 @@ static const Key keys[] = {
      {0}}, /* hide all scratchpads */
 };
 
-/* button definitions */
+/* Button Definitions */
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
  * ClkClientWin, or ClkRootWin */
 static const Button buttons[] = {

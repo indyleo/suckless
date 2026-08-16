@@ -1,4 +1,3 @@
-
 # WIKI — Configuration Reference
 
 All configuration lives in `config.h` and takes effect on rebuild
@@ -134,12 +133,32 @@ const int statustraildelim = 0;     /* 1 = print statusdelim after the last bloc
 static const StatusBlock statusblocks[] = {
     /* icon  cmd                      interval(s) */
     {"", "mediactl state-title", 0},  /* refreshed by a track-change hook */
-    {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
+    {"", "sysstats kernel", 300},
+    {"", "sysstats cpu", 3},
+    {"", "sysstats gpu", 3},
+    {"", "sysstats mem", 5},
+    {"", "sysstats disk", 10},
     {"", "sysstats brightness", 0},   /* refreshed by the OSD, see below */
-    {"", "sysstats battery", 15},
+    {"", "<battery, hides on empty/N/A/No/Not/0%>", 15},
+    {"", "<ethernet, hides unless Connected>", 15},
+    {"", "<wifi, hides unless connected or ethernet is down>", 15},
+    {"", "<tailscale, hides unless Connected>", 30},
+    {"", "sysstats microphone", 0},   /* refreshed by the OSD, see below */
+    {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
     {"", "sysstats date_time", 30},
 };
 ```
+
+The three network rows and the battery row above are shortened to their
+intent here — see `config.h` for the actual `case`-guarded shell one-liners
+each one runs, and the syspill hide-rule comment directly above
+`statusblocks[]` in `config.h` for exactly what each guard matches on
+(ported from the Quickshell bar's `shell.qml`, cross-checked against the
+real `sysstats` script's wording). This order also isn't arbitrary: it
+mirrors the Quickshell bar's `statsRow` layout left-to-right (kernel/cpu/
+gpu, then mem/disk, then brightness/battery, then ethernet/wifi/
+tailscale, then mic/volume), with the media block first and the clock
+last, so the two bars read the same way if you're switching between them.
 
 This replaces the old dwmblocks binary — there's nothing external to
 install or autostart anymore, the bar builds its own text in-process. The
@@ -206,11 +225,17 @@ enum {
 
 static const OsdItem osds[] = {
     /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
-    {"VOL", volupcmd,     volgetcmd, 1},   /* statusblocks[1] = "sysstats volume" */
-    {"VOL", voldowncmd,   volgetcmd, 1},
-    {"VOL", voltogglecmd, volgetcmd, 1},
-    {"BRI", briupcmd,     brigetcmd, 2},   /* statusblocks[2] = "sysstats brightness" */
-    {"BRI", bridowncmd,   brigetcmd, 2},
+    {"VOL", volupcmd,     volgetcmd, 12},  /* statusblocks[12] = "sysstats volume" */
+    {"VOL", voldowncmd,   volgetcmd, 12},
+    {"VOL", voltogglecmd, volgetcmd, 12},
+    {"BRI", briupcmd,     brigetcmd, -1},  /* brightness has a pill at
+                                            * statusblocks[6], but fastget
+                                            * already keeps it in sync
+                                            * without a rebuild(), so this
+                                            * is left at -1 -- see the
+                                            * comment above osds[] in
+                                            * config.h */
+    {"BRI", bridowncmd,   brigetcmd, -1},
     {"MIC", micupcmd,     micgetcmd, -1},
     {"MIC", micdowncmd,   micgetcmd, -1},
     {"MIC", mictogglecmd, micgetcmd, -1},
@@ -240,16 +265,16 @@ since these fire on every repeat of a held-down key.
 The `enum` above just gives the array indices readable names —
 `keys[]` binds each control with `{.i = OsdVolUp}` etc.:
 
-| Key                                          | Action        |
-| --------------------------------------------- | ------------- |
-| `MODKEY+ALT+Up` / `XF86AudioRaiseVolume`      | Volume up     |
-| `MODKEY+ALT+Down` / `XF86AudioLowerVolume`    | Volume down   |
-| `MODKEY+ALT+m` / `XF86AudioMute`              | Volume toggle |
-| `XF86MonBrightnessUp`                         | Brightness up |
-| `XF86MonBrightnessDown`                       | Brightness down |
-| `MODKEY+SHIFT+Up` / `SHIFT+XF86AudioRaiseVolume` | Mic up     |
-| `MODKEY+SHIFT+Down` / `SHIFT+XF86AudioLowerVolume` | Mic down |
-| `MODKEY+SHIFT+m` / `XF86AudioMicMute`         | Mic toggle    |
+| Key                                                | Action          |
+| -------------------------------------------------- | --------------- |
+| `MODKEY+ALT+Up` / `XF86AudioRaiseVolume`           | Volume up       |
+| `MODKEY+ALT+Down` / `XF86AudioLowerVolume`         | Volume down     |
+| `MODKEY+ALT+m` / `XF86AudioMute`                   | Volume toggle   |
+| `XF86MonBrightnessUp`                              | Brightness up   |
+| `XF86MonBrightnessDown`                            | Brightness down |
+| `MODKEY+SHIFT+Up` / `SHIFT+XF86AudioRaiseVolume`   | Mic up          |
+| `MODKEY+SHIFT+Down` / `SHIFT+XF86AudioLowerVolume` | Mic down        |
+| `MODKEY+SHIFT+m` / `XF86AudioMicMute`              | Mic toggle      |
 
 The popup's size, position, and timeout are `#define`s at the top of
 `osd.c` (`OSD_W`/`OSD_WIN_H`/`OSD_MARGIN_BOTTOM`/`OSD_TIMEOUT_MS`) rather
@@ -285,7 +310,11 @@ static const Rule rules[] = {
 Rules have 15 positional fields; trailing fields you don't need can simply
 be omitted — C zero-fills the rest of the struct (`0` for numeric fields,
 `NULL` for pointers), which for every trailing field here means "don't
-override, use dwm's default behavior."
+override, use dwm's default behavior." `config.h`'s actual `rules[]`
+spells out all 15 fields on every row instead of relying on that
+zero-fill, purely for readability (every knob visible at a glance,
+aligned in columns) — omitting trailing fields, as in the shortened
+examples above, still compiles and behaves identically.
 
 ### Matching (`class` / `instance` / `title`)
 
@@ -439,18 +468,18 @@ of an image thumbnail.
 
 ## Mouse bindings
 
-| Click target  | Button                           | Action                                                                 |
-| ------------- | -------------------------------- | ---------------------------------------------------------------------- |
-| Layout symbol | Left                             | Cycle to tile layout                                                   |
-| Layout symbol | Right                            | Cycle to monocle                                                       |
-| Window title  | Left                             | Toggle window (scratchpad-style)                                       |
-| Window title  | Middle                           | Zoom                                                                   |
+| Click target  | Button                           | Action                                                                                   |
+| ------------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| Layout symbol | Left                             | Cycle to tile layout                                                                     |
+| Layout symbol | Right                            | Cycle to monocle                                                                         |
+| Window title  | Left                             | Toggle window (scratchpad-style)                                                         |
+| Window title  | Middle                           | Zoom                                                                                     |
 | Status text   | Left/Middle/Right/Scroll up/down | Reruns whichever block is under the cursor, via `sigstatusbar` → `statusbar_handleclick` |
-| Client window | `MODKEY`+Left                    | Move (drag)                                                            |
-| Client window | `MODKEY`+Middle                  | Toggle floating                                                        |
-| Client window | `MODKEY`+Right                   | Resize (drag)                                                          |
-| Tag bar       | Left/Right                       | View / toggle-view tag                                                 |
-| Tag bar       | `MODKEY`+Left/Middle             | Tag / toggle-tag window                                                |
+| Client window | `MODKEY`+Left                    | Move (drag)                                                                              |
+| Client window | `MODKEY`+Middle                  | Toggle floating                                                                          |
+| Client window | `MODKEY`+Right                   | Resize (drag)                                                                            |
+| Tag bar       | Left/Right                       | View / toggle-view tag                                                                   |
+| Tag bar       | `MODKEY`+Left/Middle             | Tag / toggle-tag window                                                                  |
 
 Unlike the other rows, "Status text" isn't one fixed action — dwm only
 identifies _which block_ was clicked (by the delimiter byte embedded
