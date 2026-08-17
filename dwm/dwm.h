@@ -127,7 +127,7 @@ void cyclelayout(const Arg *arg);
 void toggleselwin(const Arg *arg);
 void quit(const Arg *arg);
 void setstatustext(const char *s); /* statusbar.c pushes rebuilt status
-                                     * text into dwm's stext + redraws all
-                                     * bars through this */
+                                    * text into dwm's stext + redraws all
+                                    * bars through this */
 
 #endif /* DWM_H */

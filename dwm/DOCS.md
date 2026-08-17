@@ -1,4 +1,3 @@
-
 # DOCS — Code Layout & Internals
 
 This document describes how the source is organized, for anyone (including
@@ -7,35 +6,36 @@ future-you) editing `dwm.c` directly. Configuration values live in
 
 ## File overview
 
-| File                  | Purpose                                                                                                                                                          |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dwm.c`               | Event loop, layouts, client management -- the stock-dwm core plus the merged patches                                                                             |
-| `dwm.h`               | Shared surface between `dwm.c` and the modules below: `Arg`/`Client`/`Monitor` types, `ISVISIBLE`, and externs for the globals/functions those modules call into |
-| `wallpaper.c` / `.h`  | Async Imlib2 wallpaper engine (custom, not a suckless patch)                                                                                                     |
-| `ipc.c` / `.h`        | FIFO-based remote control (custom, not a suckless patch)                                                                                                         |
-| `screenshot.c` / `.h` | Screenshot capture + colorpicker (custom, not a suckless patch)                                                                                                  |
-| `statusbar.c` / `.h`  | Built-in status bar blocks -- replaces the dwmblocks binary (custom, not a suckless patch)                                                                       |
-| `osd.c` / `.h`        | Volume/brightness/mic on-screen-display popup (custom, not a suckless patch)                                                                                     |
-| `movestack.c` / `.h`  | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h`                             |
-| `drw.c` / `drw.h`     | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface                                                                                  |
-| `util.c` / `util.h`   | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)                                                                                      |
-| `transient.c`         | Transient-window handling helper, `#include`d where needed                                                                                                       |
-| `config.def.h`        | Upstream default config -- **do not edit**, copy to `config.h` instead                                                                                           |
-| `config.h`            | Your actual config -- compiled directly into the binary                                                                                                          |
-| `config.mk`           | Build flags, install prefix, library paths                                                                                                                       |
-| `autostart.sh`        | Shell script run once at dwm startup to launch background processes                                                                                              |
-| `patches/`            | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading)                                                                         |
+| File                     | Purpose                                                                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dwm.c`                  | Event loop, layouts, client management -- the stock-dwm core plus the merged patches                                                                             |
+| `dwm.h`                  | Shared surface between `dwm.c` and the modules below: `Arg`/`Client`/`Monitor` types, `ISVISIBLE`, and externs for the globals/functions those modules call into |
+| `wallpaper.c` / `.h`     | Async Imlib2 wallpaper engine (custom, not a suckless patch)                                                                                                     |
+| `ipc.c` / `.h`           | FIFO-based remote control (custom, not a suckless patch)                                                                                                         |
+| `screenshot.c` / `.h`    | Screenshot capture + colorpicker (custom, not a suckless patch)                                                                                                  |
+| `statusbar.c` / `.h`     | Built-in status bar blocks -- replaces the dwmblocks binary (custom, not a suckless patch)                                                                       |
+| `osd.c` / `.h`           | Volume/brightness/mic on-screen-display popup (custom, not a suckless patch)                                                                                     |
+| `notifications.c` / `.h` | Standalone `org.freedesktop.Notifications` DBus server -- popups, history, DND (custom, not a suckless patch)                                                    |
+| `movestack.c` / `.h`     | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h`                             |
+| `drw.c` / `drw.h`        | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface                                                                                  |
+| `util.c` / `util.h`      | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)                                                                                      |
+| `transient.c`            | Transient-window handling helper, `#include`d where needed                                                                                                       |
+| `config.def.h`           | Upstream default config -- **do not edit**, copy to `config.h` instead                                                                                           |
+| `config.h`               | Your actual config -- compiled directly into the binary                                                                                                          |
+| `config.mk`              | Build flags, install prefix, library paths                                                                                                                       |
+| `autostart.sh`           | Shell script run once at dwm startup to launch background processes                                                                                              |
+| `patches/`               | Reference copies of the patches already merged into `dwm.c` (kept for diffing/upgrading)                                                                         |
 
 ### Why the split
 
 `dwm.c` used to contain everything, including several sizeable, largely
 self-contained subsystems (wallpaper, IPC, screenshots, and now the status
-bar blocks and OSD popup) that don't touch client/layout internals. Those
-got pulled into their own `.c`/`.h` pairs to keep `dwm.c` itself focused
-on the actual window manager. `movestack.c` was already a separate file
-but was previously `#include`d as text from `config.h` rather than
-compiled as its own translation unit -- it's now wired up the same way as
-the others.
+bar blocks, the OSD popup, and the notification server) that don't touch
+client/layout internals. Those got pulled into their own `.c`/`.h` pairs to
+keep `dwm.c` itself focused on the actual window manager. `movestack.c` was
+already a separate file but was previously `#include`d as text from
+`config.h` rather than compiled as its own translation unit -- it's now
+wired up the same way as the others.
 
 `dwm.h` exists solely so those modules have something to compile against.
 It is **not** a general-purpose dwm header -- it only exposes what's
@@ -64,7 +64,8 @@ main()
   ├─ checkotherwm()        — refuse to start if another WM owns the display
   ├─ autostart_exec()      — run autostart.sh
   ├─ setup()               — screen geometry, atoms, cursors, the bar, signal handlers,
-  │                          statusbar_init() (statusbar.c), osdsetup() (osd.c)
+  │                          statusbar_init() (statusbar.c), osdsetup() (osd.c),
+  │                          notifsetup() (notifications.c)
   ├─ setupfifo()           — create/open the IPC FIFO (ipc.c)
   ├─ scan()                — adopt any windows already mapped
   ├─ setrandomwallpaper()  — initial wallpaper draw (wallpaper.c)
@@ -86,6 +87,8 @@ void run(void) {
     if (fifofd >= 0) readfifo();
     statusbar_tick(); /* statusbar.c: reruns any block whose interval elapsed */
     osdtick();         /* osd.c: unmaps the popup once its timeout elapsed */
+    notiftick();        /* notifications.c: pumps the dbus connection
+                          * non-blockingly and expires timed-out popups */
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       handler[ev.type](&ev);
@@ -98,15 +101,18 @@ void run(void) {
 
 This is **not** a `select()`/`epoll()` loop — it's a busy-poll with a 10ms
 sleep when there's nothing to do. That's why adding new event sources (the
-wallpaper timer flag, the FIFO, the status blocks, the OSD auto-hide) was
-just a matter of checking a flag/fd/elapsed-time at the top of the loop
-rather than restructuring it. Latency for FIFO commands, signal-triggered
-wallpaper changes, block reruns, and OSD hiding is all bounded by that
+wallpaper timer flag, the FIFO, the status blocks, the OSD auto-hide, and
+now the notification DBus connection) was just a matter of checking a
+flag/fd/elapsed-time at the top of the loop rather than restructuring it.
+Latency for FIFO commands, signal-triggered wallpaper changes, block
+reruns, OSD hiding, and incoming DBus notifications is all bounded by that
 10ms tick. `statusbar_tick()` and `osdtick()` are both cheap on every
 iteration where nothing's actually due -- the former is a handful of
 `time(NULL)` comparisons, the latter one `clock_gettime()` comparison --
-so neither needed its own signal/timer plumbing the way the wallpaper
-rotation did.
+and `notiftick()` is likewise cheap when idle: `dbus_connection_read_write_dispatch(conn, 0)`
+is non-blocking and returns immediately when there's nothing queued, so
+none of the three needed their own signal/timer plumbing the way the
+wallpaper rotation did.
 
 `handler[]` is a lookup table indexed by X11 event type (`ButtonPress`,
 `KeyPress`, `PropertyNotify`, etc.) mapping to the function that handles
@@ -143,7 +149,7 @@ Functions: `drawbar()`, `drawstatusbar()` (status2d escape-code parsing),
 `buttonpress()`, `sigstatusbar()`, `setstatustext()`. All still in
 `dwm.c` — `drawstatusbar()`/`buttonpress()` are two of the merged
 suckless patches, not a custom module, so they weren't split into their
-own files like wallpaper/ipc/screenshot/statusbar/osd were. What *did*
+own files like wallpaper/ipc/screenshot/statusbar/osd were. What _did_
 change: this used to be dwmblocks-fed (an external binary wrote to the
 root window's name via `xsetroot`); it's now fed by `statusbar.c` calling
 `setstatustext()` directly, in-process. `drawstatusbar()`'s parsing and
@@ -272,7 +278,7 @@ inside `statusbar.c`.
 
 Blocks are capped at `STATUSBAR_MAXBLOCKS` (31, see `statusbar.h`) —
 delimiter bytes are literal values `1..31` (anything `< ' '` is stripped
-from what's actually *drawn* by `drawstatusbar()`, but still walked by
+from what's actually _drawn_ by `drawstatusbar()`, but still walked by
 `buttonpress()` to resolve which block was clicked), so that's a hard
 ceiling, not a tunable.
 
@@ -283,7 +289,7 @@ the public surface (declared in `osd.h`); `runargv_wait()`,
 `runargv_getint()`, `osdpaint()` are `static` inside `osd.c`.
 
 - `osds[]` (`config.h`) is an array of `{label, changecmd, getcmd,
-  blockidx}`. `changecmd`/`getcmd` are `NULL`-terminated argv arrays
+blockidx}`. `changecmd`/`getcmd` are `NULL`-terminated argv arrays
   (exec'd directly via `fork()`+`execvp()`, no shell) rather than the
   shell-string commands `statusblocks[]` uses — this fires on every
   repeat of a held-down volume key, so skipping `sh -c` matters more here
@@ -319,6 +325,102 @@ the public surface (declared in `osd.h`); `runargv_wait()`,
   shouldn't jump if the system clock does.
 - `osdcleanup()` (`cleanup()`, `dwm.c`) frees `osddrw` and destroys the
   popup window on exit/restart.
+
+## Notifications (`notifications.c` / `notifications.h`, custom, not a suckless patch)
+
+Functions: `notifsetup()`, `notifcleanup()`, `notiftick()`,
+`notif_win_click()`, `notif_win_expose()`, `notif_blockclick()`,
+`notif_dnd()`, `notif_dismissall()`, `notif_clearhistory()`,
+`notif_dumphistory()` are the public surface (declared in
+`notifications.h`); the dbus message parsing/handling functions, the
+popup pool, and the history ring buffer are all `static` inside
+`notifications.c`.
+
+Unlike the other custom modules, this one doesn't call out to an external
+tool at all (compare `screenshot.c`'s `notify-send`/`xclip` execs below,
+or the OSD's `changecmd`/`getcmd` argv arrays) -- dwm implements the
+`org.freedesktop.Notifications` DBus interface itself, using libdbus-1's
+low-level API directly (no glib/sd-bus). This is the one place in the
+codebase where dwm _becomes_ something rather than launching it, and it's
+a deliberate exception to the `spawn()`/screenshot-notify reasoning
+documented below: a notification daemon needs to own a well-known DBus
+name and hold state (history, DND, in-flight popups) for the life of the
+session, which doesn't fit the fork-and-forget model everything else here
+uses.
+
+- `notifsetup()` (called once from `setup()`, after `statusbar_init()`)
+  connects to the session bus via `dbus_bus_get(DBUS_BUS_SESSION, ...)`
+  and calls `dbus_bus_request_name()` for `org.freedesktop.Notifications`
+  with `DBUS_NAME_FLAG_DO_NOT_QUEUE`. If that fails -- most likely because
+  another daemon (dunst, mako, a desktop environment's own notification
+  server) already owns the name -- dwm logs a warning to stderr and
+  disables the notification system for that session rather than crashing
+  or fighting over the name; everything else in dwm is unaffected. The
+  same function also pre-creates a fixed pool of `NOTIF_MAX_POPUPS` (5)
+  override-redirect windows, each with its own `Drw` (same reasoning as
+  the OSD's separate `Drw` -- see above), sized off the bar's font
+  metrics the first time through the loop.
+- `notiftick()` -- called every `run()` iteration, same as
+  `statusbar_tick()`/`osdtick()` -- does two things: non-blockingly pumps
+  the dbus connection (`dbus_connection_read_write_dispatch(conn, 0)`,
+  then drains `dbus_connection_pop_message()` in a loop) and walks the
+  popup pool checking `CLOCK_MONOTONIC` against each active popup's
+  per-urgency expiry.
+- Incoming `Notify` calls are parsed by hand via `DBusMessageIter`
+  (`handle_notify()`) -- app name, replaces-id, icon (accepted but not
+  rendered), summary, body, the `actions` array (only the first action
+  key is kept, invoked on left-click as the "default action"), the
+  `hints` dict (only `urgency` is read), and `expire_timeout`. A
+  malformed call gets a `DBUS_ERROR_INVALID_ARGS` reply rather than being
+  silently dropped or crashing the parse. Urgency drives the default
+  timeout when the caller doesn't specify one: low = 4s, normal = 6s,
+  critical = never auto-expires (the sending app is expected to close it
+  itself), matching common notification-daemon convention.
+- Popups are laid out top-to-bottom from the top-right corner of `selmon`
+  by `notif_relayout()`, called whenever a popup is shown or dismissed --
+  slots are reused in place rather than creating/destroying windows on
+  the common path. Border color reuses the bar's existing `scheme[]`
+  entries by urgency (`SchemeUrg` for critical, `SchemeSel` for normal,
+  `SchemeHid` for low) rather than introducing a parallel color config.
+- Click handling: `dwm.c`'s `buttonpress()`/`expose()` each call
+  `notif_win_click()`/`notif_win_expose()` first, before their normal
+  window-lookup logic, since popup windows are override-redirect and
+  outside dwm's usual client/monitor bookkeeping. Left-click invokes the
+  stored default action (if any, via an `ActionInvoked` signal) then
+  dismisses; any other button just dismisses. Both close paths, plus
+  timeout expiry and an explicit `CloseNotification` call, send a
+  `NotificationClosed` signal with the reason code the spec defines (1 =
+  expired, 2 = dismissed, 3 = closed via `CloseNotification`).
+- A 25-entry ring buffer (`history[]`) records every notification
+  received regardless of whether DND suppressed its popup, and
+  `notif_dumphistory()` writes it out (newest first) to `fiforeplyfd`,
+  following the exact same drain-then-write pattern `ipc.c`'s
+  `fifostate()` uses (see "FIFO IPC layer" below) -- so it's subject to
+  the same "read it right after you request it" caveat.
+- **Statusbar integration.** `config.h`'s `notifblockidx` names which
+  `statusblocks[]` entry (an otherwise-empty `{"", "", 0}` row -- there's
+  no shell command to run) shows the bell/count. `notifications.c` pushes
+  its own text into that slot directly via `statusbar_setblock()`
+  whenever the unread count or DND state changes -- no shell fork, same
+  technique the OSD's `blockidx` refresh path uses. The other half of
+  this wiring lives in `statusbar.c`: `statusbar_handleclick()` special-
+  cases `blockidx == notifblockidx` and calls `notif_blockclick()`
+  instead of `runblock()`, since re-running an empty shell command would
+  just clobber what `notifications.c` had pushed. Left click on that
+  block dismisses all visible popups, middle click clears history, right
+  click toggles DND -- see WIKI.md → "Notifications" for the config-facing
+  version of this.
+- `notifcleanup()` (`cleanup()`, `dwm.c`) frees every popup's `Drw`,
+  destroys the popup windows, and `dbus_connection_unref()`s the
+  connection. It deliberately does **not** call `dbus_connection_close()`
+  -- `dbus_bus_get()` returns a connection libdbus itself owns/shares, so
+  closing it is undefined; unref is the correct teardown for that API,
+  same distinction as `XCloseDisplay()` vs. freeing an individual
+  resource.
+
+`autostart.sh` no longer starts `dunst` (or any other notification
+daemon) for the same reason it stopped starting `dwmblocks` -- see
+"Autostart" in WIKI.md.
 
 ## Wallpaper engine (`wallpaper.c` / `wallpaper.h`, custom, not a suckless patch)
 
@@ -460,10 +562,16 @@ from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
   (image, via a file path) and `copytextclip()` (color hex, piped over
   stdin) each `fork()` + `execlp()` a thin external tool (`xclip`), same for
   `notifyshot()`/`notifycolor()` (`notify-send`) — rather than dwm
-  implementing ICCCM selection ownership or a D-Bus notification client
-  itself. Same reasoning as `spawn()`: dwm launches things, it doesn't
-  become them. `SIGCHLD` is already `SA_NOCLDWAIT` (see `setup()`), so
-  these forked children never need to be waited on.
+  implementing ICCCM selection ownership itself. Same reasoning as
+  `spawn()`: dwm launches things, it doesn't become them. `SIGCHLD` is
+  already `SA_NOCLDWAIT` (see `setup()`), so these forked children never
+  need to be waited on. `notifications.c` (see "Notifications" above) is
+  the one deliberate exception to this pattern elsewhere in the codebase
+  -- but note that even `notifyshot()`/`notifycolor()` still just `exec`
+  `notify-send`; they don't call into `notifications.c` directly. That
+  `notify-send` call is now received by dwm's own DBus server instead of
+  an external daemon, but the screenshot code itself is unchanged and
+  still doesn't know or care who's listening on the other end of the bus.
 
 ## FIFO IPC layer (`ipc.c` / `ipc.h`, custom)
 
@@ -520,8 +628,8 @@ examples.
 2. If the target function lives in `dwm.c` and isn't already declared in
    `dwm.h`, add its prototype there (drop `static` from its forward
    declaration in `dwm.c` too). Functions in
-   `wallpaper.h`/`screenshot.h`/`statusbar.h`/`osd.h` are already visible
-   to `ipc.c`.
+   `wallpaper.h`/`screenshot.h`/`statusbar.h`/`osd.h`/`notifications.h` are
+   already visible to `ipc.c`.
 3. Add a row to `fifocmds[]` in `ipc.c`: `{"yourcmd", yourfunc, argtype}`.
 4. Rebuild. No other wiring needed — `readfifo()`'s dispatch loop is generic.
 

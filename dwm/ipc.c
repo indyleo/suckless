@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details.
  *
  * See ipc.h for the public entry points.
@@ -13,6 +12,7 @@
 #include "dwm.h"
 #include "ipc.h"
 #include "mediaosd.h"
+#include "notifications.h"
 #include "osd.h"
 #include "screenshot.h"
 #include "statusbar.h"
@@ -134,6 +134,13 @@ static FifoCmd fifocmds[] = {
     {"mediaosd", mediaosdtrigger, 0}, /* mediaosd -- pushed by medianotify
                                        * on every real track/status
                                        * change; arg is ignored */
+    /* notifications */
+    {"notifdnd", notif_dnd, 0},                 /* toggle Do Not Disturb */
+    {"notifdismissall", notif_dismissall, 0},   /* dismiss all visible popups */
+    {"notifclearhistory", notif_clearhistory, 0}, /* clear notification history */
+    {"notifhistory", notif_dumphistory, 0}, /* writes history to
+                                              * fiforeplypath, newest
+                                              * first, one per line */
     /* screenshots */
     {"screenshot", takescreenshot,
      1}, /* screenshot 0=full 1=screen 2=window 3=select */

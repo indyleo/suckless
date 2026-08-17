@@ -80,11 +80,6 @@ static struct timespec mosdshownat; /* last real (push) trigger */
 static struct timespec mosdpolledat;
 static char lastart[1024]; /* art path from the last real trigger, reused
                             * by the cheap poll refreshes in between */
-static pthread_mutex_t imliblock =
-    PTHREAD_MUTEX_INITIALIZER; /* wallpaper.c also calls into Imlib2 from
-                                * its worker thread; Imlib2's global
-                                * context isn't safe to touch from two
-                                * threads at once, so serialize on it */
 
 /* Runs argv, waits for it, returns a pointer to a static buffer holding
  * its stdout with any trailing newline(s) stripped. Empty string on any
@@ -178,7 +173,7 @@ static void mediaosd_drawart(const char *path, int x, int y, int w, int h) {
   if (!path || !path[0])
     return;
 
-  pthread_mutex_lock(&imliblock);
+  pthread_mutex_lock(&imlib_mutex);
   imlib_context_set_display(dpy);
   imlib_context_set_visual(DefaultVisual(dpy, screen));
   imlib_context_set_colormap(DefaultColormap(dpy, screen));
@@ -193,7 +188,7 @@ static void mediaosd_drawart(const char *path, int x, int y, int w, int h) {
     imlib_render_image_on_drawable_at_size(x, y, w, h);
     imlib_free_image();
   }
-  pthread_mutex_unlock(&imliblock);
+  pthread_mutex_unlock(&imlib_mutex);
 }
 
 static void mediaosdpaint(const MediaState *st, const char *artpath) {

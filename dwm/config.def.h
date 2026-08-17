@@ -160,11 +160,6 @@ const int statustraildelim = 0;
 const StatusBlock statusblocks[] = {
     /* icon   cmd   interval(s) */
     {"", "mediactl state-title", 0},
-    {"", "sysstats kernel", 300},
-    {"", "sysstats cpu", 3},
-    {"", "sysstats gpu", 3},
-    {"", "sysstats mem", 5},
-    {"", "sysstats disk", 10},
     {"",
      "o=$(sysstats battery); case \"$o\" in "
      "\"\"|*N/A*|*No*|*Not*|*\" 0%\"|\"0%\") ;; "
@@ -197,8 +192,21 @@ const StatusBlock statusblocks[] = {
     {"", "sysstats volume", 0},     // refreshed by the OSD, see below
 
     {"", "sysstats date_time", 30},
+
+    /* Notifications -- text is never produced by this empty command; it's
+     * pushed directly by notifications.c via statusbar_setblock()
+     * whenever the unread count or DND state changes. See notifblockidx
+     * below and statusbar.c's statusbar_handleclick(), which routes
+     * clicks on this block to notif_blockclick() instead of rerunning
+     * this (empty) command. */
+    {"", "", 0},
 };
 const int statusblockslen = LENGTH(statusblocks);
+
+/* index into statusblocks[] (above) of the notification bell/count --
+ * must stay in sync if you reorder statusblocks[]. -1 would disable the
+ * bar indicator (popups/history/DND still work either way). */
+const int notifblockidx = 9;
 
 /* Volume/Microphone Commands For OSD */
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};

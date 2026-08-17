@@ -4,8 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <X11/Xlib.h>
 
 #include "util.h"
+
+pthread_mutex_t imlib_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Ensure Xlib is thread-safe. Must be called before any other Xlib call. */
+__attribute__((constructor))
+static void init_xthreads(void)
+{
+	XInitThreads();
+}
 
 void
 die(const char *fmt, ...)

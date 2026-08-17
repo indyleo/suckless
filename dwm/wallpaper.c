@@ -73,6 +73,14 @@ static void *wallpaperworker(void *arg) {
   WallpaperJobSpec *jobs = arg;
 
   for (int i = 0; jobs[i].num != -1; i++) {
+    pthread_mutex_lock(&imlib_mutex);
+
+    /* Ensure the Imlib2 context is correctly set for this thread.
+     * Although Imlib2 uses global context, we are under the mutex,
+     * so it is safe to change these settings. */
+    imlib_context_set_display(dpy);
+    imlib_context_set_visual(DefaultVisual(dpy, screen));
+    imlib_context_set_colormap(DefaultColormap(dpy, screen));
     imlib_context_set_anti_alias(0);
     imlib_context_set_dither(0);
     imlib_context_set_blend(0);
@@ -80,6 +88,7 @@ static void *wallpaperworker(void *arg) {
 
     Imlib_Image img = imlib_load_image(jobs[i].path);
     if (!img) {
+      pthread_mutex_unlock(&imlib_mutex);
       fprintf(stderr, "dwm: failed to load wallpaper: %s\n", jobs[i].path);
       continue;
     }
@@ -89,6 +98,7 @@ static void *wallpaperworker(void *arg) {
         jobs[i].mh);
     imlib_free_image();
     if (!scaled) {
+      pthread_mutex_unlock(&imlib_mutex);
       fprintf(stderr, "dwm: failed to scale wallpaper\n");
       continue;
     }
@@ -101,11 +111,13 @@ static void *wallpaperworker(void *arg) {
     uint32_t *buf = malloc((size_t)w * h * sizeof(uint32_t));
     if (!buf) {
       imlib_free_image();
+      pthread_mutex_unlock(&imlib_mutex);
       fprintf(stderr, "dwm: out of memory for wallpaper buffer\n");
       continue;
     }
     memcpy(buf, src, (size_t)w * h * sizeof(uint32_t));
     imlib_free_image();
+    pthread_mutex_unlock(&imlib_mutex);
 
     WallpaperResult *res = ecalloc(1, sizeof(WallpaperResult));
     res->monnum = jobs[i].num;
@@ -236,15 +248,13 @@ void applywallpaperresult(WallpaperResult *res) {
   GC gc = XCreateGC(dpy, pm, 0, NULL);
   XPutImage(dpy, pm, gc, xi, 0, 0, 0, 0, res->w, res->h);
   XFreeGC(dpy, gc);
-  /* XDestroyImage would free res->data — null it out first since we manage it
-   */
+  /* XDestroyImage would free res->data — null it out first since we manage it */
   xi->data = NULL;
   XDestroyImage(xi);
   free(res->data);
   res->data = NULL;
 
-  /* cache owns the pixmap from here on; only the cache's own eviction frees it
-   */
+  /* cache owns the pixmap from here on; only the cache's own eviction frees it */
   wallpapercache_store(res->path, res->w, res->h, pm);
   currentwallpaper[m->num] = pm;
   wprenderw[m->num] = res->w;

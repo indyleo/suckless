@@ -21,6 +21,7 @@
 #include <time.h>
 
 #include "dwm.h"
+#include "notifications.h"
 #include "statusbar.h"
 #include "util.h"
 
@@ -208,6 +209,15 @@ void statusbar_handleclick(int statussig, int button) {
   /* Use your existing length variable since sizeof() fails on incomplete types
    */
   if (blockidx < 0 || blockidx >= statusblockslen) {
+    return;
+  }
+
+  /* The notification block (config.h's notifblockidx) is driven entirely
+   * from C -- it has no shell command to rerun. Route its clicks into
+   * notifications.c instead; it pushes its own text back via
+   * statusbar_setblock(), so no rebuild() is needed here for it. */
+  if (blockidx == notifblockidx) {
+    notif_blockclick((unsigned int)button);
     return;
   }
 

@@ -28,6 +28,7 @@ external IPC control.
 | Bar           | Clickable status segments                                                                              | `statuscmd` patch   |
 | Bar           | Built-in status bar blocks (per-block interval/click, no external binary)                              | custom              |
 | Bar           | On-screen-display popup for volume/brightness/mic                                                      | custom              |
+| Notifications | Standalone `org.freedesktop.Notifications` DBus server (popups, history, DND) — no dunst/mako required | custom              |
 | Wallpaper     | Async Imlib2 loader — no event loop blocking on image decode                                           | custom              |
 | Wallpaper     | Random wallpaper rotation on a timer                                                                   | custom              |
 | Wallpaper     | Manual "next wallpaper" keybind                                                                        | custom              |
@@ -48,22 +49,29 @@ for how to configure it.
 - libxcb + xcb-res (used for process/PID lookups, e.g. swallow)
 - PCRE2 (`libpcre2-8`, headers via `libpcre2-dev`) — regex matching for
   window rules (`class`/`instance`/`title`), including lookaround
+- libdbus-1 (`libdbus-1-dev`) — dwm's built-in `org.freedesktop.Notifications`
+  server (see "Notifications" in the feature table above)
 
 ### Runtime (not linked, called via exec)
 
 - `xclip` — screenshot/colorpicker clipboard copy
-- `notify-send` (from `libnotify-bin`) + a running notification daemon
-  (e.g. `dunst`) — screenshot and colorpicker notifications
+- `notify-send` (from `libnotify-bin`) — screenshot and colorpicker
+  notifications. No separate notification daemon is needed anymore: dwm
+  itself owns `org.freedesktop.Notifications` and renders the popup, so
+  `notify-send` calls are received and displayed by dwm directly.
 
 No status bar helper is required anymore — the bar builds its own content
 in-process (see "Bar" in the feature table above), so there's nothing
-equivalent to dwmblocks to install or autostart.
+equivalent to dwmblocks to install or autostart. Likewise, no external
+notification daemon (dunst, mako, etc.) is required or should be
+autostarted alongside dwm — see "Notifications" above.
 
 On Debian/Ubuntu-style systems:
 
 ```sh
 sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
-                  libxcb1-dev libxcb-res0-dev libpcre2-dev xclip libnotify-bin dunst
+                  libxcb1-dev libxcb-res0-dev libpcre2-dev libdbus-1-dev \
+                  xclip libnotify-bin
 ```
 
 ## Building
@@ -104,6 +112,10 @@ echo "nextwallpaper" > /tmp/dwm.fifo
 # Rerun every status bar block, and fire an OSD popup
 echo "statusblock -1" > /tmp/dwm.fifo
 echo "osd 0" > /tmp/dwm.fifo
+
+# Fire a test notification and toggle Do Not Disturb
+notify-send "Hello" "This popup is rendered by dwm itself"
+echo "notifdnd" > /tmp/dwm.fifo
 ```
 
 ## License

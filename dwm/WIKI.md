@@ -146,6 +146,10 @@ static const StatusBlock statusblocks[] = {
     {"", "sysstats microphone", 0},   /* refreshed by the OSD, see below */
     {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
     {"", "sysstats date_time", 30},
+    {"", "", 0},                      /* notifications -- pushed by
+                                       * notifications.c directly, no
+                                       * command to run; see
+                                       * "Notifications" below */
 };
 ```
 
@@ -283,6 +287,63 @@ different size/position/duration.
 
 Can also be triggered outside a keybind via the FIFO: `echo "osd 2" >
 /tmp/dwm.fifo` fires `osds[2]` (`OsdVolToggle` per the enum above).
+
+## Notifications
+
+```c
+const int notifblockidx = 14; /* index into statusblocks[] of the
+                                * notification bell/count -- see
+                                * "Status bar blocks" above */
+```
+
+dwm is a complete `org.freedesktop.Notifications` DBus server on its own —
+`notify-send`, browser notifications, Discord, etc. all reach dwm directly,
+with no dunst/mako/other daemon needed (and none should be autostarted
+alongside dwm — see "Autostart" below). Popups appear in the top-right
+corner of the focused monitor and stack as more arrive.
+
+- **Urgency & timeout.** Low urgency auto-dismisses after ~4s, normal
+  after ~6s, critical never auto-dismisses (the sending app is expected to
+  close it once whatever needed attention is resolved) — unless the
+  sender explicitly requested a different timeout, which is always
+  honored.
+- **Clicking a popup.** Left-click invokes the notification's default
+  action (if the sending app provided one) and dismisses it; any other
+  button just dismisses it.
+- **The bar indicator.** `notifblockidx` above points at the
+  `statusblocks[]` row (see "Status bar blocks") that shows a bell icon
+  and unread count — that row's own `cmd` is intentionally empty, since
+  `notifications.c` pushes the text directly rather than running a shell
+  command. Clicking it:
+
+  | Button | Action                     |
+  | ------ | -------------------------- |
+  | Left   | Dismiss all visible popups |
+  | Middle | Clear notification history |
+  | Right  | Toggle Do Not Disturb      |
+
+  Set `notifblockidx = -1` to drop the bar indicator entirely — popups,
+  history, and DND all keep working either way, you just lose the at-a-
+  glance bar summary.
+
+- **Do Not Disturb.** While enabled, incoming notifications are still
+  recorded to history but no popup is shown. Toggle via the bar
+  indicator (right-click), `MODKEY+ALT+n`, or `echo "notifdnd" >
+/tmp/dwm.fifo`.
+- **History.** The most recent 25 notifications are kept in memory
+  (regardless of DND) and can be dumped via the FIFO — see "FIFO
+  commands" below.
+
+| Key              | Action                     |
+| ---------------- | -------------------------- |
+| `MODKEY+SHIFT+n` | Dismiss all visible popups |
+| `MODKEY+ALT+n`   | Toggle Do Not Disturb      |
+
+The popup pool size, dimensions, spacing, and per-urgency timeouts are
+`#define`s at the top of `notifications.c` (`NOTIF_MAX_POPUPS`/`NOTIF_W`/
+`NOTIF_MARGIN`/`NOTIF_GAP`/`NOTIF_TIMEOUT_LOW_MS`/`NOTIF_TIMEOUT_NORMAL_MS`)
+rather than `config.h` values, same reasoning as the OSD's own `#define`s
+above — edit those directly and rebuild for a different look.
 
 ## Window rules
 
@@ -437,6 +498,8 @@ window to tag, `+CTRL+SHIFT` toggle-tag on window.
 | `MODKEY+SHIFT+r` | Restart dwm (re-exec, preserves session) |
 | `MODKEY+q`       | Kill focused client                      |
 | `MODKEY+SHIFT+w` | Next wallpaper                           |
+| `MODKEY+SHIFT+n` | Dismiss all notification popups          |
+| `MODKEY+ALT+n`   | Toggle notification Do Not Disturb       |
 
 **Apps/launchers** — `MODKEY+Return` (terminal), `+f` (file manager),
 `+b` (browser), `+r` (dmenu), plus dedicated launchers for emoji picker,
@@ -499,37 +562,41 @@ event loop tick (~10ms latency). Send a command by writing a line to it:
 echo "<command> [arg]" > /tmp/dwm.fifo
 ```
 
-| Command            | Arg              | Effect                                 |
-| ------------------ | ---------------- | -------------------------------------- |
-| `view`             | 0–4              | Switch to tag                          |
-| `tag`              | 0–4              | Move window to tag                     |
-| `toggleview`       | 0–4              | Add/remove tag from current view       |
-| `toggletag`        | 0–4              | Toggle tag on focused window           |
-| `setmfact`         | float e.g. `0.6` | Set master area size                   |
-| `incnmaster`       | `1` or `-1`      | Add/remove master client               |
-| `cyclelayout`      | `1` or `-1`      | Cycle to next/prev layout              |
-| `zoom`             | —                | Swap focused window with master        |
-| `togglefloating`   | —                | Toggle float on focused window         |
-| `togglefullscreen` | —                | Toggle fullscreen                      |
-| `focusstackvis`    | `1` or `-1`      | Focus next/prev visible window         |
-| `focusmon`         | `1` or `-1`      | Focus next/prev monitor                |
-| `tagmon`           | `1` or `-1`      | Send window to next/prev monitor       |
-| `switchcol`        | —                | Focus first window in the other column |
-| `show`             | —                | Show focused window                    |
-| `hide`             | —                | Hide focused window                    |
-| `showall`          | —                | Show all hidden windows                |
-| `togglewin`        | —                | Toggle hide/show on the focused window |
-| `killclient`       | —                | Close focused window                   |
-| `togglescratch`    | 0–7              | Toggle scratchpad by index             |
-| `hideallscratch`   | —                | Hide every visible scratchpad          |
-| `togglebar`        | —                | Show/hide bar                          |
-| `nextwallpaper`    | —                | Load new random wallpaper              |
-| `screenshot`       | 0–3              | Capture full/monitor/window/select     |
-| `colorpicker`      | —                | Pick a color under cursor              |
-| `statusblock`      | 0–N, or `-1`     | Rerun one status bar block, or all     |
-| `osd`              | 0–N              | Trigger an OSD popup by `osds[]` index |
-| `state`            | —                | Write a state dump to `fiforeplypath`  |
-| `quit`             | —                | Quit dwm (`1` = restart)               |
+| Command             | Arg              | Effect                                        |
+| ------------------- | ---------------- | --------------------------------------------- |
+| `view`              | 0–4              | Switch to tag                                 |
+| `tag`               | 0–4              | Move window to tag                            |
+| `toggleview`        | 0–4              | Add/remove tag from current view              |
+| `toggletag`         | 0–4              | Toggle tag on focused window                  |
+| `setmfact`          | float e.g. `0.6` | Set master area size                          |
+| `incnmaster`        | `1` or `-1`      | Add/remove master client                      |
+| `cyclelayout`       | `1` or `-1`      | Cycle to next/prev layout                     |
+| `zoom`              | —                | Swap focused window with master               |
+| `togglefloating`    | —                | Toggle float on focused window                |
+| `togglefullscreen`  | —                | Toggle fullscreen                             |
+| `focusstackvis`     | `1` or `-1`      | Focus next/prev visible window                |
+| `focusmon`          | `1` or `-1`      | Focus next/prev monitor                       |
+| `tagmon`            | `1` or `-1`      | Send window to next/prev monitor              |
+| `switchcol`         | —                | Focus first window in the other column        |
+| `show`              | —                | Show focused window                           |
+| `hide`              | —                | Hide focused window                           |
+| `showall`           | —                | Show all hidden windows                       |
+| `togglewin`         | —                | Toggle hide/show on the focused window        |
+| `killclient`        | —                | Close focused window                          |
+| `togglescratch`     | 0–7              | Toggle scratchpad by index                    |
+| `hideallscratch`    | —                | Hide every visible scratchpad                 |
+| `togglebar`         | —                | Show/hide bar                                 |
+| `nextwallpaper`     | —                | Load new random wallpaper                     |
+| `screenshot`        | 0–3              | Capture full/monitor/window/select            |
+| `colorpicker`       | —                | Pick a color under cursor                     |
+| `statusblock`       | 0–N, or `-1`     | Rerun one status bar block, or all            |
+| `osd`               | 0–N              | Trigger an OSD popup by `osds[]` index        |
+| `notifdnd`          | —                | Toggle notification Do Not Disturb            |
+| `notifdismissall`   | —                | Dismiss all visible notification popups       |
+| `notifclearhistory` | —                | Clear notification history                    |
+| `notifhistory`      | —                | Write notification history to `fiforeplypath` |
+| `state`             | —                | Write a state dump to `fiforeplypath`         |
+| `quit`              | —                | Quit dwm (`1` = restart)                      |
 
 Examples:
 
@@ -540,6 +607,7 @@ echo "nextwallpaper" > /tmp/dwm.fifo
 echo "togglescratch 3" > /tmp/dwm.fifo
 echo "statusblock -1" > /tmp/dwm.fifo   # rerun every status bar block
 echo "osd 0" > /tmp/dwm.fifo            # OsdVolUp, per the enum in config.h
+echo "notifdnd" > /tmp/dwm.fifo         # toggle Do Not Disturb
 ```
 
 This is intended for scripting — bind it to acpi events, a rofi menu,
@@ -580,13 +648,27 @@ can't grow unbounded — but that also means a reply you don't read within
 one `state` call is gone, so read it right after sending the command
 rather than polling it independently.
 
+`notifhistory` uses the same `fiforeplypath` mechanism and the same
+caveat applies — read it right after sending the command:
+
+```sh
+echo "notifhistory" > /tmp/dwm.fifo
+cat /tmp/dwm.fifo.reply
+# [14:32:07] Firefox: Download complete - report.pdf finished downloading
+# [14:29:51] Signal: Jane Doe - Are we still on for 3?
+```
+
 ## Autostart
 
 `autostart.sh` runs once at dwm startup (called from `main()` before the
 event loop starts). Put any background processes you want running every
-session in there (compositor, notification daemon, etc.) rather than in
-`.xinitrc`, so they're tied to dwm's lifecycle.
+session in there (compositor, etc.) rather than in `.xinitrc`, so they're
+tied to dwm's lifecycle.
 
 `dwmblocks` is no longer in `PROCS` — the status bar builds its own
 content in-process now (see "Status bar blocks" above), there's nothing
-external left to autostart for it.
+external left to autostart for it. Likewise, `dunst` is no longer in
+`PROCS` — dwm is its own `org.freedesktop.Notifications` server now (see
+"Notifications" above). Don't autostart a separate notification daemon
+alongside this build: whichever one starts first wins the DBus name, and
+the other silently does nothing.

@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details.
  *
  * dynamic window manager is designed like any other X client as well. It is
@@ -58,11 +57,12 @@
 #include <sys/sysctl.h>
 #endif /* __OpenBSD */
 
-#include "drw.h"
 #include "dwm.h"
+#include "drw.h"
 #include "ipc.h"
 #include "mediaosd.h"
 #include "movestack.h"
+#include "notifications.h"
 #include "osd.h"
 #include "screenshot.h"
 #include "statusbar.h"
@@ -650,6 +650,9 @@ void buttonpress(XEvent *e) {
   Monitor *m;
   XButtonPressedEvent *ev = &e->xbutton;
 
+  if (notif_win_click(ev->window, ev->button, ev->y))
+    return;
+
   click = ClkRootWin;
 
   if ((m = wintomon(ev->window)) && m != selmon) {
@@ -794,6 +797,7 @@ void cleanup(void) {
 
   osdcleanup();
   mediaosdcleanup();
+  notifcleanup();
   for (i = 0; i < CurLast; i++)
     drw_cur_free(drw, cursor[i]);
   for (i = 0; i < LENGTH(colors) + 1; i++)
@@ -1270,6 +1274,9 @@ void enternotify(XEvent *e) {
 void expose(XEvent *e) {
   Monitor *m;
   XExposeEvent *ev = &e->xexpose;
+
+  if (notif_win_expose(ev->window))
+    return;
 
   if (ev->count == 0 && (m = wintomon(ev->window)))
     drawbar(m);
@@ -2020,6 +2027,7 @@ void run(void) {
     statusbar_tick();
     osdtick();
     mediaosdtick();
+    notiftick();
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       if (rrbase >= 0 && ev.type == rrbase + RRScreenChangeNotify)
@@ -2282,6 +2290,7 @@ void setup(void) {
                      * with real block output */
   osdsetup();
   mediaosdsetup();
+  notifsetup();
   /* supporting window for NetWMCheck */
   wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
   XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
