@@ -160,6 +160,11 @@ const int statustraildelim = 0;
 const StatusBlock statusblocks[] = {
     /* icon   cmd   interval(s) */
     {"", "mediactl state-title", 0},
+    {"", "sysstats kernel", 0},
+    {"", "sysstats cpu", 0},
+    {"", "sysstats gpu", 0},
+    {"", "sysstats mem", 0},
+    {"", "sysstats disk", 0},
     {"",
      "o=$(sysstats battery); case \"$o\" in "
      "\"\"|*N/A*|*No*|*Not*|*\" 0%\"|\"0%\") ;; "
@@ -206,7 +211,7 @@ const int statusblockslen = LENGTH(statusblocks);
 /* index into statusblocks[] (above) of the notification bell/count --
  * must stay in sync if you reorder statusblocks[]. -1 would disable the
  * bar indicator (popups/history/DND still work either way). */
-const int notifblockidx = 9;
+const int notifblockidx = 14;
 
 /* Volume/Microphone Commands For OSD */
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
