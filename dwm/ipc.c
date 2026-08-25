@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "dwm.h"
+#include "clipboard.h"
 #include "ipc.h"
 #include "mediaosd.h"
 #include "notifications.h"
@@ -145,6 +146,11 @@ static FifoCmd fifocmds[] = {
     {"screenshot", takescreenshot,
      1}, /* screenshot 0=full 1=screen 2=window 3=select */
     {"colorpicker", pickcolor, 0}, /* colorpicker */
+    /* clipboard history */
+    {"clippick", clippick, 0},   /* open the dmenu history picker */
+    {"clippin", clippin, 0},     /* pin/unpin the most recently copied entry */
+    {"clipclear", clipclear, 0}, /* clear unpinned history (pinned entries
+                                  * are kept) */
     /* query */
     {"state", fifostate, 0}, /* writes state line to fiforeplypath */
     /* session */

@@ -1,123 +1,70 @@
-# dwm (custom build)
+# dwm: native clipboard history + central theme
 
-A personal fork of [dwm](https://dwm.suckless.org/) — the suckless dynamic
-window manager — with a curated patch set, a custom Imlib2 wallpaper engine,
-and a hand-rolled FIFO IPC layer. Targets real laptop/desktop hardware
-(not just X11-in-a-VM).
+Two new features, built and verified against your uploaded dwm source
+(full clean build + link tested; patches verified to `patch -p1` apply
+onto a fresh checkout and rebuild independently).
 
-## Why this fork exists
+## What's here
 
-Stock dwm is intentionally minimal. This build adds the quality-of-life
-patches that come up in nearly every dwm setup (scratchpads, swallowing,
-gaps, per-tag layouts) plus a few custom features that aren't part of the
-suckless patch ecosystem at all — most notably wallpaper management and
-external IPC control.
+- `clipboard.c` / `clipboard.h` — new module: XFixes-based clipboard
+  history with pinning, persisted to `~/.cache/dwm/clipboard_history`,
+  picked via `dmenu`, written back via `xclip` (same mechanism your
+  `screenshot.c` already uses). Replaces the external `"clip daemon"` +
+  `clip select` script pair.
+- `theme.h` — new header: the Gruvbox Dark palette as `CAL0`..`CAL15`,
+  matching your `qs/Theme.qml` naming, plus dwm-specific accents. One
+  file to edit to re-theme dwm.
+- `patches/*.patch` — unified diffs (`patch -p1` format) against every
+  existing file that needed a wire-up: `config.def.h`, `config.h`,
+  `dwm.c`, `ipc.c`, `Makefile`, `config.mk`, `autostart.sh`.
 
-## Feature summary
+## Installing
 
-| Category      | Feature                                                                                                | Source              |
-| ------------- | ------------------------------------------------------------------------------------------------------ | ------------------- |
-| Layout        | Per-tag layout/mfact/nmaster memory                                                                    | `pertag` patch      |
-| Layout        | Gaps between windows                                                                                   | `uselessgap` patch  |
-| Layout        | Move windows within the stack                                                                          | `movestack` patch   |
-| Layout        | Attach new clients below the active one                                                                | `attachbelow` patch |
-| Windows       | Terminal scratchpads (toggle-able floating apps)                                                       | `scratchpads` patch |
-| Windows       | Terminal swallows GUI child windows                                                                    | `swallow` patch     |
-| Windows       | Window rules match via PCRE2 regex (incl. lookaround), with size/move/center/forcefullscreen overrides | custom              |
-| Bar           | 2D-drawn status bar (icons/colors in status text)                                                      | `status2d` patch    |
-| Bar           | Clickable status segments                                                                              | `statuscmd` patch   |
-| Bar           | Built-in status bar blocks (per-block interval/click, no external binary)                              | custom              |
-| Bar           | On-screen-display popup for volume/brightness/mic                                                      | custom              |
-| Notifications | Standalone `org.freedesktop.Notifications` DBus server (popups, history, DND) — no dunst/mako required | custom              |
-| Wallpaper     | Async Imlib2 loader — no event loop blocking on image decode                                           | custom              |
-| Wallpaper     | Random wallpaper rotation on a timer                                                                   | custom              |
-| Wallpaper     | Manual "next wallpaper" keybind                                                                        | custom              |
-| IPC           | FIFO-based remote control (`/tmp/dwm.fifo`)                                                            | custom              |
-| Multi-monitor | Automatic monitor hotplug detection via RandR                                                          | custom              |
-| Session       | Custom autostart process management                                                                    | `autostart.sh`      |
-| Utilities     | Native screenshot capture (full/monitor/window/select) + colorpicker, clipboard, notify                | custom              |
-
-See **[DOCS.md](DOCS.md)** for how the code is organized and **[WIKI.md](WIKI.md)**
-for how to configure it.
-
-## Requirements
-
-- Xlib headers (`libx11-dev` or equivalent)
-- Xinerama (multi-monitor support)
-- Xft + fontconfig (font rendering)
-- Imlib2 (wallpaper rendering **and** screenshot capture)
-- libxcb + xcb-res (used for process/PID lookups, e.g. swallow)
-- PCRE2 (`libpcre2-8`, headers via `libpcre2-dev`) — regex matching for
-  window rules (`class`/`instance`/`title`), including lookaround
-- libdbus-1 (`libdbus-1-dev`) — dwm's built-in `org.freedesktop.Notifications`
-  server (see "Notifications" in the feature table above)
-
-### Runtime (not linked, called via exec)
-
-- `xclip` — screenshot/colorpicker clipboard copy
-- `notify-send` (from `libnotify-bin`) — screenshot and colorpicker
-  notifications. No separate notification daemon is needed anymore: dwm
-  itself owns `org.freedesktop.Notifications` and renders the popup, so
-  `notify-send` calls are received and displayed by dwm directly.
-
-No status bar helper is required anymore — the bar builds its own content
-in-process (see "Bar" in the feature table above), so there's nothing
-equivalent to dwmblocks to install or autostart. Likewise, no external
-notification daemon (dunst, mako, etc.) is required or should be
-autostarted alongside dwm — see "Notifications" above.
-
-On Debian/Ubuntu-style systems:
+From your dwm source root:
 
 ```sh
-sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
-                  libxcb1-dev libxcb-res0-dev libpcre2-dev libdbus-1-dev \
-                  xclip libnotify-bin
+cp clipboard.c clipboard.h theme.h .
+for p in patches/*.patch; do patch -p1 < "$p"; done
+make clean && make
+sudo make install
 ```
 
-## Building
+Then edit `autostart.sh` on your actual machine to stop whatever binary
+your old `"clip daemon"` was (kill it once, or just reboot into the new
+dwm — the patch already removes it from the process list dwm manages).
 
-```sh
-make clean install
-```
+## New keybinds (config.h)
 
-This builds `dwm` and installs it (along with `autostart.sh`, the man page,
-a `.desktop` entry, and an icon) into the prefix set in `config.mk`
-(`/usr/local` by default). Root privileges are typically needed for `install`.
+| Bind | Action |
+|---|---|
+| `MODKEY+SHIFT+c` | Open clipboard history in dmenu (was `clip select`) |
+| `MODKEY+CTRL+c` | Pin/unpin the most recently copied entry |
+| `MODKEY+SHIFT+CTRL+c` | Clear unpinned history (pinned entries kept) |
 
-To rebuild after editing `config.h` (the only file you should normally
-touch), just run `make clean install` again — `config.h` is compiled
-directly into the `dwm` binary, there's no runtime config file.
+Also exposed as FIFO commands if you want to trigger them from a script:
+`echo clippick > /tmp/dwm.fifo`, `clippin`, `clipclear`.
 
-## Running
+## Design notes / limitations
 
-Add to your `.xinitrc`:
-
-```sh
-exec dwm
-```
-
-Or select "dwm" from your display manager's session list (the installed
-`.desktop` file enables this).
-
-## Quick start after install
-
-```sh
-# Confirm it's running and the FIFO exists
-ls -l /tmp/dwm.fifo
-
-# Try the IPC layer
-echo "view 1" > /tmp/dwm.fifo
-echo "nextwallpaper" > /tmp/dwm.fifo
-
-# Rerun every status bar block, and fire an OSD popup
-echo "statusblock -1" > /tmp/dwm.fifo
-echo "osd 0" > /tmp/dwm.fifo
-
-# Fire a test notification and toggle Do Not Disturb
-notify-send "Hello" "This popup is rendered by dwm itself"
-echo "notifdnd" > /tmp/dwm.fifo
-```
-
-## License
-
-MIT/X11, same as upstream dwm — see `LICENSE`.
+- **Text only.** No image/binary clipboard entries — matches what your
+  `xclip`-based write path already assumes. If you regularly copy
+  images and want those in history too, that's a bigger addition
+  (would need Imlib2 involved the way `screenshot.c` uses it for
+  reading, not just writing) — happy to add it if it'd help.
+- **No ICCCM selection-owner protocol in dwm itself.** dwm only ever
+  *watches* the clipboard (via XFixes) and *writes* it by handing text
+  to `xclip`, exactly like `screenshot.c` does today. This sidesteps a
+  lot of X11 selection-serving complexity at the cost of dwm not being
+  the "clipboard manager of record" in the strict X11 sense — in
+  practice this is invisible day to day.
+- **Preview truncation is byte-based, not UTF-8-aware.** A multi-byte
+  character can render oddly at the tail of a long dmenu preview line.
+  Cosmetic only — the full original text is always what gets copied.
+- **`theme.h` changes zero pixels.** It's a pure refactor: every hex
+  value in `config.def.h`/`config.h` is unchanged, just routed through
+  named constants instead of being typed twice.
+- The `dmenu` invocation in `clippick()` uses plain `-i -l 20 -p
+  clipboard:` flags. If your `dmenu_run` wrapper passes styling flags
+  (`-nb`/`-nf`/`-fn`/etc.) you'll want to copy those into the `dmenuargv`
+  array at the top of `clippick()` in `clipboard.c` so the picker
+  matches your other dmenu-driven scripts.

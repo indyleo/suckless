@@ -38,6 +38,8 @@ A dynamic window manager for X, enhanced with:
 - 🧱 **Built-in status bar blocks** — per-block interval/click, no external binary required
 - 🔊 **On-screen-display popup** for volume/brightness/mic
 - 🔔 **Standalone notification daemon** (`org.freedesktop.Notifications` over DBus, popups + history + Do Not Disturb — no dunst/mako required)
+- 📋 **Native clipboard history** (XFixes-watched, pinning, dmenu picker — no external clip daemon required)
+- 🎨 **Central `theme.h` palette** (one file to re-theme every color, shared naming with the companion `qs` Quickshell config)
 - 🖼️ **Async Imlib2 wallpaper loader** (no event loop blocking)
 - 🔄 **Automatic wallpaper rotation** on a timer
 - 🖼️ **Manual "next wallpaper" keybind**
@@ -117,7 +119,7 @@ Typical dependencies on Debian/Ubuntu:
 ```bash
 sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
                  libxcb1-dev libxcb-res0-dev libxext-dev libfontconfig-dev \
-                 libharfbuzz-dev libpcre2-dev libdbus-1-dev
+                 libharfbuzz-dev libpcre2-dev libdbus-1-dev libxfixes-dev
 ```
 
 ## Building & Installation

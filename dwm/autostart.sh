@@ -2,15 +2,11 @@
 
 # Vars
 PROCS=(
-    # dunst removed: dwm now runs its own org.freedesktop.Notifications
-    # server (notifications.c) and would otherwise race dunst for the
-    # DBus name at startup -- whichever wins silently blocks the other.
     lxqt-policykit-agent
     udiskie
     medianotify
 )
 DAEMON_PROCS=(
-    "clip daemon"
     "organizer.py --daemon"
     "picom"
 )

@@ -48,6 +48,7 @@
 #include <X11/extensions/Xinerama.h>
 #include <X11/extensions/Xrandr.h>
 #endif /* XINERAMA */
+#include <X11/extensions/Xfixes.h> /* clipboard.c's history watcher */
 #include <Imlib2.h>
 #include <X11/Xft/Xft.h>
 #include <X11/Xlib-xcb.h>
@@ -59,6 +60,7 @@
 
 #include "dwm.h"
 #include "drw.h"
+#include "clipboard.h"
 #include "ipc.h"
 #include "mediaosd.h"
 #include "movestack.h"
@@ -325,11 +327,14 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [MapRequest] = maprequest,
     [MotionNotify] = motionnotify,
     [PropertyNotify] = propertynotify,
+    [SelectionNotify] = clipboardselectionnotify,
     [UnmapNotify] = unmapnotify};
 /* wallpaperupdate, wallpaperready, wplock, wpqueue now live in wallpaper.c
  * (declared extern via wallpaper.h); fifofd now lives in ipc.c (declared
  * extern via ipc.h). */
 static int rrbase = -1;
+static int fixesbase = -1; /* XFixes extension event base, see
+                            * clipboard.c; -1 if unavailable */
 static Atom wmatom[WMLast], netatom[NetLast];
 static int restart = 0;
 static int running = 1;
@@ -798,6 +803,7 @@ void cleanup(void) {
   osdcleanup();
   mediaosdcleanup();
   notifcleanup();
+  clipboardcleanup();
   for (i = 0; i < CurLast; i++)
     drw_cur_free(drw, cursor[i]);
   for (i = 0; i < LENGTH(colors) + 1; i++)
@@ -2032,6 +2038,8 @@ void run(void) {
       XNextEvent(dpy, &ev);
       if (rrbase >= 0 && ev.type == rrbase + RRScreenChangeNotify)
         rrscreenchangenotify(&ev);
+      else if (fixesbase >= 0 && ev.type == fixesbase + XFixesSelectionNotify)
+        clipboardfixesnotify(&ev);
       else if (handler[ev.type])
         handler[ev.type](&ev);
     } else {
@@ -2255,6 +2263,11 @@ void setup(void) {
   int rrerrbase;
   if (XRRQueryExtension(dpy, &rrbase, &rrerrbase))
     XRRSelectInput(dpy, root, RRScreenChangeNotifyMask);
+  int fixeserrbase;
+  if (XFixesQueryExtension(dpy, &fixesbase, &fixeserrbase))
+    clipboardsetup(); /* no-op-safe if this branch is never taken --
+                       * clippick/clippin/clipclear all check
+                       * clipboardactive first */
   updategeom();
   /* init atoms */
   utf8string = XInternAtom(dpy, "UTF8_STRING", False);

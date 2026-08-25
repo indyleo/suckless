@@ -3,7 +3,7 @@
 
 include config.mk
 
-SRC = drw.c dwm.c ipc.c mediaosd.c movestack.c notifications.c osd.c screenshot.c statusbar.c util.c wallpaper.c
+SRC = clipboard.c drw.c dwm.c ipc.c mediaosd.c movestack.c notifications.c osd.c screenshot.c statusbar.c util.c wallpaper.c
 OBJ = ${SRC:.c=.o}
 
 VERBOSE := 0
@@ -38,7 +38,7 @@ dist: clean
 	$(PRINTF) "DIST" dwm-${VERSION}.tar.gz
 	$Qmkdir -p dwm-${VERSION}
 	$Qcp -R LICENSE Makefile README config.def.h config.mk\
-		dwm.1 drw.h dwm.h ipc.h movestack.h notifications.h osd.h screenshot.h statusbar.h wallpaper.h util.h ${SRC} dwm.png transient.c dwm-${VERSION}
+		dwm.1 drw.h dwm.h clipboard.h ipc.h movestack.h notifications.h osd.h screenshot.h statusbar.h wallpaper.h theme.h util.h ${SRC} dwm.png transient.c dwm-${VERSION}
 	$Qtar -cf dwm-${VERSION}.tar dwm-${VERSION}
 	$Qgzip dwm-${VERSION}.tar
 	$Qrm -rf dwm-${VERSION}

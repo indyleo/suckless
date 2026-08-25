@@ -18,24 +18,26 @@ const char *fonts[] = {
 const int fontslen = LENGTH(fonts); /* external linkage (dropped `static`
                                      * above) so osd.c can build its own
                                      * font set to match the bar's */
-/* Gruvbox color variables */
-static const char gruvbox_normfgcolor[] = "#ebdbb2"; // light fg
-static const char gruvbox_normbgcolor[] = "#282828"; // dark bg
-static const char gruvbox_normbordercolor[] =
-    "#3c3836"; // slightly lighter than bg
+/* Gruvbox color variables -- these are now just aliases into theme.h,
+ * so this block never has to be hand-edited again: edit theme.h
+ * instead (same "one file to re-theme everything" idea as qs's
+ * Theme.qml). Values below are byte-identical to before the refactor. */
+#include "theme.h"
+static const char gruvbox_normfgcolor[] = THEME_TEXT;
+static const char gruvbox_normbgcolor[] = THEME_BACKGROUND;
+static const char gruvbox_normbordercolor[] = THEME_SURFACE;
 
-static const char gruvbox_selfgcolor[] = "#282828"; // dark fg for contrast
-static const char gruvbox_selbgcolor[] = "#fabd2f"; // bright yellow
-static const char gruvbox_selbordercolor[] =
-    "#d79921"; // muted yellow for border
+static const char gruvbox_selfgcolor[] = THEME_BACKGROUND;
+static const char gruvbox_selbgcolor[] = THEME_WARNING;
+static const char gruvbox_selbordercolor[] = THEME_SEL_BORDER;
 
-static const char gruvbox_hidfgcolor[] = "#928374";     // gruvbox faded fg
-static const char gruvbox_hidbgcolor[] = "#1d2021";     // hard contrast bg
-static const char gruvbox_hidbordercolor[] = "#3c3836"; // same as norm border
+static const char gruvbox_hidfgcolor[] = THEME_HID_FG;
+static const char gruvbox_hidbgcolor[] = THEME_HID_BG;
+static const char gruvbox_hidbordercolor[] = THEME_SURFACE;
 
-static const char gruvbox_urgfgcolor[] = "#fbf1c7";     // near-white fg
-static const char gruvbox_urgbgcolor[] = "#cc241d";     // gruvbox red
-static const char gruvbox_urgbordercolor[] = "#fb4934"; // bright red border
+static const char gruvbox_urgfgcolor[] = THEME_URG_FG;
+static const char gruvbox_urgbgcolor[] = THEME_DANGER_ALT;
+static const char gruvbox_urgbordercolor[] = THEME_DANGER;
 
 /* Gruvbox color scheme table */
 static const char *colors[][3] = {
@@ -160,11 +162,6 @@ const int statustraildelim = 0;
 const StatusBlock statusblocks[] = {
     /* icon   cmd   interval(s) */
     {"", "mediactl state-title", 0},
-    {"", "sysstats kernel", 0},
-    {"", "sysstats cpu", 0},
-    {"", "sysstats gpu", 0},
-    {"", "sysstats mem", 0},
-    {"", "sysstats disk", 0},
     {"",
      "o=$(sysstats battery); case \"$o\" in "
      "\"\"|*N/A*|*No*|*Not*|*\" 0%\"|\"0%\") ;; "
@@ -211,7 +208,7 @@ const int statusblockslen = LENGTH(statusblocks);
 /* index into statusblocks[] (above) of the notification bell/count --
  * must stay in sync if you reorder statusblocks[]. -1 would disable the
  * bar indicator (popups/history/DND still work either way). */
-const int notifblockidx = 14;
+const int notifblockidx = 9;
 
 /* Volume/Microphone Commands For OSD */
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
@@ -312,7 +309,9 @@ static const Key keys[] = {
     /* Launchers */
     {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
     {MODKEY, XK_n, spawn, SHCMD("notebook")},
-    {MODKEY | SHIFTKEY, XK_c, spawn, SHCMD("clip select")},
+    {MODKEY | SHIFTKEY, XK_c, clippick, {0}},
+    {MODKEY | CTRLKEY, XK_c, clippin, {0}},
+    {MODKEY | SHIFTKEY | CTRLKEY, XK_c, clipclear, {0}},
     {MODKEY | SHIFTKEY, XK_e, spawn, SHCMD("emoji")},
     {MODKEY | ALTKEY, XK_e, spawn, SHCMD("nerdfont")},
     {MODKEY | SHIFTKEY, XK_p, spawn, SHCMD("power")},

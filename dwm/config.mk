@@ -28,7 +28,7 @@ DBUSLIBS = $(shell pkg-config --libs dbus-1)
 
 # includes and libs
 INCS = -I${X11INC} -I${FREETYPEINC} ${DBUSINC}
-LIBS = -L${X11LIB} -lX11 ${XINERAMALIBS} ${FREETYPELIBS} -lX11-xcb -lxcb -lxcb-res ${KVMLIB} -lImlib2 -lXrandr -lpthread -lpcre2-8 ${DBUSLIBS}
+LIBS = -L${X11LIB} -lX11 ${XINERAMALIBS} ${FREETYPELIBS} -lX11-xcb -lxcb -lxcb-res ${KVMLIB} -lImlib2 -lXrandr -lXfixes -lpthread -lpcre2-8 ${DBUSLIBS}
 
 # flags
 CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700L -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}

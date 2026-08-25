@@ -62,8 +62,27 @@ client's own tab in the title area — both in `drawbar()`. It only fires
 off `XWMHintsIsUrgent`/`isurgent`, which clears itself the moment you
 focus the client.
 
-To re-theme, edit the named hex variables — don't restructure the table
-itself unless you're also adding a new `Scheme*`.
+The `gruvbox_*` variables above aren't hand-typed hex strings anymore —
+each is an alias into `theme.h`, e.g. `gruvbox_normfgcolor` is just
+`THEME_TEXT`. **To re-theme, edit `theme.h`, not this block.** `theme.h`
+defines the palette two ways:
+
+- `CAL0`..`CAL15` — the raw Gruvbox Dark hex values, named the same way
+  as the companion `qs` (Quickshell) config's `Theme.qml`, so both
+  projects can be kept in sync from one mental model.
+- Semantic aliases (`THEME_BACKGROUND`, `THEME_TEXT`, `THEME_ACCENT`,
+  etc.) — prefer these over the raw `CAL*` names in new code, since they
+  describe *role* rather than palette index.
+
+A handful of accents (`THEME_SEL_BORDER`, `THEME_HID_FG`, `THEME_HID_BG`,
+`THEME_URG_FG`) live outside the shared 16-color set — dwm needs a couple
+of shades (a selected-border tint, a harder-contrast hidden-tag bg) that
+a shell/bar config never does. These are also defined in `theme.h`, just
+called out separately in its header comment so it's clear they're
+dwm-specific rather than part of the portable palette.
+
+Don't restructure the `colors[][3]` table itself unless you're also
+adding a new `Scheme*`.
 
 ## Tags
 
@@ -529,6 +548,29 @@ clipboard via `xclip`, and confirm via `notify-send`. The colorpicker copies
 the hex value as text (not a file) and notifies with the hex string instead
 of an image thumbnail.
 
+## Clipboard
+
+| Key                          | Action                                    |
+| ----------------------------- | ------------------------------------------ |
+| `MODKEY+SHIFT+c`             | Open clipboard history in dmenu           |
+| `MODKEY+CTRL+c`               | Pin/unpin the most recently copied entry  |
+| `MODKEY+SHIFT+CTRL+c`         | Clear unpinned history (pinned entries kept) |
+
+dwm watches the `CLIPBOARD` selection itself (via the XFixes extension)
+and keeps a history of up to 200 unpinned + 100 pinned entries, persisted
+to `~/.cache/dwm/clipboard_history` so it survives a restart. Picking an
+entry runs it through `xclip` the same way screenshots/colorpicker copy
+their output — dwm never becomes the clipboard's long-term owner itself,
+it only watches and, on pick, hands text off to `xclip`.
+
+Pinning always acts on whatever you *most recently copied* (whether it's
+already pinned or not) rather than needing you to locate it in the
+picker first — copy something, then `MODKEY+CTRL+c` immediately if you
+want to keep it around past the unpinned cap.
+
+This replaces the older `"clip daemon"` + `clip select` script pair —
+see "Autostart" below.
+
 ## Mouse bindings
 
 | Click target  | Button                           | Action                                                                                   |
@@ -589,6 +631,9 @@ echo "<command> [arg]" > /tmp/dwm.fifo
 | `nextwallpaper`     | —                | Load new random wallpaper                     |
 | `screenshot`        | 0–3              | Capture full/monitor/window/select            |
 | `colorpicker`       | —                | Pick a color under cursor                     |
+| `clippick`          | —                | Open the clipboard history picker (dmenu)     |
+| `clippin`           | —                | Pin/unpin the most recently copied entry      |
+| `clipclear`         | —                | Clear unpinned clipboard history              |
 | `statusblock`       | 0–N, or `-1`     | Rerun one status bar block, or all            |
 | `osd`               | 0–N              | Trigger an OSD popup by `osds[]` index        |
 | `notifdnd`          | —                | Toggle notification Do Not Disturb            |
@@ -608,6 +653,7 @@ echo "togglescratch 3" > /tmp/dwm.fifo
 echo "statusblock -1" > /tmp/dwm.fifo   # rerun every status bar block
 echo "osd 0" > /tmp/dwm.fifo            # OsdVolUp, per the enum in config.h
 echo "notifdnd" > /tmp/dwm.fifo         # toggle Do Not Disturb
+echo "clippick" > /tmp/dwm.fifo         # open the clipboard history picker
 ```
 
 This is intended for scripting — bind it to acpi events, a rofi menu,
@@ -615,9 +661,9 @@ a hardware button, or any external trigger that shouldn't need its own
 X11 keybind. See `DOCS.md` → "Adding a new FIFO command" to extend the
 table.
 
-Note: `screenshot 3` (select) and `colorpicker` block dwm's event loop
-until the interaction completes, same as a mouse-drag resize would — don't
-trigger them from something expecting an instant return.
+Note: `screenshot 3` (select), `colorpicker`, and `clippick` block dwm's
+event loop until the interaction completes, same as a mouse-drag resize
+would — don't trigger them from something expecting an instant return.
 
 ### Querying state back out
 
@@ -672,3 +718,8 @@ external left to autostart for it. Likewise, `dunst` is no longer in
 "Notifications" above). Don't autostart a separate notification daemon
 alongside this build: whichever one starts first wins the DBus name, and
 the other silently does nothing.
+
+The old `"clip daemon"` entry is gone from `DAEMON_PROCS` for the same
+reason — dwm watches the clipboard itself now (see "Clipboard" above).
+Don't autostart a separate clipboard manager alongside this build; it'll
+just fight dwm for ownership of whatever you copy.

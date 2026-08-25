@@ -11,6 +11,7 @@ future-you) editing `dwm.c` directly. Configuration values live in
 | `dwm.c`                  | Event loop, layouts, client management -- the stock-dwm core plus the merged patches                                                                             |
 | `dwm.h`                  | Shared surface between `dwm.c` and the modules below: `Arg`/`Client`/`Monitor` types, `ISVISIBLE`, and externs for the globals/functions those modules call into |
 | `wallpaper.c` / `.h`     | Async Imlib2 wallpaper engine (custom, not a suckless patch)                                                                                                     |
+| `clipboard.c` / `.h`     | Clipboard history: XFixes watcher, pinning, dmenu picker (custom, not a suckless patch)                                                                          |
 | `ipc.c` / `.h`           | FIFO-based remote control (custom, not a suckless patch)                                                                                                         |
 | `screenshot.c` / `.h`    | Screenshot capture + colorpicker (custom, not a suckless patch)                                                                                                  |
 | `statusbar.c` / `.h`     | Built-in status bar blocks -- replaces the dwmblocks binary (custom, not a suckless patch)                                                                       |
@@ -20,6 +21,7 @@ future-you) editing `dwm.c` directly. Configuration values live in
 | `drw.c` / `drw.h`        | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface                                                                                  |
 | `util.c` / `util.h`      | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)                                                                                      |
 | `transient.c`            | Transient-window handling helper, `#include`d where needed                                                                                                       |
+| `theme.h`                | Central color palette -- named `CAL0`..`CAL15` + semantic aliases, `#include`d from `config.def.h`/`config.h`; the single file to edit to re-theme dwm            |
 | `config.def.h`           | Upstream default config -- **do not edit**, copy to `config.h` instead                                                                                           |
 | `config.h`               | Your actual config -- compiled directly into the binary                                                                                                          |
 | `config.mk`              | Build flags, install prefix, library paths                                                                                                                       |
@@ -30,12 +32,13 @@ future-you) editing `dwm.c` directly. Configuration values live in
 
 `dwm.c` used to contain everything, including several sizeable, largely
 self-contained subsystems (wallpaper, IPC, screenshots, and now the status
-bar blocks, the OSD popup, and the notification server) that don't touch
-client/layout internals. Those got pulled into their own `.c`/`.h` pairs to
-keep `dwm.c` itself focused on the actual window manager. `movestack.c` was
-already a separate file but was previously `#include`d as text from
-`config.h` rather than compiled as its own translation unit -- it's now
-wired up the same way as the others.
+bar blocks, the OSD popup, the notification server, and the clipboard
+history watcher) that don't touch client/layout internals. Those got
+pulled into their own `.c`/`.h` pairs to keep `dwm.c` itself focused on
+the actual window manager. `movestack.c` was already a separate file but
+was previously `#include`d as text from `config.h` rather than compiled
+as its own translation unit -- it's now wired up the same way as the
+others.
 
 `dwm.h` exists solely so those modules have something to compile against.
 It is **not** a general-purpose dwm header -- it only exposes what's
@@ -65,7 +68,8 @@ main()
   ├─ autostart_exec()      — run autostart.sh
   ├─ setup()               — screen geometry, atoms, cursors, the bar, signal handlers,
   │                          statusbar_init() (statusbar.c), osdsetup() (osd.c),
-  │                          notifsetup() (notifications.c)
+  │                          notifsetup() (notifications.c), clipboardsetup()
+  │                          (clipboard.c, only if XFixesQueryExtension() succeeds)
   ├─ setupfifo()           — create/open the IPC FIFO (ipc.c)
   ├─ scan()                — adopt any windows already mapped
   ├─ setrandomwallpaper()  — initial wallpaper draw (wallpaper.c)
@@ -493,7 +497,10 @@ driver, so hotplug events could be silently missed.
   `rrbase + RRScreenChangeNotify`. This number can fall outside the range
   `handler[]` is indexed for, so it can't be dropped into that dispatch
   table like ordinary events. Instead, `run()` checks for it explicitly
-  before falling back to `handler[ev.type]`.
+  before falling back to `handler[ev.type]`. `clipboard.c`'s XFixes
+  selection-notify event uses the identical `fixesbase + <event>`
+  pattern, checked right next to this one -- see "Clipboard history"
+  below.
 - `rrscreenchangenotify()` calls `XRRUpdateConfiguration()` first — this
   refreshes Xlib's cached screen/rotation info, which Xinerama's query
   depends on — then calls the existing `updategeom()`.
@@ -573,6 +580,114 @@ from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
   an external daemon, but the screenshot code itself is unchanged and
   still doesn't know or care who's listening on the other end of the bus.
 
+## Clipboard history (`clipboard.c` / `clipboard.h`, custom, not a suckless patch)
+
+Functions: `clipboardsetup()`, `clipboardcleanup()`, `clipboardselectionnotify()`,
+`clipboardfixesnotify()`, `clippick()`, `clippin()`, `clipclear()` are the
+public surface (declared in `clipboard.h`, called from `dwm.c`'s
+`setup()`/`cleanup()`/`handler[]`/`run()` and from `ipc.c`'s `fifocmds[]`
+table); everything else (`clipboardpush()`, `cliptrim()`, `savehistory()`/
+`loadhistory()`, `runargv_io()`, `copytextclip()`, `clipappendline()`,
+`cliplistmove()`) is `static` inside `clipboard.c`.
+
+Same reasoning as `screenshot.c`'s clipboard writes (see above): dwm
+never implements ICCCM selection ownership itself. It only *watches*
+`CLIPBOARD` (via the XFixes extension) and, when you pick a history
+entry, hands the text to `xclip` over a pipe -- same fork/exec shape as
+`screenshot.c`'s `copytextclip()`, just parameterized on length instead
+of assuming a NUL-terminated string. This sidesteps having to serve
+`SelectionRequest` events, which is most of the complexity a "real"
+clipboard manager has to deal with.
+
+- `clipboardsetup()` (called once from `setup()`, and only if
+  `XFixesQueryExtension()` succeeded -- see "Monitor hotplug handling"
+  above for the identical pattern with RandR) interns the `CLIPBOARD`
+  and `UTF8_STRING` atoms, creates a small never-mapped requestor
+  window (`clipwin`, same idea as `wmcheckwin`), and calls
+  `XFixesSelectSelectionInput()` to subscribe to ownership-change
+  notifications on it. It then calls `loadhistory()` to restore
+  persisted state, and if the clipboard already has an owner at
+  startup, immediately requests its content the same way a live change
+  would -- so restarting dwm doesn't lose whatever's currently copied.
+- Extension event dispatch mirrors RandR's: `fixesbase` (the XFixes
+  event base, queried in `setup()`) is checked in `run()` right next to
+  the existing `rrbase` check, since `XFixesSelectionNotify`'s real
+  event type (`fixesbase + XFixesSelectionNotify`) is assigned at
+  runtime and can fall outside `handler[]`'s indexed range, same
+  constraint RandR events have.
+- `clipboardfixesnotify()` is what that dispatch calls. It checks the
+  event is for `CLIPBOARD` and a real ownership change (not a
+  destroy/close), then calls `XConvertSelection()` targeting
+  `UTF8_STRING` onto `clipwin`'s property -- this is a *request*, not
+  the data itself.
+- `clipboardselectionnotify()` **is** wired into `handler[]` directly
+  (under `SelectionNotify`, a fixed core-protocol event type, unlike
+  the extension event above) -- it's the reply to that
+  `XConvertSelection()` call. It reads the property via
+  `XGetWindowProperty()` (deleting it as it reads, per ICCCM
+  convention) and hands the bytes to `clipboardpush()`.
+- `clipboardpush()` dedups against `lastentry` (the single most
+  recently captured entry, tracked across both lists -- see below),
+  truncates absurdly large clips at `CLIP_MAX_ENTRY` (256KB), and
+  prepends a new `ClipEntry` onto `history`. The dedup check is what
+  keeps `xclip` re-asserting ownership of something you just picked
+  from history (which fires another `XFixesSelectionNotify`) from
+  spawning a duplicate at the top of the list.
+- **Two singly linked lists**, both newest-first: `history` (unpinned,
+  capped at `CLIP_MAX_HISTORY` = 200) and `pinned` (capped at
+  `CLIP_MAX_PINNED` = 100). `cliptrim()` evicts the oldest entry (the
+  tail -- an O(n) walk, cheap at these caps) whenever either list
+  exceeds its cap; pinned entries are never evicted by unpinned growth
+  and vice versa.
+- `lastentry` -- the single most recently *captured* entry, whichever
+  list it's currently sitting in. It's set to the head of `history` at
+  every push, and `clippin()`/`cliplistmove()` relocate it (in place,
+  no realloc) between list heads without ever invalidating the
+  pointer. This works because of an invariant `cliplistmove()` asserts
+  defensively: `lastentry` is *always* the head of whichever list it's
+  in when `clippin()` runs, since only a fresh push (always to
+  `history`'s head) or a prior pin/unpin toggle (always to the other
+  list's head) can have put it there.
+- `clippin()` toggles `lastentry` between `history` and `pinned` via
+  `cliplistmove()`. This is a head-to-head move with no predecessor
+  search needed, given the invariant above -- `cliplistmove()` still
+  checks `*from == e` and no-ops rather than corrupt a list if that's
+  ever violated.
+- `clipclear()` frees every node in `history` (not `pinned`), NULLing
+  out `lastentry` first if it pointed into the list being freed.
+- **Persistence** (`savehistory()`/`loadhistory()`) uses a
+  deliberately dumb length-prefixed format rather than any escaping
+  scheme: each record is `"<P|H> <unix-ts> <byte-len>\n"` followed by
+  exactly that many raw bytes and a separator newline. This lets an
+  entry contain anything -- embedded newlines, NULs, whatever the X
+  selection handed over -- with no encoding step, at the cost of the
+  file not being line-oriented in the usual sense. Written to (and read
+  from) `$XDG_CACHE_HOME/dwm/clipboard_history`, falling back to
+  `~/.cache/dwm/` the same way `screenshot.c`'s path helper falls back
+  for `~/Pictures/Screenshots/`. `savehistory()` is called after every
+  push/pin/clear rather than only at `clipboardcleanup()` time, since
+  an unclean shutdown (crash, `kill -9`) shouldn't lose history.
+- `clippick()` builds a `dmenu`-formatted menu string (pinned entries
+  first, then history, each line `"<index> <pin-marker><preview>"`)
+  alongside a parallel `ClipEntry*` index array in the same emission
+  order, then calls `runargv_io()` -- a local bidirectional-pipe helper
+  (own copy, same shape as `osd.c`'s/`mediaosd.c`'s already-duplicated
+  `runargv_getline()`) that writes the menu to `dmenu`'s stdin, closes
+  it (so `dmenu` sees EOF and knows the list is complete), then reads
+  one line back from its stdout. The chosen line's leading integer is
+  parsed with `sscanf()` and used to index back into the array --
+  recovering the *full*, untruncated entry even though the preview
+  shown in `dmenu` was truncated to `CLIP_PREVIEW_LEN` (100) bytes.
+  Preview truncation is byte-based, not UTF-8-aware, so a multi-byte
+  character can render oddly at the tail of a long line -- cosmetic
+  only, since the index-based lookup means the truncation never
+  touches what actually gets copied.
+- `clipboardcleanup()` (`cleanup()`, `dwm.c`) saves history one last
+  time, frees both lists, and destroys `clipwin`.
+
+`autostart.sh` no longer starts an external clipboard daemon, for the
+same reason it stopped starting `dunst` -- see "Autostart" in `WIKI.md`.
+
 ## FIFO IPC layer (`ipc.c` / `ipc.h`, custom)
 
 Functions: `setupfifo()`, `readfifo()`, plus the `FifoCmd` dispatch table
@@ -628,8 +743,8 @@ examples.
 2. If the target function lives in `dwm.c` and isn't already declared in
    `dwm.h`, add its prototype there (drop `static` from its forward
    declaration in `dwm.c` too). Functions in
-   `wallpaper.h`/`screenshot.h`/`statusbar.h`/`osd.h`/`notifications.h` are
-   already visible to `ipc.c`.
+   `wallpaper.h`/`screenshot.h`/`statusbar.h`/`osd.h`/`notifications.h`/
+   `clipboard.h` are already visible to `ipc.c`.
 3. Add a row to `fifocmds[]` in `ipc.c`: `{"yourcmd", yourfunc, argtype}`.
 4. Rebuild. No other wiring needed — `readfifo()`'s dispatch loop is generic.
 
