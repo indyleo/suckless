@@ -235,14 +235,24 @@ enum {
 
 const OsdItem osds[] = {
     // label  changecmd       getcmd      blockidx  fastget
-    {"VOL", volupcmd, volgetcmd, 12, osd_vol_fastget},
-    {"VOL", voldowncmd, volgetcmd, 12, osd_vol_fastget},
-    {"VOL", voltogglecmd, volgetcmd, 12, osd_vol_fastget},
-    {"BRI", briupcmd, brigetcmd, -1, osd_bri_fastget},
-    {"BRI", bridowncmd, brigetcmd, -1, osd_bri_fastget},
-    {"MIC", micupcmd, micgetcmd, -1, osd_mic_fastget},
-    {"MIC", micdowncmd, micgetcmd, -1, osd_mic_fastget},
-    {"MIC", mictogglecmd, micgetcmd, -1, osd_mic_fastget},
+    // blockidx indices below must match statusblocks[] above: brightness=2,
+    // microphone=6, volume=7. These were previously 12 (out of range -- silently
+    // ignored by statusbar_setblock()/statusbar_refresh()'s bounds checks) for
+    // volume, and -1 (explicitly disabled) for brightness/mic, even though all
+    // three of those statusblocks entries are marked "refreshed by the OSD" and
+    // have interval=0 so nothing else ever refreshes them. Net effect: the
+    // volume/brightness/mic numbers shown in the bar only ever reflected their
+    // startup values and silently went stale the moment you pressed a volume,
+    // brightness, or mic key, even though the OSD popup itself always showed
+    // the correct live value (it reads it independently via getcmd/fastget).
+    {"VOL", volupcmd, volgetcmd, 7, osd_vol_fastget},
+    {"VOL", voldowncmd, volgetcmd, 7, osd_vol_fastget},
+    {"VOL", voltogglecmd, volgetcmd, 7, osd_vol_fastget},
+    {"BRI", briupcmd, brigetcmd, 2, osd_bri_fastget},
+    {"BRI", bridowncmd, brigetcmd, 2, osd_bri_fastget},
+    {"MIC", micupcmd, micgetcmd, 6, osd_mic_fastget},
+    {"MIC", micdowncmd, micgetcmd, 6, osd_mic_fastget},
+    {"MIC", mictogglecmd, micgetcmd, 6, osd_mic_fastget},
 };
 const int osdslen = LENGTH(osds);
 
