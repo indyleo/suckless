@@ -2160,8 +2160,21 @@ void setfullscreen(Client *c, int fullscreen) {
 }
 
 Layout *last_layout;
+/* Tracks whether *this function* currently thinks it's showing the
+ * fullscreen (monocle) layout, independent of selmon->showbar.
+ *
+ * This used to branch on selmon->showbar itself, on the assumption
+ * that the only way the bar's visibility changes is through this
+ * function. But togglebar() is bound to its own key (Mod+Shift+b) and
+ * showbar is tracked per-tag, so toggling the bar for unrelated
+ * reasons -- then pressing fullscreen -- made this take the "restore"
+ * branch despite never having entered fullscreen, restoring a stale
+ * (or, on a fresh session, never-set) last_layout and un-hiding a bar
+ * the user had deliberately hidden. A dedicated flag decouples the
+ * two. */
+static int infullscreen = 0;
 void fullscreen(const Arg *arg) {
-  if (selmon->showbar) {
+  if (!infullscreen) {
     for (last_layout = (Layout *)layouts;
          last_layout != selmon->lt[selmon->sellt]; last_layout++)
       ;
@@ -2169,6 +2182,7 @@ void fullscreen(const Arg *arg) {
   } else {
     setlayout(&((Arg){.v = last_layout}));
   }
+  infullscreen = !infullscreen;
   togglebar(arg);
 }
 
