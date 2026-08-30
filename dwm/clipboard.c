@@ -41,11 +41,12 @@ static ClipEntry *history = NULL; /* unpinned, newest first */
 static ClipEntry *pinned = NULL;  /* pinned, newest first */
 static int historycount = 0;
 static int pinnedcount = 0;
-/* The single most recently *captured* entry, whichever list it's
- * currently sitting in. Always the head of `history` at the moment it
- * is pushed; clippin() moves it (in place) to the head of `pinned`
- * without invalidating this pointer. See clippin()'s comment below for
- * why that invariant is safe. */
+/* The single most recently *captured or picked* entry, whichever list
+ * it's currently sitting in: pushed to the head of `history` when a
+ * new copy comes in, but also reassigned to an arbitrary (possibly
+ * not-head) entry by clippick() when the user picks something from
+ * history. clippin() relocates it between lists without invalidating
+ * this pointer either way -- see cliplistmove()'s comment. */
 static ClipEntry *lastentry = NULL;
 
 static Atom clipboardatom;
@@ -514,18 +515,31 @@ void clippick(const Arg *arg) {
   free(index);
 }
 
-/* Moves `e` from the head of `*from` to the head of `*to`. Only ever
- * called on `lastentry`, which is always the head of whichever list
- * it's currently in: it's set to the head of `history` at push time,
- * and clippin() below is the only thing that ever relocates it, also
- * always to/from a head. So no predecessor search is needed -- but
- * this still checks defensively and no-ops rather than corrupt a list
- * if that invariant is ever violated. */
+/* Unlinks `e` from `*from` (wherever it sits in that singly linked
+ * list) and re-inserts it at the head of `*to`, flipping its pinned
+ * flag and updating both counts. No-ops if `e` isn't actually in
+ * `*from`.
+ *
+ * This used to assume `e` was always the head of `*from` -- true for
+ * a freshly-pushed entry, but clippick() can set `lastentry` to any
+ * entry in the list (whichever one the user picked from dmenu, not
+ * necessarily the newest). With the old head-only check, pinning
+ * (Mod+Ctrl+c) after picking anything but the very newest history
+ * entry silently did nothing. This walks the list to find and unlink
+ * `e` properly instead. */
 static void cliplistmove(ClipEntry **from, ClipEntry **to, ClipEntry *e,
                           int *fromcount, int *tocount) {
-  if (*from != e)
-    return;
-  *from = e->next;
+  ClipEntry *prev;
+
+  if (*from == e) {
+    *from = e->next;
+  } else {
+    for (prev = *from; prev && prev->next != e; prev = prev->next)
+      ;
+    if (!prev)
+      return; /* e isn't in *from at all */
+    prev->next = e->next;
+  }
   e->next = *to;
   *to = e;
   e->pinned = !e->pinned;

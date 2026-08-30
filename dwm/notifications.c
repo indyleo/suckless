@@ -230,8 +230,20 @@ static void pushhistory(const char *appname, const char *summary,
         histcount++;
 }
 
+/* `off` counts from the *newest* entry (0 = newest), matching the
+ * on-screen row order used by notif_hist_paint()/notif_hist_click() --
+ * row 0 is always the most recently received notification. Internally
+ * the ring buffer is simplest to splice oldest-first, so that's flipped
+ * right away below.
+ *
+ * This used to use `off` directly as an offset from the *oldest*
+ * entry while its only caller (a click on a specific row) passed an
+ * offset from the *newest* -- so clicking to dismiss the topmost
+ * (newest) notification silently deleted the oldest one instead, and
+ * every other row was off by the same mirroring. */
 static void remove_history_offset(int off) {
     if (off < 0 || off >= histcount) return;
+    off = histcount - 1 - off; /* newest-relative -> oldest-relative */
     int oldest = (histhead - histcount + NOTIF_HISTORY_LEN) % NOTIF_HISTORY_LEN;
     int idx = (oldest + off) % NOTIF_HISTORY_LEN;
     if (history[idx].image) notif_free_image(history[idx].image);
