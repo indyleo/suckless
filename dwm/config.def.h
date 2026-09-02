@@ -291,7 +291,7 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_comma, tagmon, {.i = -1}},
     {MODKEY | SHIFTKEY, XK_period, tagmon, {.i = +1}},
     {MODKEY, XK_equal, show, {0}},
-    {MODKEY | SHIFTKEY, XK_equal, showall, {0}},
+    {MODKEY | CTRLKEY | SHIFTKEY, XK_equal, showall, {0}},
     {MODKEY, XK_minus, hide, {0}},
 
     /* System Controls */

@@ -506,6 +506,7 @@ table lives in `keys[]`; grouped highlights below.
 | `MODKEY+SHIFT+f`         | Toggle fullscreen                     |
 | `MODKEY+SHIFT+space`     | Toggle floating                       |
 | `MODKEY+=` / `-`         | Show / hide focused window            |
+| `MODKEY+CTRL+SHIFT+=`    | Show all hidden windows               |
 | `MODKEY+SHIFT+t`         | Hide all visible scratchpads          |
 | `MODKEY+0` / `SHIFT+0`   | View / tag all tags                   |
 | `MODKEY+,` / `.`         | Focus prev/next monitor               |
