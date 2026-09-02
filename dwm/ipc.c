@@ -107,7 +107,7 @@ static FifoCmd fifocmds[] = {
     {"cyclelayout", cyclelayout, 1}, /* cyclelayout 1/-1  */
     {"zoom", zoom, 0},
     {"togglefloating", togglefloating, 0},
-    {"togglefullscreen", fullscreen, 0},
+    {"togglefullscreen", togglefullscreen, 0},
     /* focus / stack */
     {"focusstackvis", focusstackvis, 1}, /* focusstackvis 1/-1 */
     {"focusmon", focusmon, 1},           /* focusmon 1/-1     */

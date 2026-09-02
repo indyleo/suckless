@@ -441,6 +441,11 @@ window's monitor and geometry are finalized in `manage()`. Useful for
 apps (like Steam games) that don't request fullscreen themselves but you
 always want fullscreened on open.
 
+`MODKEY+SHIFT+f` (`togglefullscreen()`) toggles this same per-client
+`isfullscreen` state by hand, so it correctly un-fullscreens a window
+that got there via `forcefullscreen` or its own EWMH request, and
+re-fullscreens it the same way.
+
 The Steam example above uses a negative lookahead (`(?!0$)`) to
 fullscreen every `steam_app_NNNNN` window except `steam_app_0`, which some
 Steam launch paths use for the client UI itself rather than an actual game.

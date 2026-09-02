@@ -284,7 +284,7 @@ static const Key keys[] = {
     {MODKEY | ALTKEY | SHIFTKEY, XK_m, setlayout, {.v = &layouts[2]}},
     {MODKEY | ALTKEY, XK_space, cyclelayout, {.i = +1}},
     {MODKEY | ALTKEY | SHIFTKEY, XK_space, cyclelayout, {.i = -1}},
-    {MODKEY | SHIFTKEY, XK_f, fullscreen, {0}},
+    {MODKEY | SHIFTKEY, XK_f, togglefullscreen, {0}},
     {MODKEY | SHIFTKEY, XK_space, togglefloating, {0}},
     {MODKEY, XK_comma, focusmon, {.i = -1}},
     {MODKEY, XK_period, focusmon, {.i = +1}},

@@ -246,7 +246,7 @@ static void setclientstate(Client *c, long state);
 static void setclienttagprop(Client *c);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
-void fullscreen(const Arg *arg);
+void togglefullscreen(const Arg *arg);
 static void setlayout(const Arg *arg);
 void cyclelayout(const Arg *arg);
 void setmfact(const Arg *arg);
@@ -2159,31 +2159,13 @@ void setfullscreen(Client *c, int fullscreen) {
   }
 }
 
-Layout *last_layout;
-/* Tracks whether *this function* currently thinks it's showing the
- * fullscreen (monocle) layout, independent of selmon->showbar.
- *
- * This used to branch on selmon->showbar itself, on the assumption
- * that the only way the bar's visibility changes is through this
- * function. But togglebar() is bound to its own key (Mod+Shift+b) and
- * showbar is tracked per-tag, so toggling the bar for unrelated
- * reasons -- then pressing fullscreen -- made this take the "restore"
- * branch despite never having entered fullscreen, restoring a stale
- * (or, on a fresh session, never-set) last_layout and un-hiding a bar
- * the user had deliberately hidden. A dedicated flag decouples the
- * two. */
-static int infullscreen = 0;
-void fullscreen(const Arg *arg) {
-  if (!infullscreen) {
-    for (last_layout = (Layout *)layouts;
-         last_layout != selmon->lt[selmon->sellt]; last_layout++)
-      ;
-    setlayout(&((Arg){.v = &layouts[2]}));
-  } else {
-    setlayout(&((Arg){.v = last_layout}));
-  }
-  infullscreen = !infullscreen;
-  togglebar(arg);
+/* Real per-client fullscreen, same path as EWMH requests and the
+ * `forcefullscreen` window rule use. State lives on the Client
+ * (c->isfullscreen), so it correctly un-fullscreens a client that
+ * was fullscreened by a rule or by the app itself. */
+void togglefullscreen(const Arg *arg) {
+  if (selmon->sel)
+    setfullscreen(selmon->sel, !selmon->sel->isfullscreen);
 }
 
 void setlayout(const Arg *arg) {

@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details.
  *
  * Shared surface between dwm.c and the modules split out of it
@@ -111,7 +110,7 @@ void setmfact(const Arg *arg);
 void incnmaster(const Arg *arg);
 void zoom(const Arg *arg);
 void togglefloating(const Arg *arg);
-void fullscreen(const Arg *arg);
+void togglefullscreen(const Arg *arg);
 void focusstackvis(const Arg *arg);
 void focusmon(const Arg *arg);
 void tagmon(const Arg *arg);
