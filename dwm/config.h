@@ -60,14 +60,11 @@ const char *spcmd4[] = {"st",        "-c", "wiremixsc", "-n",
                         "Wiremixsc", "-e", "wiremix",   NULL};
 const char *spcmd5[] = {"st", "-c",  "gurks", "-n",    "Gurks",
                         "-e", "zsh", "-c",    "gurks", NULL};
-const char *spcmd6[] = {"st",         "-c", "twitch-tui", "-n",
-                        "Twitch-tui", "-e", "twt",        NULL};
-const char *spcmd7[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
+const char *spcmd6[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
                         "-e", "zsh", "-c",      "subsonic-tui", NULL};
 static Sp scratchpads[] = {
     {"termsc", spcmd1},    {"lfsc", spcmd2},  {"qalsc", spcmd3},
-    {"wiremixsc", spcmd4}, {"gurks", spcmd5}, {"twitch-tui", spcmd6},
-    {"musicsc", spcmd7},
+    {"wiremixsc", spcmd4}, {"gurks", spcmd5}, {"musicsc", spcmd6},
 };
 
 /* Autostart */
@@ -108,8 +105,7 @@ setpos  center  forcefullscreen */
     {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^gurks$", NULL, NULL, SPTAG(4), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-    {"^twitch-tui", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-    {"^musicsc", NULL, NULL, SPTAG(6), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^musicsc", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
 };
 
 /* Layout(s) */
@@ -388,8 +384,7 @@ static const Key keys[] = {
     {MODKEY, XK_z, togglescratch, {.ui = 2}}, /* qalsc */
     {MODKEY, XK_a, togglescratch, {.ui = 3}}, /* wiremixsc */
     {MODKEY, XK_g, togglescratch, {.ui = 4}}, /* gurks */
-    {MODKEY, XK_c, togglescratch, {.ui = 5}}, /* twitch-tui */
-    {MODKEY, XK_m, togglescratch, {.ui = 6}}, /* musicsc */
+    {MODKEY, XK_m, togglescratch, {.ui = 5}}, /* musicsc */
     {MODKEY | SHIFTKEY,
      XK_t,
      hideallscratchpads,
