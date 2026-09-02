@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details.
  *
  * A standalone org.freedesktop.Notifications DBus server built into dwm.
@@ -419,6 +420,13 @@ static void fill_popup(int slot, unsigned int id, const char *appname,
   snprintf(p->body, sizeof(p->body), "%s", body ? body : "");
   p->urgency = urgency;
   snprintf(p->defaultaction, sizeof(p->defaultaction), "%s", action ? action : "");
+  /* When this call is replacing an already-active popup (same slot,
+   * new content), the previous image would otherwise be overwritten
+   * here with no reference left to free it -- a leaked Imlib_Image
+   * per replaced notification. Free the old one first. */
+  if (p->image && p->image != image) {
+    notif_free_image(p->image);
+  }
   p->image = image;
   p->img_w = img_w;
   p->img_h = img_h;
@@ -571,6 +579,12 @@ static void notif_hist_toggle(void) {
                       NOTIF_HIST_W, NOTIF_HIST_H);
     XMapRaised(dpy, histwin);
     notif_hist_paint();
+    /* Opening the history panel means the user has seen the pending
+     * notifications, so clear the unread badge on the bar. */
+    if (unreadcount != 0) {
+      unreadcount = 0;
+      notif_updateblock();
+    }
   } else {
     XUnmapWindow(dpy, histwin);
   }
@@ -587,7 +601,9 @@ static int notif_hist_click(unsigned int button, int y) {
     histcount = 0;
     histhead = 0;
     histscroll = 0;
+    unreadcount = 0;
     notif_hist_paint();
+    notif_updateblock();
     return 1;
   }
 
@@ -601,7 +617,9 @@ static int notif_hist_click(unsigned int button, int y) {
       histcount = 0;
       histhead = 0;
       histscroll = 0;
+      unreadcount = 0;
       notif_hist_paint();
+      notif_updateblock();
       return 1;
     }
 
@@ -623,6 +641,10 @@ static int notif_hist_click(unsigned int button, int y) {
         remove_history_offset(global_off);
         if (histscroll > 0 && histscroll >= histcount)
           histscroll = histcount > 0 ? histcount - 1 : 0;
+        if (unreadcount > 0) {
+          unreadcount--;
+          notif_updateblock();
+        }
         notif_hist_paint();
       }
       return 1;
@@ -1199,6 +1221,8 @@ void notif_clearhistory(const Arg *arg) {
   }
   histcount = 0;
   histhead = 0;
+  unreadcount = 0;
+  notif_updateblock();
 }
 
 void notif_dumphistory(const Arg *arg) {
