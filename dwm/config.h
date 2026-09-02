@@ -60,16 +60,14 @@ const char *spcmd4[] = {"st",        "-c", "wiremixsc", "-n",
                         "Wiremixsc", "-e", "wiremix",   NULL};
 const char *spcmd5[] = {"st", "-c",  "gurks", "-n",    "Gurks",
                         "-e", "zsh", "-c",    "gurks", NULL};
-const char *spcmd6[] = {"st", "-c",  "discordo", "-n",       "Discordo",
-                        "-e", "zsh", "-c",       "discordo", NULL};
-const char *spcmd7[] = {"st",         "-c", "twitch-tui", "-n",
+const char *spcmd6[] = {"st",         "-c", "twitch-tui", "-n",
                         "Twitch-tui", "-e", "twt",        NULL};
-const char *spcmd8[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
+const char *spcmd7[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
                         "-e", "zsh", "-c",      "subsonic-tui", NULL};
 static Sp scratchpads[] = {
-    {"termsc", spcmd1},     {"lfsc", spcmd2},    {"qalsc", spcmd3},
-    {"wiremixsc", spcmd4},  {"gurks", spcmd5},   {"discordo", spcmd6},
-    {"twitch-tui", spcmd7}, {"musicsc", spcmd8},
+    {"termsc", spcmd1},    {"lfsc", spcmd2},  {"qalsc", spcmd3},
+    {"wiremixsc", spcmd4}, {"gurks", spcmd5}, {"twitch-tui", spcmd6},
+    {"musicsc", spcmd7},
 };
 
 /* Autostart */
@@ -84,9 +82,9 @@ const Tag tags[] = {
 const int tagslen = LENGTH(tags);
 
 static const Rule rules[] = {
-    /*  class                            instance  title                  tags
-       mask  isfloating  isterminal  noswallow  monitor    w    h    x    y
-       setpos  center  forcefullscreen */
+    /*  class                            instance  title tags mask
+isfloating  isterminal  noswallow  monitor    w    h    x    y
+setpos  center  forcefullscreen */
     {"^Gimp$", NULL, NULL, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^Firefox$", NULL, NULL, 1 << 0, 0, 0, -1, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^St$", NULL, NULL, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0},
@@ -110,10 +108,8 @@ static const Rule rules[] = {
     {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^gurks$", NULL, NULL, SPTAG(4), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-    {"^discordo$", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0,
-     0}, /* was "discord", didn't match instance "discordo" */
-    {"^twitch-tui", NULL, NULL, SPTAG(6), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-    {"^musicsc", NULL, NULL, SPTAG(7), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^twitch-tui", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^musicsc", NULL, NULL, SPTAG(6), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
 };
 
 /* Layout(s) */
@@ -236,7 +232,8 @@ enum {
 const OsdItem osds[] = {
     // label  changecmd       getcmd      blockidx  fastget
     // blockidx indices below must match statusblocks[] above: brightness=2,
-    // microphone=6, volume=7. These were previously 12 (out of range -- silently
+    // microphone=6, volume=7. These were previously 12 (out of range --
+    // silently
     // ignored by statusbar_setblock()/statusbar_refresh()'s bounds checks) for
     // volume, and -1 (explicitly disabled) for brightness/mic, even though all
     // three of those statusblocks entries are marked "refreshed by the OSD" and
@@ -391,9 +388,8 @@ static const Key keys[] = {
     {MODKEY, XK_z, togglescratch, {.ui = 2}}, /* qalsc */
     {MODKEY, XK_a, togglescratch, {.ui = 3}}, /* wiremixsc */
     {MODKEY, XK_g, togglescratch, {.ui = 4}}, /* gurks */
-    {MODKEY, XK_d, togglescratch, {.ui = 5}}, /* discordo */
-    {MODKEY, XK_c, togglescratch, {.ui = 6}}, /* twitch-tui */
-    {MODKEY, XK_m, togglescratch, {.ui = 7}}, /* musicsc */
+    {MODKEY, XK_c, togglescratch, {.ui = 5}}, /* twitch-tui */
+    {MODKEY, XK_m, togglescratch, {.ui = 6}}, /* musicsc */
     {MODKEY | SHIFTKEY,
      XK_t,
      hideallscratchpads,
