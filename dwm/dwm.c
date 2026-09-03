@@ -2712,12 +2712,30 @@ void updatebarpos(Monitor *m) {
 void updateclientlist(void) {
   Client *c;
   Monitor *m;
+  Window *wins;
+  unsigned int i, n = 0;
 
-  XDeleteProperty(dpy, root, netatom[NetClientList]);
   for (m = mons; m; m = m->next)
     for (c = m->clients; c; c = c->next)
-      XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
-                      PropModeAppend, (unsigned char *)&(c->win), 1);
+      n++;
+
+  if (!n) {
+    XDeleteProperty(dpy, root, netatom[NetClientList]);
+    return;
+  }
+
+  /* Build the full list locally and push it in a single round-trip
+   * instead of one XChangeProperty call per client. */
+  if (!(wins = malloc(n * sizeof(Window))))
+    return;
+  i = 0;
+  for (m = mons; m; m = m->next)
+    for (c = m->clients; c; c = c->next)
+      wins[i++] = c->win;
+
+  XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
+                  PropModeReplace, (unsigned char *)wins, n);
+  free(wins);
 }
 
 int updategeom(void) {
