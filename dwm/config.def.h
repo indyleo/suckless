@@ -58,13 +58,11 @@ const char *spcmd2[] = {"st", "-c",  "lfsc", "-n", "Lfsc",
 const char *spcmd3[] = {"st", "-c", "qalsc", "-n", "Qalsc", "-e", "qalc", NULL};
 const char *spcmd4[] = {"st",        "-c", "wiremixsc", "-n",
                         "Wiremixsc", "-e", "wiremix",   NULL};
-const char *spcmd5[] = {"st", "-c",  "gurks", "-n",    "Gurks",
-                        "-e", "zsh", "-c",    "gurks", NULL};
-const char *spcmd6[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
+const char *spcmd5[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
                         "-e", "zsh", "-c",      "subsonic-tui", NULL};
 static Sp scratchpads[] = {
-    {"termsc", spcmd1},    {"lfsc", spcmd2},  {"qalsc", spcmd3},
-    {"wiremixsc", spcmd4}, {"gurks", spcmd5}, {"musicsc", spcmd6},
+    {"termsc", spcmd1},    {"lfsc", spcmd2},    {"qalsc", spcmd3},
+    {"wiremixsc", spcmd4}, {"musicsc", spcmd5},
 };
 
 /* Autostart */
@@ -104,7 +102,6 @@ setpos  center  forcefullscreen */
     {"^lfsc$", NULL, NULL, SPTAG(1), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-    {"^gurks$", NULL, NULL, SPTAG(4), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^musicsc", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
 };
 
@@ -383,8 +380,7 @@ static const Key keys[] = {
     {MODKEY, XK_y, togglescratch, {.ui = 1}}, /* lfsc */
     {MODKEY, XK_z, togglescratch, {.ui = 2}}, /* qalsc */
     {MODKEY, XK_a, togglescratch, {.ui = 3}}, /* wiremixsc */
-    {MODKEY, XK_g, togglescratch, {.ui = 4}}, /* gurks */
-    {MODKEY, XK_m, togglescratch, {.ui = 5}}, /* musicsc */
+    {MODKEY, XK_m, togglescratch, {.ui = 4}}, /* musicsc */
     {MODKEY | SHIFTKEY,
      XK_t,
      hideallscratchpads,
