@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details.
  *
  * See wallpaper.h for the public entry points. Everything below is
@@ -516,8 +517,4 @@ void setrandomwallpaper(void) {
   free(paths);
 }
 
-void nextwallpaper(const Arg *arg) {
-  fprintf(stderr, "dwm: nextwallpaper called\n");
-  setrandomwallpaper();
-  fprintf(stderr, "dwm: nextwallpaper done\n");
-}
+void nextwallpaper(const Arg *arg) { setrandomwallpaper(); }
