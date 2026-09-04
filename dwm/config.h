@@ -1,4 +1,3 @@
-
 /* See LICENSE file for copyright and license details. */
 
 /* Appearance */
@@ -158,6 +157,12 @@ const StatusBlock statusblocks[] = {
      "*) printf '%s' \"$o\" ;; "
      "esac",
      15},
+    {"",
+     "export BLOCK_BUTTON; o=$(sysstats kbd); case \"$o\" in "
+     "\"\"|*N/A*) ;; "
+     "*) printf '%s' \"$o\" ;; "
+     "esac",
+     0},                            // refreshed by the OSD, see below
     {"", "sysstats brightness", 0}, // refreshed by the OSD, see below
     {"",
      "export BLOCK_BUTTON; o=$(sysstats ethernet); case \"$o\" in "
@@ -198,7 +203,7 @@ const int statusblockslen = LENGTH(statusblocks);
 /* index into statusblocks[] (above) of the notification bell/count --
  * must stay in sync if you reorder statusblocks[]. -1 would disable the
  * bar indicator (popups/history/DND still work either way). */
-const int notifblockidx = 9;
+const int notifblockidx = 10;
 
 /* Volume/Microphone Commands For OSD */
 static const char *volupcmd[] = {"sysctl", "vol", "-i", "5", NULL};
@@ -206,9 +211,14 @@ static const char *voldowncmd[] = {"sysctl", "vol", "-d", "5", NULL};
 static const char *voltogglecmd[] = {"sysctl", "vol", "--toggle", NULL};
 static const char *briupcmd[] = {"sysctl", "bri", "-i", "5", NULL};
 static const char *bridowncmd[] = {"sysctl", "bri", "-d", "5", NULL};
+static const char *britogglecmd[] = {"sysctl", "bri", "--toggle", NULL};
 static const char *micupcmd[] = {"sysctl", "mic", "-i", "5", NULL};
 static const char *micdowncmd[] = {"sysctl", "mic", "-d", "5", NULL};
 static const char *mictogglecmd[] = {"sysctl", "mic", "--toggle", NULL};
+static const char *kbdupcmd[] = {"sysctl", "kbd", "-i", "5", NULL};
+static const char *kbddowncmd[] = {"sysctl", "kbd", "-d", "5", NULL};
+static const char *kbdtogglecmd[] = {"sysctl", "kbd", "--toggle", NULL};
+static const char *kbdgetcmd[] = {"sysstats", "kbd_raw", NULL};
 static const char *volgetcmd[] = {"sysstats", "vol_raw", NULL};
 static const char *micgetcmd[] = {"sysstats", "mic_raw", NULL};
 static const char *brigetcmd[] = {"sysstats", "bri_raw", NULL};
@@ -218,32 +228,30 @@ enum {
   OsdVolToggle,
   OsdBriUp,
   OsdBriDown,
+  OsdBriToggle,
   OsdMicUp,
   OsdMicDown,
-  OsdMicToggle
+  OsdMicToggle,
+  OsdKbdUp,
+  OsdKbdDown,
+  OsdKbdToggle
 }; // indices into osds[], referenced from keys[] as {.i = OsdVolUp} etc.
 
 const OsdItem osds[] = {
     // label  changecmd       getcmd      blockidx  fastget
-    // blockidx indices below must match statusblocks[] above: brightness=2,
-    // microphone=6, volume=7. These were previously 12 (out of range --
-    // silently
-    // ignored by statusbar_setblock()/statusbar_refresh()'s bounds checks) for
-    // volume, and -1 (explicitly disabled) for brightness/mic, even though all
-    // three of those statusblocks entries are marked "refreshed by the OSD" and
-    // have interval=0 so nothing else ever refreshes them. Net effect: the
-    // volume/brightness/mic numbers shown in the bar only ever reflected their
-    // startup values and silently went stale the moment you pressed a volume,
-    // brightness, or mic key, even though the OSD popup itself always showed
-    // the correct live value (it reads it independently via getcmd/fastget).
+    // blockidx indices below must match statusblocks[] above
     {"VOL", volupcmd, volgetcmd, 7, osd_vol_fastget},
     {"VOL", voldowncmd, volgetcmd, 7, osd_vol_fastget},
     {"VOL", voltogglecmd, volgetcmd, 7, osd_vol_fastget},
-    {"BRI", briupcmd, brigetcmd, 2, osd_bri_fastget},
-    {"BRI", bridowncmd, brigetcmd, 2, osd_bri_fastget},
+    {"BRI", briupcmd, brigetcmd, 3, osd_bri_fastget},
+    {"BRI", bridowncmd, brigetcmd, 3, osd_bri_fastget},
+    {"BRI", britogglecmd, brigetcmd, 3, osd_bri_fastget},
     {"MIC", micupcmd, micgetcmd, 6, osd_mic_fastget},
     {"MIC", micdowncmd, micgetcmd, 6, osd_mic_fastget},
     {"MIC", mictogglecmd, micgetcmd, 6, osd_mic_fastget},
+    {"KBD", kbdupcmd, kbdgetcmd, 2, osd_kbd_fastget},
+    {"KBD", kbddowncmd, kbdgetcmd, 2, osd_kbd_fastget},
+    {"KBD", kbdtogglecmd, kbdgetcmd, 2, osd_kbd_fastget},
 };
 const int osdslen = LENGTH(osds);
 

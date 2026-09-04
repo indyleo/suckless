@@ -51,6 +51,7 @@ typedef struct {
 int osd_vol_fastget(int *level, char *text, size_t textsz);
 int osd_mic_fastget(int *level, char *text, size_t textsz);
 int osd_bri_fastget(int *level, char *text, size_t textsz);
+int osd_kbd_fastget(int *level, char *text, size_t textsz);
 
 void osdsetup(void);   /* called once from setup(), after updatebars() */
 void osdcleanup(void); /* called once from cleanup() */

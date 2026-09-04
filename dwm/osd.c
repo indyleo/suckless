@@ -283,6 +283,66 @@ int osd_bri_fastget(int *level, char *text, size_t textsz) {
   return 0;
 }
 
+/* Discovers the keyboard backlight device under /sys/class/leds.
+ * Checks for standard naming conventions like "smc::kbd_backlight"
+ * or "tpacpi::kbd_backlight". Caches the result. */
+static const char *find_kbd_backlight_dir(void) {
+  static char dir[512] = "";
+  static int tried = 0;
+  DIR *d;
+  struct dirent *de;
+
+  if (tried)
+    return dir[0] ? dir : NULL;
+  tried = 1;
+  if ((d = opendir("/sys/class/leds"))) {
+    while ((de = readdir(d))) {
+      if (de->d_name[0] == '.')
+        continue;
+      if (strstr(de->d_name, "kbd_backlight") || strstr(de->d_name, "kbd_illum")) {
+        snprintf(dir, sizeof(dir), "/sys/class/leds/%s", de->d_name);
+        break;
+      }
+    }
+    closedir(d);
+  }
+  return dir[0] ? dir : NULL;
+}
+
+int osd_kbd_fastget(int *level, char *text, size_t textsz) {
+  const char *dir;
+  char path[560];
+  FILE *f;
+  long cur = -1, max = -1;
+  int pct;
+
+  if (!(dir = find_kbd_backlight_dir()))
+    return -1;
+
+  snprintf(path, sizeof(path), "%s/brightness", dir);
+  if ((f = fopen(path, "r"))) {
+    if (fscanf(f, "%ld", &cur) != 1) cur = -1;
+    fclose(f);
+  }
+  snprintf(path, sizeof(path), "%s/max_brightness", dir);
+  if ((f = fopen(path, "r"))) {
+    if (fscanf(f, "%ld", &max) != 1) max = -1;
+    fclose(f);
+  }
+  if (cur < 0 || max <= 0)
+    return -1;
+
+  /* round-half-up */
+  pct = (int)((cur * 100 + max / 2) / max);
+  if (pct > 100) pct = 100;
+  if (pct < 0) pct = 0;
+
+  *level = pct;
+  if (text && textsz > 0)
+    snprintf(text, textsz, "󰌌 %d%%", pct); /* Using a generic Nerd Font keyboard icon */
+  return 0;
+}
+
 /* Paints label + level bar into osddrw and maps the popup if it isn't
  * already visible. level < 0 means "no numeric level" -- draws an empty
  * urgency-colored track instead of a fill. */
