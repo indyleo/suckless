@@ -1,3 +1,4 @@
+
 /* See LICENSE file for copyright and license details. */
 
 /* Appearance */
@@ -152,28 +153,28 @@ const StatusBlock statusblocks[] = {
     /* icon   cmd   interval(s) */
     {"", "mediactl state-title", 0},
     {"",
-     "o=$(sysstats battery); case \"$o\" in "
+     "export BLOCK_BUTTON; o=$(sysstats battery); case \"$o\" in "
      "\"\"|*N/A*|*No*|*Not*|*\" 0%\"|\"0%\") ;; "
      "*) printf '%s' \"$o\" ;; "
      "esac",
      15},
     {"", "sysstats brightness", 0}, // refreshed by the OSD, see below
     {"",
-     "o=$(sysstats ethernet); case \"$o\" in "
+     "export BLOCK_BUTTON; o=$(sysstats ethernet); case \"$o\" in "
      "*Connected*) printf '%s' \"$o\" ;; "
      "esac",
      15},
     {"",
-     "w=$(sysstats wifi); case \"$w\" in "
+     "export BLOCK_BUTTON; w=$(sysstats wifi); case \"$w\" in "
      "*Offline*|*\"No tool\"*|*Disconnected*) "
-     "e=$(sysstats ethernet); case \"$e\" in "
+     "e=$(BLOCK_BUTTON= sysstats ethernet); case \"$e\" in "
      "*Disconnected*) printf '%s' \"$w\" ;; "
      "esac ;; "
      "*) printf '%s' \"$w\" ;; "
      "esac",
      15},
     {"",
-     "t=$(sysstats tail); case \"$t\" in "
+     "export BLOCK_BUTTON; t=$(sysstats tail); case \"$t\" in "
      "*\"Not connected\"*) ;; "
      "*Connected*) printf '%s' \"$t\" ;; "
      "esac",
