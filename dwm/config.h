@@ -330,6 +330,8 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_l, spawn, SHCMD("slock")},
     {0, XF86XK_MonBrightnessUp, osdtrigger, {.i = OsdBriUp}},
     {0, XF86XK_MonBrightnessDown, osdtrigger, {.i = OsdBriDown}},
+    {CTRLKEY, XF86XK_MonBrightnessUp, osdtrigger, {.i = OsdKbdUp}},
+    {CTRLKEY, XF86XK_MonBrightnessDown, osdtrigger, {.i = OsdKbdDown}},
     {0, XF86XK_WLAN, spawn, SHCMD("sysctl wifi --toggle")},
     {0, XF86XK_Bluetooth, spawn, SHCMD("sysctl bt --toggle")},
 
