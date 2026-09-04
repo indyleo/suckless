@@ -43,11 +43,20 @@ extern const int fontslen;
 #define NOTIF_TIMEOUT_LOW_MS 4000
 #define NOTIF_TIMEOUT_NORMAL_MS 6000
 
+/* Word-wrap: the toast popup grows to fit up to NOTIF_BODY_MAXLINES lines
+ * of body text; the history row wraps into a smaller, fixed budget since
+ * its row height isn't dynamic. NOTIF_LINE_MAXLEN caps how much of a
+ * single wrapped line we keep -- generous for a UI line, not meant as a
+ * content limit (that's Popup/HistEntry's body[256]). */
+#define NOTIF_LINE_MAXLEN 128
+#define NOTIF_BODY_MAXLINES 4
+#define NOTIF_HIST_BODY_MAXLINES 2
+
 /* History overlay constants */
 #define NOTIF_HIST_W 360
 #define NOTIF_HIST_HEADER_H 26
 #define NOTIF_HIST_FOOTER_H 26
-#define NOTIF_HIST_ROW_H 68
+#define NOTIF_HIST_ROW_H 92
 #define NOTIF_HIST_MAX_ROWS 5
 #define NOTIF_HIST_PAD 8
 #define NOTIF_HIST_H (NOTIF_HIST_HEADER_H + NOTIF_HIST_MAX_ROWS * NOTIF_HIST_ROW_H \
@@ -68,6 +77,11 @@ typedef struct {
   /* image support */
   Imlib_Image image;
   int img_w, img_h;
+  /* wrapping: computed once in fill_popup() when the content is set,
+   * not re-measured on every repaint (Expose etc. just redraw these). */
+  char bodylines[NOTIF_BODY_MAXLINES][NOTIF_LINE_MAXLEN];
+  int nbodylines;
+  int height; /* this popup's actual current window height */
 } Popup;
 
 typedef struct {
@@ -276,6 +290,83 @@ static void notif_updateblock(void) {
 
 /* --- popup layout / painting --------------------------------------- */
 
+/* Greedy word-wrap: fills `lines` (each up to NOTIF_LINE_MAXLEN-1 chars)
+ * from `text`, breaking on spaces so no line exceeds `maxw` pixels in
+ * drw's current font. A single word wider than maxw is placed on its own
+ * line as-is and left for drw_text's own ellipsis-clamping at paint
+ * time, rather than hyphenated here. If `text` doesn't fit in `maxlines`
+ * lines, the last line gets a trailing "..." and the remainder is
+ * dropped. Returns the number of lines written (0..maxlines).
+ *
+ * The snprintf calls below intentionally truncate long input into
+ * NOTIF_LINE_MAXLEN-sized buffers -- that's the whole point (this is a
+ * *line length cap*), not a bug, so silence -Wformat-truncation for it.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+static int wrap_text(Drw *drw, const char *text, int maxw,
+                      char lines[][NOTIF_LINE_MAXLEN], int maxlines) {
+  int n = 0;
+  int truncated = 0;
+  const char *p = text;
+  char linebuf[NOTIF_LINE_MAXLEN] = "";
+
+  if (!drw || !text || !text[0] || maxw <= 0 || maxlines <= 0)
+    return 0;
+
+  while (*p) {
+    while (*p == ' ')
+      p++;
+    size_t wlen = 0;
+    while (p[wlen] && p[wlen] != ' ' && wlen < sizeof(linebuf) - 1)
+      wlen++;
+    if (!wlen)
+      break;
+    char wordbuf[NOTIF_LINE_MAXLEN];
+    memcpy(wordbuf, p, wlen);
+    wordbuf[wlen] = '\0';
+    p += wlen;
+
+    char trial[NOTIF_LINE_MAXLEN];
+    if (linebuf[0])
+      snprintf(trial, sizeof(trial), "%s %s", linebuf, wordbuf);
+    else
+      snprintf(trial, sizeof(trial), "%s", wordbuf);
+
+    if (!linebuf[0] || (unsigned)drw_fontset_getwidth(drw, trial) <= (unsigned)maxw) {
+      snprintf(linebuf, sizeof(linebuf), "%s", trial);
+      continue;
+    }
+
+    /* `wordbuf` doesn't fit on the current line -- flush what we have
+     * and start a new line with it. */
+    if (n >= maxlines) {
+      truncated = 1;
+      break;
+    }
+    snprintf(lines[n++], NOTIF_LINE_MAXLEN, "%s", linebuf);
+    snprintf(linebuf, sizeof(linebuf), "%s", wordbuf);
+  }
+
+  if (!truncated && linebuf[0]) {
+    if (n >= maxlines)
+      truncated = 1;
+    else
+      snprintf(lines[n++], NOTIF_LINE_MAXLEN, "%s", linebuf);
+  }
+
+  if (truncated && n > 0) {
+    size_t len = strlen(lines[n - 1]);
+    if (len + 3 < NOTIF_LINE_MAXLEN)
+      snprintf(lines[n - 1] + len, NOTIF_LINE_MAXLEN - len, "...");
+    else
+      snprintf(lines[n - 1] + NOTIF_LINE_MAXLEN - 4, 4, "...");
+  }
+
+  return n;
+}
+#pragma GCC diagnostic pop
+
 static void notif_relayout(void) {
   int i, x, y;
   int bar_offset = 0;
@@ -294,28 +385,25 @@ static void notif_relayout(void) {
     if (!popups[i].active)
       continue;
     XMoveWindow(dpy, popups[i].win, x, y);
-    y += notifh + NOTIF_GAP;
+    y += (popups[i].height > 0 ? popups[i].height : notifh) + NOTIF_GAP;
   }
 }
 
 static void notif_paint(int slot) {
   Popup *p = &popups[slot];
   Drw *d = p->drw;
-  int line1y, line2y, lineh;
+  int h = p->height > 0 ? p->height : notifh;
+  int lineh = d->fonts ? (int)d->fonts->h + 6 : (notifh > 0 ? notifh / 2 : 20);
   unsigned int bordercolor;
-
-  lineh = notifh / 2;
+  int i;
 
   drw_setscheme(d, scheme[SchemeNorm]);
-  drw_rect(d, 0, 0, NOTIF_W, notifh, 1, 1);
-
-  line1y = 0;
-  line2y = lineh;
+  drw_rect(d, 0, 0, NOTIF_W, h, 1, 1);
 
   int img_area_x = NOTIF_PAD;
-  int img_area_y = (notifh - 36) / 2;
   int img_area_w = 36;
   int img_area_h = 36;
+  int img_area_y = (h - img_area_h) / 2;
   int text_left = img_area_x + img_area_w + 8;
   int text_width = NOTIF_W - text_left - NOTIF_PAD;
 
@@ -331,18 +419,27 @@ static void notif_paint(int slot) {
     pthread_mutex_unlock(&imlib_mutex);
   }
 
+  /* Center each line when it fits text_width; otherwise pin it to
+   * text_left and pass the *remaining* box width (not the text's own
+   * measured width) as drw_text's clamp box, so long text actually gets
+   * ellipsis-clamped by drw_text instead of silently overflowing past
+   * the window edge -- passing the text's own width there always made
+   * the clamp a no-op. */
   const char *sum = p->summary[0] ? p->summary : p->appname;
   drw_setscheme(d, scheme[SchemeNorm]);
   int sum_w = drw_fontset_getwidth(d, sum);
-  int sum_x = text_left + (text_width - sum_w) / 2;
-  drw_text(d, sum_x, line1y, sum_w, lineh, 0, sum, 0);
+  int sum_x = text_left + (sum_w < text_width ? (text_width - sum_w) / 2 : 0);
+  drw_text(d, sum_x, 0, text_width - (sum_x - text_left), lineh, 0, sum, 0);
 
   drw_setscheme(d, scheme[SchemeHid]);
-  int body_w = drw_fontset_getwidth(d, p->body);
-  int body_x = text_left + (text_width - body_w) / 2;
-  drw_text(d, body_x, line2y, body_w, lineh, 0, p->body, 0);
+  for (i = 0; i < p->nbodylines; i++) {
+    int line_w = drw_fontset_getwidth(d, p->bodylines[i]);
+    int line_x = text_left + (line_w < text_width ? (text_width - line_w) / 2 : 0);
+    drw_text(d, line_x, lineh * (1 + i), text_width - (line_x - text_left), lineh,
+             0, p->bodylines[i], 0);
+  }
 
-  drw_map(d, p->win, 0, 0, NOTIF_W, notifh);
+  drw_map(d, p->win, 0, 0, NOTIF_W, h);
 
   bordercolor = p->urgency >= 2 ? scheme[SchemeUrg][ColBorder].pixel
                 : p->urgency == 0 ? scheme[SchemeHid][ColBorder].pixel
@@ -430,6 +527,31 @@ static void fill_popup(int slot, unsigned int id, const char *appname,
   p->image = image;
   p->img_w = img_w;
   p->img_h = img_h;
+
+  /* Word-wrap the body and resize this popup to fit however many lines
+   * that took. Previously the whole popup was a fixed 2-line height and
+   * a long body (e.g. several fields chained together) just got
+   * silently cut to one line with no visual indication of overflow. */
+  {
+    int img_area_w = 36;
+    int text_left = NOTIF_PAD + img_area_w + 8;
+    int text_width = NOTIF_W - text_left - NOTIF_PAD;
+    p->nbodylines = p->body[0]
+        ? wrap_text(p->drw, p->body, text_width, p->bodylines, NOTIF_BODY_MAXLINES)
+        : 0;
+
+    int lineh = p->drw->fonts ? (int)p->drw->fonts->h + 6
+                               : (notifh > 0 ? notifh / 2 : 20);
+    int content_lines = p->nbodylines > 0 ? p->nbodylines : 1; /* summary + body */
+    int min_h = 36 + 2 * NOTIF_PAD; /* image icon must always fit */
+
+    p->height = lineh * (1 + content_lines) + 2 * NOTIF_PAD;
+    if (p->height < min_h)
+      p->height = min_h;
+
+    XResizeWindow(dpy, p->win, NOTIF_W, p->height);
+    drw_resize(p->drw, NOTIF_W, p->height);
+  }
 
   if (expire_timeout == 0)
     p->expiremsafter = -1;
@@ -540,13 +662,21 @@ static void notif_hist_paint(void) {
 
     drw_setscheme(d, scheme[SchemeNorm]);
     int summary_w = drw_fontset_getwidth(d, h->summary);
-    int summary_x = text_left + (text_width - summary_w) / 2;
-    drw_text(d, summary_x, y + 4, summary_w, d->fonts->h, 0, h->summary, 0);
+    int summary_x = text_left + (summary_w < text_width ? (text_width - summary_w) / 2 : 0);
+    drw_text(d, summary_x, y + 4, text_width - (summary_x - text_left), d->fonts->h, 0, h->summary, 0);
 
     drw_setscheme(d, scheme[SchemeHid]);
-    int body_w = drw_fontset_getwidth(d, h->body);
-    int body_x = text_left + (text_width - body_w) / 2;
-    drw_text(d, body_x, y + 4 + d->fonts->h + 2, body_w, d->fonts->h, 0, h->body, 0);
+    char bodylines[NOTIF_HIST_BODY_MAXLINES][NOTIF_LINE_MAXLEN];
+    int nbodylines = h->body[0]
+        ? wrap_text(d, h->body, text_width, bodylines, NOTIF_HIST_BODY_MAXLINES)
+        : 0;
+    for (int bl = 0; bl < nbodylines; bl++) {
+      int line_w = drw_fontset_getwidth(d, bodylines[bl]);
+      int line_x = text_left + (line_w < text_width ? (text_width - line_w) / 2 : 0);
+      int line_y = y + 4 + (bl + 1) * (d->fonts->h + 2);
+      drw_text(d, line_x, line_y, text_width - (line_x - text_left), d->fonts->h,
+               0, bodylines[bl], 0);
+    }
 
     y += NOTIF_HIST_ROW_H;
   }
@@ -1062,12 +1192,14 @@ void notifsetup(void) {
     popups[i].active = 0;
     popups[i].id = 0;
     popups[i].image = NULL;
+    popups[i].nbodylines = 0;
   }
 
   if (notifh > 0)
     for (i = 0; i < NOTIF_MAX_POPUPS; i++) {
       XResizeWindow(dpy, popups[i].win, NOTIF_W, notifh);
       drw_resize(popups[i].drw, NOTIF_W, notifh);
+      popups[i].height = notifh;
     }
 
   XSetWindowAttributes hwa = {
