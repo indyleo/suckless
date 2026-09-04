@@ -240,15 +240,15 @@ enum {
 const OsdItem osds[] = {
     // label  changecmd       getcmd      blockidx  fastget
     // blockidx indices below must match statusblocks[] above
-    {"VOL", volupcmd, volgetcmd, 7, osd_vol_fastget},
-    {"VOL", voldowncmd, volgetcmd, 7, osd_vol_fastget},
-    {"VOL", voltogglecmd, volgetcmd, 7, osd_vol_fastget},
+    {"VOL", volupcmd, volgetcmd, 8, osd_vol_fastget},
+    {"VOL", voldowncmd, volgetcmd, 8, osd_vol_fastget},
+    {"VOL", voltogglecmd, volgetcmd, 8, osd_vol_fastget},
     {"BRI", briupcmd, brigetcmd, 3, osd_bri_fastget},
     {"BRI", bridowncmd, brigetcmd, 3, osd_bri_fastget},
     {"BRI", britogglecmd, brigetcmd, 3, osd_bri_fastget},
-    {"MIC", micupcmd, micgetcmd, 6, osd_mic_fastget},
-    {"MIC", micdowncmd, micgetcmd, 6, osd_mic_fastget},
-    {"MIC", mictogglecmd, micgetcmd, 6, osd_mic_fastget},
+    {"MIC", micupcmd, micgetcmd, 7, osd_mic_fastget},
+    {"MIC", micdowncmd, micgetcmd, 7, osd_mic_fastget},
+    {"MIC", mictogglecmd, micgetcmd, 7, osd_mic_fastget},
     {"KBD", kbdupcmd, kbdgetcmd, 2, osd_kbd_fastget},
     {"KBD", kbddowncmd, kbdgetcmd, 2, osd_kbd_fastget},
     {"KBD", kbdtogglecmd, kbdgetcmd, 2, osd_kbd_fastget},
