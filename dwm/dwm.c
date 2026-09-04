@@ -2034,6 +2034,7 @@ void run(void) {
     osdtick();
     mediaosdtick();
     notiftick();
+    cliptick();
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       if (rrbase >= 0 && ev.type == rrbase + RRScreenChangeNotify)

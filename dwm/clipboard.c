@@ -55,6 +55,20 @@ static Atom clipdwmprop;
 static Window clipwin = None;
 static int clipboardactive = 0;
 
+/* savehistory() rewrites the *entire* history+pinned file from scratch
+ * (see below) -- fine for the infrequent, user-initiated callers
+ * (clippin/clipclear/shutdown), but clipboardpush() fires on every
+ * single clipboard change, and rapid copies (or an app that re-asserts
+ * ownership in a loop) would otherwise mean a full-history disk rewrite
+ * per copy. clipboardpush() instead marks history dirty and cliptick()
+ * (called from dwm.c's run() loop alongside statusbar_tick() etc.)
+ * flushes it after CLIP_SAVE_DEBOUNCE_SEC of no further changes.
+ * clipboardcleanup() always flushes unconditionally on shutdown so nothing
+ * in the last debounce window is lost. */
+#define CLIP_SAVE_DEBOUNCE_SEC 2
+static int clipdirty = 0;
+static time_t clipdirtysince = 0;
+
 /* ---- small local helpers, same shape as the ones screenshot.c /
  * osd.c / mediaosd.c each keep a private copy of ------------------- */
 
@@ -353,7 +367,18 @@ static void clipboardpush(const unsigned char *data, unsigned long nitems) {
   lastentry = e;
 
   cliptrim();
-  savehistory();
+  clipdirty = 1;
+  clipdirtysince = time(NULL);
+}
+
+/* Called from dwm.c's run() loop, same as statusbar_tick()/osdtick()/
+ * mediaosdtick()/notiftick(). Flushes a debounced savehistory() once
+ * CLIP_SAVE_DEBOUNCE_SEC has passed since the last clipboard change. */
+void cliptick(void) {
+  if (clipdirty && time(NULL) - clipdirtysince >= CLIP_SAVE_DEBOUNCE_SEC) {
+    savehistory();
+    clipdirty = 0;
+  }
 }
 
 /* ---- X plumbing ----------------------------------------------------- */

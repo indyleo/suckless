@@ -27,6 +27,12 @@ void clipboardsetup(void);   /* called once from setup(), only if
                               * XFixesQueryExtension() succeeded */
 void clipboardcleanup(void); /* called once from cleanup() */
 
+/* Called from run()'s event loop, same as statusbar_tick()/osdtick()/
+ * mediaosdtick()/notiftick() -- flushes a debounced history save so a
+ * burst of clipboard changes doesn't mean a full-history disk rewrite
+ * per copy. See the CLIP_SAVE_DEBOUNCE_SEC comment in clipboard.c. */
+void cliptick(void);
+
 /* Wired into dwm.c's handler[] table under SelectionNotify -- this is
  * the reply to the XConvertSelection request clipboardfixesnotify()
  * makes below. */

@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -283,14 +284,20 @@ int osd_bri_fastget(int *level, char *text, size_t textsz) {
   return 0;
 }
 
-/* Discovers the keyboard backlight device under /sys/class/leds.
- * Checks for standard naming conventions like "smc::kbd_backlight"
- * or "tpacpi::kbd_backlight". Caches the result. */
+/* Discovers the keyboard backlight device under /sys/class/leds. Mirrors
+ * find_kbd_device() in sysctl and _kbd_backlight_dir() in sysstats --
+ * all three need to agree on the same device or the OSD popup can end
+ * up unable to *read* a level that sysctl/sysstats can still *write*
+ * (this used to only match "kbd_backlight"/"kbd_illum" substrings,
+ * missing e.g. "asus::kbd" which the shell scripts' broader kbd
+ * keyboard* match already handled). Caches the result. */
 static const char *find_kbd_backlight_dir(void) {
   static char dir[512] = "";
   static int tried = 0;
   DIR *d;
   struct dirent *de;
+  char path[560];
+  struct stat st;
 
   if (tried)
     return dir[0] ? dir : NULL;
@@ -299,13 +306,35 @@ static const char *find_kbd_backlight_dir(void) {
     while ((de = readdir(d))) {
       if (de->d_name[0] == '.')
         continue;
-      if (strstr(de->d_name, "kbd_backlight") || strstr(de->d_name, "kbd_illum")) {
+      if (strstr(de->d_name, "kbd") || strstr(de->d_name, "keyboard")) {
+        snprintf(path, sizeof(path), "/sys/class/leds/%s/brightness", de->d_name);
+        if (stat(path, &st) != 0)
+          continue;
+        snprintf(path, sizeof(path), "/sys/class/leds/%s/max_brightness", de->d_name);
+        if (stat(path, &st) != 0)
+          continue;
         snprintf(dir, sizeof(dir), "/sys/class/leds/%s", de->d_name);
         break;
       }
     }
     closedir(d);
   }
+
+  if (!dir[0]) {
+    /* Same fallback name list as the shell scripts, for identical
+     * behavior when the substring scan above finds nothing. */
+    static const char *fallback[] = {"kbd_backlight", "platform::kbd_backlight",
+                                      "tpacpi::kbd_backlight", "dell::kbd_backlight"};
+    size_t i;
+    for (i = 0; i < sizeof(fallback) / sizeof(fallback[0]); i++) {
+      snprintf(path, sizeof(path), "/sys/class/leds/%s/brightness", fallback[i]);
+      if (stat(path, &st) != 0)
+        continue;
+      snprintf(dir, sizeof(dir), "/sys/class/leds/%s", fallback[i]);
+      break;
+    }
+  }
+
   return dir[0] ? dir : NULL;
 }
 
