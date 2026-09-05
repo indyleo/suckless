@@ -36,9 +36,11 @@ A dynamic window manager for X, enhanced with:
 - 📊 **2D-drawn status bar** (icons/colors in status text) (`status2d` patch)
 - 🖱️ **Clickable status segments** (`statuscmd` patch)
 - 🧱 **Built-in status bar blocks** — per-block interval/click, no external binary required
-- 🔊 **On-screen-display popup** for volume/brightness/mic
-- 🔔 **Standalone notification daemon** (`org.freedesktop.Notifications` over DBus, popups + history + Do Not Disturb — no dunst/mako required)
-- 📋 **Native clipboard history** (XFixes-watched, pinning, dmenu picker — no external clip daemon required)
+- 🔊 **On-screen-display popup** for volume/brightness/mic/keyboard-backlight, with zero-fork reads for the level bar where possible
+- 🎵 **Media OSD popup** for the current track (title/artist/art/progress), fully non-blocking so a slow player query or album-art fetch never freezes the WM
+- 🔔 **Standalone notification daemon** (`org.freedesktop.Notifications` over DBus, popups + word-wrapped bodies + history + Do Not Disturb — no dunst/mako required)
+- 🖱️ **Click-for-details status blocks** — click Wi-Fi/Ethernet/Tailscale/battery for a notification with connection/ping/IP/health info beyond what fits in the bar
+- 📋 **Native clipboard history** (XFixes-watched, pinning, dmenu picker, debounced disk persistence — no external clip daemon required)
 - 🎨 **Central `theme.h` palette** (one file to re-theme every color, shared naming with the companion `qs` Quickshell config)
 - 🖼️ **Async Imlib2 wallpaper loader** (no event loop blocking)
 - 🔄 **Automatic wallpaper rotation** on a timer

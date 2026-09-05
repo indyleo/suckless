@@ -15,13 +15,14 @@ future-you) editing `dwm.c` directly. Configuration values live in
 | `ipc.c` / `.h`           | FIFO-based remote control (custom, not a suckless patch)                                                                                                         |
 | `screenshot.c` / `.h`    | Screenshot capture + colorpicker (custom, not a suckless patch)                                                                                                  |
 | `statusbar.c` / `.h`     | Built-in status bar blocks -- replaces the dwmblocks binary (custom, not a suckless patch)                                                                       |
-| `osd.c` / `.h`           | Volume/brightness/mic on-screen-display popup (custom, not a suckless patch)                                                                                     |
+| `osd.c` / `.h`           | Volume/brightness/mic/keyboard-backlight on-screen-display popup (custom, not a suckless patch)                                                                  |
+| `mediaosd.c` / `.h`      | Media-player on-screen-display popup (title/artist/art/progress via the external `mediactl` script, custom, not a suckless patch)                                |
 | `notifications.c` / `.h` | Standalone `org.freedesktop.Notifications` DBus server -- popups, history, DND (custom, not a suckless patch)                                                    |
 | `movestack.c` / `.h`     | Implementation of the `movestack` patch -- its own translation unit, declared in `keys[]` via `#include "movestack.h"` in `config.h`                             |
 | `drw.c` / `drw.h`        | Drawing primitives (the "drw" library) -- fonts, colors, the status bar surface                                                                                  |
 | `util.c` / `util.h`      | Small helpers (`die()`, `ecalloc()`, the `LENGTH()`/`MAX()`/`MIN()` macros)                                                                                      |
 | `transient.c`            | Transient-window handling helper, `#include`d where needed                                                                                                       |
-| `theme.h`                | Central color palette -- named `CAL0`..`CAL15` + semantic aliases, `#include`d from `config.def.h`/`config.h`; the single file to edit to re-theme dwm            |
+| `theme.h`                | Central color palette -- named `CAL0`..`CAL15` + semantic aliases, `#include`d from `config.def.h`/`config.h`; the single file to edit to re-theme dwm           |
 | `config.def.h`           | Upstream default config -- **do not edit**, copy to `config.h` instead                                                                                           |
 | `config.h`               | Your actual config -- compiled directly into the binary                                                                                                          |
 | `config.mk`              | Build flags, install prefix, library paths                                                                                                                       |
@@ -88,11 +89,18 @@ losing your X session.
 void run(void) {
   while (running) {
     if (wallpaperupdate) { wallpaperupdate = 0; setrandomwallpaper(); }
+    if (wallpaperready) { /* drain the async loader's result queue -- see
+                           * "Wallpaper engine" below */ }
     if (fifofd >= 0) readfifo();
     statusbar_tick(); /* statusbar.c: reruns any block whose interval elapsed */
     osdtick();         /* osd.c: unmaps the popup once its timeout elapsed */
+    mediaosdtick();     /* mediaosd.c: drives the async status/art fetch state
+                          * machine forward and unmaps the popup on timeout --
+                          * see "Media OSD popup" below */
     notiftick();        /* notifications.c: pumps the dbus connection
                           * non-blockingly and expires timed-out popups */
+    cliptick();          /* clipboard.c: flushes a debounced history save --
+                          * see "Clipboard history" below */
     if (XPending(dpy)) {
       XNextEvent(dpy, &ev);
       handler[ev.type](&ev);
@@ -105,18 +113,20 @@ void run(void) {
 
 This is **not** a `select()`/`epoll()` loop — it's a busy-poll with a 10ms
 sleep when there's nothing to do. That's why adding new event sources (the
-wallpaper timer flag, the FIFO, the status blocks, the OSD auto-hide, and
-now the notification DBus connection) was just a matter of checking a
+wallpaper timer flag, the FIFO, the status blocks, the OSD auto-hide, the
+notification DBus connection, and now the media OSD's fetch state machine
+and the clipboard save debounce) was just a matter of checking a
 flag/fd/elapsed-time at the top of the loop rather than restructuring it.
 Latency for FIFO commands, signal-triggered wallpaper changes, block
-reruns, OSD hiding, and incoming DBus notifications is all bounded by that
-10ms tick. `statusbar_tick()` and `osdtick()` are both cheap on every
-iteration where nothing's actually due -- the former is a handful of
-`time(NULL)` comparisons, the latter one `clock_gettime()` comparison --
-and `notiftick()` is likewise cheap when idle: `dbus_connection_read_write_dispatch(conn, 0)`
-is non-blocking and returns immediately when there's nothing queued, so
-none of the three needed their own signal/timer plumbing the way the
-wallpaper rotation did.
+reruns, OSD hiding, incoming DBus notifications, media OSD updates, and
+clipboard persistence is all bounded by that 10ms tick. `statusbar_tick()`
+and `osdtick()` are both cheap on every iteration where nothing's actually
+due -- the former is a handful of `time(NULL)` comparisons, the latter one
+`clock_gettime()` comparison -- and `notiftick()`/`cliptick()` are likewise
+cheap when idle (a non-blocking dbus dispatch call and a `time(NULL)`
+comparison, respectively). `mediaosdtick()` is a little more involved when
+a fetch is actually in flight (see "Media OSD popup" below), but each call
+is still a single non-blocking `read()` attempt -- never a wait.
 
 `handler[]` is a lookup table indexed by X11 event type (`ButtonPress`,
 `KeyPress`, `PropertyNotify`, etc.) mapping to the function that handles
@@ -290,22 +300,56 @@ ceiling, not a tunable.
 
 Functions: `osdsetup()`, `osdcleanup()`, `osdtrigger()`, `osdtick()` are
 the public surface (declared in `osd.h`); `runargv_wait()`,
-`runargv_getint()`, `osdpaint()` are `static` inside `osd.c`.
+`runargv_getint()`, `osdpaint()`, `osd_vol_fastget()`, `osd_bri_fastget()`,
+`osd_mic_fastget()`, `osd_kbd_fastget()`, `find_kbd_backlight_dir()` are
+`static` inside `osd.c`.
 
 - `osds[]` (`config.h`) is an array of `{label, changecmd, getcmd,
-blockidx}`. `changecmd`/`getcmd` are `NULL`-terminated argv arrays
-  (exec'd directly via `fork()`+`execvp()`, no shell) rather than the
-  shell-string commands `statusblocks[]` uses — this fires on every
-  repeat of a held-down volume key, so skipping `sh -c` matters more here
-  than it does for a once-every-15-seconds clock block.
+blockidx, fastget}` (`OsdItem`, `osd.h`). `changecmd`/`getcmd` are
+  `NULL`-terminated argv arrays (exec'd directly via `fork()`+`execvp()`,
+  no shell) rather than the shell-string commands `statusblocks[]` uses --
+  this fires on every repeat of a held-down volume/brightness/kbd key, so
+  skipping `sh -c` matters more here than it does for a once-every-15-
+  seconds clock block.
 - `osdtrigger(arg)` (`arg->i` = index into `osds[]`, bound directly in
   `keys[]`) runs `changecmd` via `runargv_wait()` (fork, `execvp`,
-  `waitpid` — blocks the event loop for the duration, which in practice
-  is sub-tens-of-ms for something like `amixer`/a thin wrapper script),
-  then reads `getcmd`'s stdout back as an int via `runargv_getint()` (a
-  `pipe()` + the same fork/exec/wait shape), then calls `osdpaint()`. If
-  `o->blockidx >= 0`, it also calls `statusbar_refresh()` for that index
-  so the bar doesn't visibly lag a beat behind the popup.
+  `waitpid` -- blocks the event loop for the duration, which in practice
+  is sub-tens-of-ms for something like `sysctl`), then determines the
+  level for the popup's bar one of two ways:
+  - **`fastget` set (vol/bri/mic/kbd all have one).** Calls
+    `o->fastget(&level, text, sizeof(text))` directly -- a plain C
+    function reading straight from `wpctl`'s cached state or the relevant
+    sysfs file (`osd_bri_fastget()`/`osd_kbd_fastget()` read
+    `/sys/class/backlight/*`/`/sys/class/leds/*kbd*` directly), with
+    **zero forks**. `text` is also written straight into the matching
+    `statusblocks[]` entry via `statusbar_setblock()` when `blockidx >=
+0`, so the fast path updates the bar too without a `getcmd`/
+    `statusbar_refresh()` round-trip. Returning `-1` (e.g. the sysfs path
+    isn't found) falls back to the `getcmd` path below for that one
+    trigger, so a missing fastget dependency degrades gracefully instead
+    of breaking the OSD.
+  - **`fastget` NULL, or it returned -1.** Reads `getcmd`'s stdout back as
+    an int via `runargv_getint()` (a `pipe()` + the same fork/exec/wait
+    shape as `runargv_wait()`), then if `o->blockidx >= 0` calls
+    `statusbar_refresh()` for that index so the bar doesn't visibly lag a
+    beat behind the popup.
+
+  Either way `osdpaint()` is called last with whatever level/text was
+  resolved.
+
+- `find_kbd_backlight_dir()` scans `/sys/class/leds/*` for a name
+  containing `kbd`/`keyboard` (checking both `brightness` and
+  `max_brightness` exist before accepting a match), falling back to a
+  short list of known exact names (`kbd_backlight`,
+  `platform::kbd_backlight`, `tpacpi::kbd_backlight`,
+  `dell::kbd_backlight`). Caches the result after the first call. **This
+  detection logic is intentionally duplicated three times** --
+  `find_kbd_device()` in `sysctl` (the shell script that actually writes
+  the brightness), `_kbd_backlight_dir()` in `sysstats` (the bar's
+  `kbd`/`kbd_raw` blocks), and this one -- because two are shell and one
+  is C. All three need to agree on the same device, or the OSD popup can
+  end up unable to _read_ a level that `sysctl`/`sysstats` can still
+  _write_. If you ever touch the matching rules, update all three.
 - `osdpaint()` draws directly into `osddrw` — a **separate** `Drw`
   context from the bar's (`drw` in `dwm.c`), created once in `osdsetup()`
   with its own font set loaded from `fonts[]`/`fontslen` (given external
@@ -329,6 +373,79 @@ blockidx}`. `changecmd`/`getcmd` are `NULL`-terminated argv arrays
   shouldn't jump if the system clock does.
 - `osdcleanup()` (`cleanup()`, `dwm.c`) frees `osddrw` and destroys the
   popup window on exit/restart.
+
+## Media OSD popup (`mediaosd.c` / `mediaosd.h`, custom, not a suckless patch)
+
+Functions: `mediaosdsetup()`, `mediaosdcleanup()`, `mediaosdtrigger()`,
+`mediaosdtick()` are the public surface (declared in `mediaosd.h`);
+`parsestate()`, `mediaosdpaint()`, `mediaosd_drawart()`,
+`mosd_start_fetch()`, `mosd_poll_child()`, `mosd_reap_fetch()`,
+`mosd_reap_zombie()`, `mosd_finish_and_paint()` are `static` inside
+`mediaosd.c`.
+
+Shows the current track (title/artist/album, play/pause icon, a progress
+bar, and album art when available) via the external `mediactl` script,
+same `changecmd`/`getcmd`-style argv-array philosophy as the OSD above --
+but unlike `osd.c`'s `runargv_wait()`, **nothing here ever blocks the
+event loop waiting on a child process**, because a `mediactl status`/`art`
+call can be slow in a way volume/brightness controls never are (a cold
+`playerctl` D-Bus round-trip, or -- for `art` -- a network fetch for a
+remote cover image if the player doesn't cache one locally). An earlier
+version of this file did use a blocking `runargv_getline()` here, the same
+shape as `osd.c`'s; it was replaced with the state machine below
+specifically because that fetch is the slow one.
+
+- **The fetch is a small non-blocking state machine**, not a blocking
+  call: `MosdStage` is `MOSD_IDLE` / `MOSD_FETCH_STATUS` /
+  `MOSD_FETCH_ART`. `mosd_start_fetch(argv, stage)` forks+execs with the
+  child's stdout piped back through a fd set `O_NONBLOCK` via `fcntl()`,
+  records the pid/fd/start-time in static state, and returns immediately
+  -- it does not wait for the child at all. `mosd_poll_child()`, called
+  from `mediaosdtick()` every `run()` iteration whenever `mosdstage !=
+MOSD_IDLE`, does exactly one non-blocking `read()` attempt per call:
+  `EAGAIN`/`EWOULDBLOCK` means "nothing yet, try again next tick" and
+  returns immediately (this is the whole point -- a call here costs a
+  fraction of a millisecond even while a multi-hundred-millisecond fetch
+  is still running in the background); EOF means the child is done
+  writing, so it reaps the child and advances the chain.
+- **The chain**: a real trigger (`mediaosdtrigger()`, bound to a media
+  key) starts `MOSD_FETCH_STATUS` with `mosdpendingfetchart = 1`. Once
+  that completes and parses as a non-idle track, it starts
+  `MOSD_FETCH_ART` (`mediactl art`) before finally painting. The
+  once-a-second background poll (from `mediaosdtick()`, while the popup
+  is already visible, mirroring `MOSD_POLL_MS`) sets
+  `mosdpendingfetchart = 0` instead, so it re-checks status/progress
+  without re-fetching art every second -- `lastart` (the art path from
+  the last real trigger) is reused. `mosdpendingistrigger` tracks which
+  kind of chain is in flight so only a real trigger's completion resets
+  `mosdshownat`/`mosdpolledat` (the popup's shown/timeout clock) -- a
+  background poll landing shouldn't restart the countdown.
+- **Timeout safety net**: `MOSD_FETCH_TIMEOUT_MS` (5000) is checked at
+  the top of every `mosd_poll_child()` call against
+  `mosdfetchstarted`. If a child hasn't produced EOF by then (a genuinely
+  stalled network fetch, say), it's `SIGKILL`'d and abandoned rather than
+  leaving the state machine stuck indefinitely -- the popup just falls
+  back to whatever it last painted.
+- **Reaping never blocks either.** `mosd_reap_fetch()` uses
+  `waitpid(pid, NULL, WNOHANG)`; on the very rare chance the child's
+  stdout hit EOF fractionally before the child itself fully exited, the
+  pid is stashed in `mosdzombiepid` and `mosd_reap_zombie()` (called at
+  the top of every `mediaosdtick()`, unconditionally) retries the
+  non-blocking `waitpid()` on later ticks until it succeeds -- so no
+  zombie accumulates and nothing ever waits.
+- `mediaosdtick()` drives the fetch machine _before_ checking
+  `mosdvisible`/the timeout, since a fresh trigger's chain hasn't painted
+  (and therefore hasn't set `mosdvisible`) yet when the first tick after
+  `mediaosdtrigger()` runs.
+- `mediaosdcleanup()` (`cleanup()`, `dwm.c`) additionally `SIGKILL`s and
+  reaps any in-flight or not-yet-reaped child before tearing down the
+  window/`Drw`, so restarting/quitting dwm mid-fetch doesn't leak a
+  process.
+- `parsestate()` splits `mediactl`'s tab-separated 9-field line (see
+  `mediactl`'s own `get_state()`) by hand with `strchr(p, '\t')` per
+  field rather than `sscanf()`, since field values (titles, artist names)
+  can contain arbitrary characters `sscanf("%s")` would mis-split on;
+  `progress` is the one numeric field, read with a plain `atoi()`.
 
 ## Notifications (`notifications.c` / `notifications.h`, custom, not a suckless patch)
 
@@ -383,7 +500,28 @@ uses.
 - Popups are laid out top-to-bottom from the top-right corner of `selmon`
   by `notif_relayout()`, called whenever a popup is shown or dismissed --
   slots are reused in place rather than creating/destroying windows on
-  the common path. Border color reuses the bar's existing `scheme[]`
+  the common path. Each popup stacks using its own `height` (see next
+  bullet), not a single shared value, so a tall wrapped body correctly
+  pushes the next popup further down.
+- **Word-wrap.** `wrap_text()` greedily wraps `p->body` at word
+  boundaries to fit `NOTIF_W`'s text column, using the same
+  `drw_fontset_getwidth()` measurement the rest of the file already
+  relies on. `fill_popup()` computes this once per notification (not on
+  every repaint -- an `Expose` just redraws the cached
+  `p->bodylines[]`/`p->nbodylines`) and resizes that popup's window
+  (`XResizeWindow()` + `drw_resize()`) to fit however many lines that
+  took, up to `NOTIF_BODY_MAXLINES` (4); text past that is truncated with
+  a trailing `...` on the last line rather than silently dropped. The
+  history overlay (`notif_hist_paint()`) wraps the same way into a
+  smaller, fixed budget (`NOTIF_HIST_BODY_MAXLINES`, 2) since its row
+  height isn't per-row dynamic the way a toast's window is. Before this,
+  the body was drawn as a single line with the clamp box set to the
+  text's own measured width, which meant `drw_text()`'s ellipsis-clamp
+  never actually triggered -- long bodies just overflowed past the
+  window edge instead of being cut off cleanly; that's fixed as a side
+  effect of routing everything through `wrap_text()`'s width-aware
+  layout instead.
+- Border color reuses the bar's existing `scheme[]`
   entries by urgency (`SchemeUrg` for critical, `SchemeSel` for normal,
   `SchemeHid` for low) rather than introducing a parallel color config.
 - Click handling: `dwm.c`'s `buttonpress()`/`expose()` each call
@@ -583,15 +721,15 @@ from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
 ## Clipboard history (`clipboard.c` / `clipboard.h`, custom, not a suckless patch)
 
 Functions: `clipboardsetup()`, `clipboardcleanup()`, `clipboardselectionnotify()`,
-`clipboardfixesnotify()`, `clippick()`, `clippin()`, `clipclear()` are the
-public surface (declared in `clipboard.h`, called from `dwm.c`'s
-`setup()`/`cleanup()`/`handler[]`/`run()` and from `ipc.c`'s `fifocmds[]`
-table); everything else (`clipboardpush()`, `cliptrim()`, `savehistory()`/
-`loadhistory()`, `runargv_io()`, `copytextclip()`, `clipappendline()`,
-`cliplistmove()`) is `static` inside `clipboard.c`.
+`clipboardfixesnotify()`, `clippick()`, `clippin()`, `clipclear()`,
+`cliptick()` are the public surface (declared in `clipboard.h`, called
+from `dwm.c`'s `setup()`/`cleanup()`/`handler[]`/`run()` and from `ipc.c`'s
+`fifocmds[]` table); everything else (`clipboardpush()`, `cliptrim()`,
+`savehistory()`/`loadhistory()`, `runargv_io()`, `copytextclip()`,
+`clipappendline()`, `cliplistmove()`) is `static` inside `clipboard.c`.
 
 Same reasoning as `screenshot.c`'s clipboard writes (see above): dwm
-never implements ICCCM selection ownership itself. It only *watches*
+never implements ICCCM selection ownership itself. It only _watches_
 `CLIPBOARD` (via the XFixes extension) and, when you pick a history
 entry, hands the text to `xclip` over a pipe -- same fork/exec shape as
 `screenshot.c`'s `copytextclip()`, just parameterized on length instead
@@ -618,7 +756,7 @@ clipboard manager has to deal with.
 - `clipboardfixesnotify()` is what that dispatch calls. It checks the
   event is for `CLIPBOARD` and a real ownership change (not a
   destroy/close), then calls `XConvertSelection()` targeting
-  `UTF8_STRING` onto `clipwin`'s property -- this is a *request*, not
+  `UTF8_STRING` onto `clipwin`'s property -- this is a _request_, not
   the data itself.
 - `clipboardselectionnotify()` **is** wired into `handler[]` directly
   (under `SelectionNotify`, a fixed core-protocol event type, unlike
@@ -639,12 +777,12 @@ clipboard manager has to deal with.
   tail -- an O(n) walk, cheap at these caps) whenever either list
   exceeds its cap; pinned entries are never evicted by unpinned growth
   and vice versa.
-- `lastentry` -- the single most recently *captured* entry, whichever
+- `lastentry` -- the single most recently _captured_ entry, whichever
   list it's currently sitting in. It's set to the head of `history` at
   every push, and `clippin()`/`cliplistmove()` relocate it (in place,
   no realloc) between list heads without ever invalidating the
   pointer. This works because of an invariant `cliplistmove()` asserts
-  defensively: `lastentry` is *always* the head of whichever list it's
+  defensively: `lastentry` is _always_ the head of whichever list it's
   in when `clippin()` runs, since only a fresh push (always to
   `history`'s head) or a prior pin/unpin toggle (always to the other
   list's head) can have put it there.
@@ -664,19 +802,39 @@ clipboard manager has to deal with.
   file not being line-oriented in the usual sense. Written to (and read
   from) `$XDG_CACHE_HOME/dwm/clipboard_history`, falling back to
   `~/.cache/dwm/` the same way `screenshot.c`'s path helper falls back
-  for `~/Pictures/Screenshots/`. `savehistory()` is called after every
-  push/pin/clear rather than only at `clipboardcleanup()` time, since
-  an unclean shutdown (crash, `kill -9`) shouldn't lose history.
+  for `~/Pictures/Screenshots/`.
+- **Debounced saves.** `savehistory()` rewrites the _entire_ file from
+  scratch every time (it's the length-prefixed format above written out
+  in full, not an append) -- fine for the low-frequency, user-initiated
+  callers (`clippin()`, `clipclear()`, `clipboardcleanup()`, all of which
+  still call it directly and immediately), but `clipboardpush()` fires on
+  every clipboard change, and a burst of rapid copies would otherwise
+  mean a full-history disk rewrite per copy. `clipboardpush()` instead
+  just sets `clipdirty = 1` and stamps `clipdirtysince`; `cliptick()`
+  (called from `run()`, same as `statusbar_tick()` etc. -- see "The event
+  loop" above) flushes the real `savehistory()` once
+  `CLIP_SAVE_DEBOUNCE_SEC` (2) seconds have passed with no further
+  change. `clipboardcleanup()` always flushes unconditionally on
+  shutdown regardless of `clipdirty`, so a normal quit/restart never
+  loses anything -- the debounce window only matters for an _unclean_
+  shutdown (crash, `kill -9`) landing within those ~2 seconds, in which
+  case whatever was copied most recently within that window can be lost.
+  `clippin()`/`clipclear()` deliberately stayed as immediate,
+  non-debounced writes: both are rare enough that batching them buys
+  nothing, and `clipclear()` specifically should persist right away --
+  debouncing a "clear my history" action would mean the cleared (and
+  possibly sensitive) data could still be sitting on disk if the machine
+  crashed inside the debounce window.
 - `clippick()` builds a `dmenu`-formatted menu string (pinned entries
   first, then history, each line `"<index> <pin-marker><preview>"`)
   alongside a parallel `ClipEntry*` index array in the same emission
   order, then calls `runargv_io()` -- a local bidirectional-pipe helper
-  (own copy, same shape as `osd.c`'s/`mediaosd.c`'s already-duplicated
-  `runargv_getline()`) that writes the menu to `dmenu`'s stdin, closes
+  (own copy, same fork/pipe shape as `osd.c`'s `runargv_wait()`/
+  `runargv_getint()`) that writes the menu to `dmenu`'s stdin, closes
   it (so `dmenu` sees EOF and knows the list is complete), then reads
   one line back from its stdout. The chosen line's leading integer is
   parsed with `sscanf()` and used to index back into the array --
-  recovering the *full*, untruncated entry even though the preview
+  recovering the _full_, untruncated entry even though the preview
   shown in `dmenu` was truncated to `CLIP_PREVIEW_LEN` (100) bytes.
   Preview truncation is byte-based, not UTF-8-aware, so a multi-byte
   character can render oddly at the tail of a long line -- cosmetic

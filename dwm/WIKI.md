@@ -72,7 +72,7 @@ defines the palette two ways:
   projects can be kept in sync from one mental model.
 - Semantic aliases (`THEME_BACKGROUND`, `THEME_TEXT`, `THEME_ACCENT`,
   etc.) — prefer these over the raw `CAL*` names in new code, since they
-  describe *role* rather than palette index.
+  describe _role_ rather than palette index.
 
 A handful of accents (`THEME_SEL_BORDER`, `THEME_HID_FG`, `THEME_HID_BG`,
 `THEME_URG_FG`) live outside the shared 16-color set — dwm needs a couple
@@ -150,38 +150,49 @@ const int statusleaddelim = 0;      /* 1 = print statusdelim before the first bl
 const int statustraildelim = 0;     /* 1 = print statusdelim after the last block too */
 
 static const StatusBlock statusblocks[] = {
-    /* icon  cmd                      interval(s) */
-    {"", "mediactl state-title", 0},  /* refreshed by a track-change hook */
-    {"", "sysstats kernel", 300},
-    {"", "sysstats cpu", 3},
-    {"", "sysstats gpu", 3},
-    {"", "sysstats mem", 5},
-    {"", "sysstats disk", 10},
-    {"", "sysstats brightness", 0},   /* refreshed by the OSD, see below */
+    /* icon  cmd                                        interval(s) */
+    {"", "mediactl state-title", 0},   /* refreshed by a track-change hook */
     {"", "<battery, hides on empty/N/A/No/Not/0%>", 15},
+    {"", "<kbd backlight, hides on empty/N/A>", 0},     /* refreshed by the OSD, see below */
+    {"", "sysstats brightness", 0},                     /* refreshed by the OSD, see below */
     {"", "<ethernet, hides unless Connected>", 15},
     {"", "<wifi, hides unless connected or ethernet is down>", 15},
     {"", "<tailscale, hides unless Connected>", 30},
-    {"", "sysstats microphone", 0},   /* refreshed by the OSD, see below */
-    {"", "sysstats volume", 0},       /* refreshed by the OSD, see below */
+    {"", "sysstats microphone", 0},                     /* refreshed by the OSD, see below */
+    {"", "sysstats volume", 0},                         /* refreshed by the OSD, see below */
     {"", "sysstats date_time", 30},
-    {"", "", 0},                      /* notifications -- pushed by
+    {"", "", 0},                       /* notifications -- pushed by
                                        * notifications.c directly, no
                                        * command to run; see
                                        * "Notifications" below */
 };
 ```
 
-The three network rows and the battery row above are shortened to their
-intent here — see `config.h` for the actual `case`-guarded shell one-liners
-each one runs, and the syspill hide-rule comment directly above
-`statusblocks[]` in `config.h` for exactly what each guard matches on
-(ported from the Quickshell bar's `shell.qml`, cross-checked against the
-real `sysstats` script's wording). This order also isn't arbitrary: it
-mirrors the Quickshell bar's `statsRow` layout left-to-right (kernel/cpu/
-gpu, then mem/disk, then brightness/battery, then ethernet/wifi/
-tailscale, then mic/volume), with the media block first and the clock
-last, so the two bars read the same way if you're switching between them.
+The battery, kbd, ethernet, wifi, and tailscale rows above are shortened
+to their intent here — see `config.h` for the actual `export
+BLOCK_BUTTON; ... case`-guarded shell one-liners each one runs, and the
+hide-rule comment directly above `statusblocks[]` in `config.h` for
+exactly what each guard matches on. This order isn't arbitrary: media
+first, then battery/kbd/brightness (things about the machine itself),
+then the three network rows, then mic/volume, then the clock, with
+notifications last.
+
+**The `export BLOCK_BUTTON;` prefix matters if you write your own
+compound command.** `statusbar_handleclick()` (see "Mouse bindings"
+below) reruns a clicked block's `cmd` with `BLOCK_BUTTON=N` prefixed onto
+the whole shell string. For a simple command like `sysstats volume`
+that's all that's needed — the prefix lands directly in that command's
+environment. But for a compound command starting with an assignment,
+like `o=$(sysstats battery); case ...`, a bash prefix assignment on an
+assignment-only statement sets it as a plain (non-exported) shell
+variable for the _rest of that script_, not as an environment variable
+for the `sysstats battery` call inside the `$(...)` — so without
+`export BLOCK_BUTTON;` as an explicit first statement, `$BLOCK_BUTTON`
+never actually reaches the script your `cmd` invokes, and any click
+handling inside it (see `handle_block_click()` in `sysstats`) silently
+never fires. Every compound block above that needs click handling
+(`battery`/`kbd`/`ethernet`/`wifi`/`tail`) does this already; copy that
+pattern if you add a new one.
 
 This replaces the old dwmblocks binary — there's nothing external to
 install or autostart anymore, the bar builds its own text in-process. The
@@ -242,66 +253,82 @@ cap of 31 blocks.
 ```c
 enum {
   OsdVolUp, OsdVolDown, OsdVolToggle,
-  OsdBriUp, OsdBriDown,
-  OsdMicUp, OsdMicDown, OsdMicToggle
+  OsdBriUp, OsdBriDown, OsdBriToggle,
+  OsdMicUp, OsdMicDown, OsdMicToggle,
+  OsdKbdUp, OsdKbdDown, OsdKbdToggle
 };
 
-static const OsdItem osds[] = {
-    /* label  changecmd       getcmd      statusblocks[] index (-1 = none) */
-    {"VOL", volupcmd,     volgetcmd, 12},  /* statusblocks[12] = "sysstats volume" */
-    {"VOL", voldowncmd,   volgetcmd, 12},
-    {"VOL", voltogglecmd, volgetcmd, 12},
-    {"BRI", briupcmd,     brigetcmd, -1},  /* brightness has a pill at
-                                            * statusblocks[6], but fastget
-                                            * already keeps it in sync
-                                            * without a rebuild(), so this
-                                            * is left at -1 -- see the
-                                            * comment above osds[] in
-                                            * config.h */
-    {"BRI", bridowncmd,   brigetcmd, -1},
-    {"MIC", micupcmd,     micgetcmd, -1},
-    {"MIC", micdowncmd,   micgetcmd, -1},
-    {"MIC", mictogglecmd, micgetcmd, -1},
+const OsdItem osds[] = {
+    // label  changecmd      getcmd      blockidx  fastget
+    {"VOL", volupcmd,     volgetcmd, 7, osd_vol_fastget},
+    {"VOL", voldowncmd,   volgetcmd, 7, osd_vol_fastget},
+    {"VOL", voltogglecmd, volgetcmd, 7, osd_vol_fastget},
+    {"BRI", briupcmd,     brigetcmd, 3, osd_bri_fastget},
+    {"BRI", bridowncmd,   brigetcmd, 3, osd_bri_fastget},
+    {"BRI", britogglecmd, brigetcmd, 3, osd_bri_fastget},
+    {"MIC", micupcmd,     micgetcmd, 6, osd_mic_fastget},
+    {"MIC", micdowncmd,   micgetcmd, 6, osd_mic_fastget},
+    {"MIC", mictogglecmd, micgetcmd, 6, osd_mic_fastget},
+    {"KBD", kbdupcmd,     kbdgetcmd, 2, osd_kbd_fastget},
+    {"KBD", kbddowncmd,   kbdgetcmd, 2, osd_kbd_fastget},
+    {"KBD", kbdtogglecmd, kbdgetcmd, 2, osd_kbd_fastget},
 };
 ```
 
 A small popup (bottom-center of the screen) that flashes a label and a
 percentage bar for ~1.2s whenever you raise/lower/toggle volume,
-brightness, or mic. Each `osds[]` row is `{label, changecmd, getcmd,
-blockidx}`:
+brightness, mic, or keyboard backlight. Each `osds[]` row is `{label,
+changecmd, getcmd, blockidx, fastget}`:
 
-- `label` — short text shown in the popup, e.g. `"VOL"`.
-- `changecmd` — argv array run first (the thing that actually raises/
+- `label` -- short text shown in the popup, e.g. `"VOL"`.
+- `changecmd` -- argv array run first (the thing that actually raises/
   lowers/toggles the value).
-- `getcmd` — argv array run afterward; its stdout must be a bare integer
-  0–100 (no `%`, no units) for the level bar. Pass `NULL` to skip the bar
-  and just flash the label.
-- `blockidx` — index into `statusblocks[]` above to refresh immediately
+- `getcmd` -- argv array fallback for reading the level back, used only
+  if `fastget` is `NULL` or returns `-1`. Its stdout must be a bare
+  integer 0-100 (no `%`, no units) for the level bar.
+- `blockidx` -- index into `statusblocks[]` above to refresh immediately
   afterward, so the bar doesn't lag a beat behind the popup, or `-1` if
-  nothing in the bar mirrors this control.
+  nothing in the bar mirrors this control. All four controls here have a
+  real bar block, so all four use one.
+- `fastget` -- an optional C function (`int fn(int *level, char *text,
+size_t textsz)`) that reads the current level directly instead of
+  forking `getcmd` at all: `osd_vol_fastget`/`osd_mic_fastget` run a
+  single `wpctl get-volume` (no shell, no wrapper script), and
+  `osd_bri_fastget`/`osd_kbd_fastget` read straight from the relevant
+  `/sys/class/backlight`/`/sys/class/leds` file with **zero forks**. When
+  `blockidx >= 0` and `fastget` succeeds, it also writes straight into
+  that bar block, skipping a separate `statusbar_refresh()` round-trip.
+  Pass `NULL` here to always use the `getcmd` fallback instead.
 
 Both `changecmd` and `getcmd` are plain argv arrays (`{"sysctl", "vol",
-"-i", "5", NULL}`), not shell strings — no shell is invoked, so no
+"-i", "5", NULL}`), not shell strings -- no shell is invoked, so no
 quoting/pipes, but also no per-keypress `sh -c` overhead, which matters
 since these fire on every repeat of a held-down key.
 
-The `enum` above just gives the array indices readable names —
+The `enum` above just gives the array indices readable names --
 `keys[]` binds each control with `{.i = OsdVolUp}` etc.:
 
-| Key                                                | Action          |
-| -------------------------------------------------- | --------------- |
-| `MODKEY+ALT+Up` / `XF86AudioRaiseVolume`           | Volume up       |
-| `MODKEY+ALT+Down` / `XF86AudioLowerVolume`         | Volume down     |
-| `MODKEY+ALT+m` / `XF86AudioMute`                   | Volume toggle   |
-| `XF86MonBrightnessUp`                              | Brightness up   |
-| `XF86MonBrightnessDown`                            | Brightness down |
-| `MODKEY+SHIFT+Up` / `SHIFT+XF86AudioRaiseVolume`   | Mic up          |
-| `MODKEY+SHIFT+Down` / `SHIFT+XF86AudioLowerVolume` | Mic down        |
-| `MODKEY+SHIFT+m` / `XF86AudioMicMute`              | Mic toggle      |
+| Key                                                | Action                  |
+| -------------------------------------------------- | ----------------------- |
+| `MODKEY+ALT+Up` / `XF86AudioRaiseVolume`           | Volume up               |
+| `MODKEY+ALT+Down` / `XF86AudioLowerVolume`         | Volume down             |
+| `MODKEY+ALT+m` / `XF86AudioMute`                   | Volume toggle           |
+| `XF86MonBrightnessUp`                              | Brightness up           |
+| `XF86MonBrightnessDown`                            | Brightness down         |
+| `MODKEY+SHIFT+Up` / `SHIFT+XF86AudioRaiseVolume`   | Mic up                  |
+| `MODKEY+SHIFT+Down` / `SHIFT+XF86AudioLowerVolume` | Mic down                |
+| `MODKEY+SHIFT+m` / `XF86AudioMicMute`              | Mic toggle              |
+| `CTRL+XF86MonBrightnessUp`                         | Keyboard backlight up   |
+| `CTRL+XF86MonBrightnessDown`                       | Keyboard backlight down |
+
+`OsdBriToggle` and `OsdKbdToggle` (indices 5 and 11) are in the array but
+have no keybind at all -- the only ways to reach them are the FIFO
+(below) or clicking the brightness/`kbd` bar block directly (see "Status
+bar blocks" above and the click table in "Mouse bindings" below).
 
 The popup's size, position, and timeout are `#define`s at the top of
 `osd.c` (`OSD_W`/`OSD_WIN_H`/`OSD_MARGIN_BOTTOM`/`OSD_TIMEOUT_MS`) rather
-than `config.h` values — edit those directly and rebuild if you want a
+than `config.h` values -- edit those directly and rebuild if you want a
 different size/position/duration.
 
 Can also be triggered outside a keybind via the FIFO: `echo "osd 2" >
@@ -310,7 +337,7 @@ Can also be triggered outside a keybind via the FIFO: `echo "osd 2" >
 ## Notifications
 
 ```c
-const int notifblockidx = 14; /* index into statusblocks[] of the
+const int notifblockidx = 10; /* index into statusblocks[] of the
                                 * notification bell/count -- see
                                 * "Status bar blocks" above */
 ```
@@ -326,6 +353,11 @@ corner of the focused monitor and stack as more arrive.
   close it once whatever needed attention is resolved) — unless the
   sender explicitly requested a different timeout, which is always
   honored.
+- **Word-wrap.** A notification's body wraps to fit the popup's width (up
+  to 4 lines) instead of being cut off at one line, and the popup grows
+  taller to fit — other stacked popups shift down to make room. The
+  history overlay wraps the same way, into a smaller fixed 2-line budget
+  per entry. A body longer than that is truncated with a trailing `...`.
 - **Clicking a popup.** Left-click invokes the notification's default
   action (if the sending app provided one) and dismisses it; any other
   button just dismisses it.
@@ -556,11 +588,11 @@ of an image thumbnail.
 
 ## Clipboard
 
-| Key                          | Action                                    |
-| ----------------------------- | ------------------------------------------ |
-| `MODKEY+SHIFT+c`             | Open clipboard history in dmenu           |
-| `MODKEY+CTRL+c`               | Pin/unpin the most recently copied entry  |
-| `MODKEY+SHIFT+CTRL+c`         | Clear unpinned history (pinned entries kept) |
+| Key                   | Action                                       |
+| --------------------- | -------------------------------------------- |
+| `MODKEY+SHIFT+c`      | Open clipboard history in dmenu              |
+| `MODKEY+CTRL+c`       | Pin/unpin the most recently copied entry     |
+| `MODKEY+SHIFT+CTRL+c` | Clear unpinned history (pinned entries kept) |
 
 dwm watches the `CLIPBOARD` selection itself (via the XFixes extension)
 and keeps a history of up to 200 unpinned + 100 pinned entries, persisted
@@ -569,10 +601,18 @@ entry runs it through `xclip` the same way screenshots/colorpicker copy
 their output — dwm never becomes the clipboard's long-term owner itself,
 it only watches and, on pick, hands text off to `xclip`.
 
-Pinning always acts on whatever you *most recently copied* (whether it's
+Pinning always acts on whatever you _most recently copied_ (whether it's
 already pinned or not) rather than needing you to locate it in the
 picker first — copy something, then `MODKEY+CTRL+c` immediately if you
 want to keep it around past the unpinned cap.
+
+History saves to disk are debounced by ~2 seconds — copying rapidly
+doesn't mean a disk write per copy, just one write ~2s after you stop.
+Pinning, clearing, and a normal quit/restart of dwm all still flush
+immediately and unconditionally, so the debounce window only matters for
+an unclean shutdown (crash, `kill -9`) landing within those 2 seconds,
+in which case whatever you copied most recently in that window can be
+lost.
 
 This replaces the older `"clip daemon"` + `clip select` script pair —
 see "Autostart" below.
@@ -600,6 +640,38 @@ What actually happens is entirely up to that command — see "Status bar
 blocks" above for the current block list. Clicks that land outside any
 block's region are ignored (`statussig` stays `0`, which is never a valid
 block index — see `DOCS.md` for why).
+
+The blocks that actually do something with `$BLOCK_BUTTON` (in
+`sysstats`' `handle_block_click()`):
+
+| Block              | Button         | Action                                                          |
+| ------------------ | -------------- | --------------------------------------------------------------- |
+| Volume             | Left           | Mute toggle                                                     |
+| Volume             | Right          | Open the wiremix mixer scratchpad                               |
+| Volume             | Scroll up/down | +5% / -5%                                                       |
+| Brightness         | Left           | Toggle dim (10% ↔ 100%)                                         |
+| Brightness         | Scroll up/down | +5% / -5%                                                       |
+| Keyboard backlight | Left           | Toggle on/off                                                   |
+| Keyboard backlight | Scroll up/down | +10% / -10%                                                     |
+| Microphone         | Left           | Mute toggle                                                     |
+| Microphone         | Scroll up/down | +5% / -5%                                                       |
+| Wi-Fi              | Left           | Launch the `wifi` network-picker script                         |
+| Wi-Fi              | Right          | Notify: ping, interface, local + public IPv4, IPv6 if present   |
+| Ethernet           | Left           | Notify: ping, interface, local + public IPv4, IPv6 if present   |
+| Tailscale          | Left           | Notify: up/down, peer up/down counts, this device's tailnet IPs |
+| Battery            | Left           | Notify: charge state, time remaining/until full, health %       |
+
+The `wifi` script isn't part of this repo — it's expected to be
+whatever interactive network picker you already use (e.g. a rofi/dmenu
+wrapper around `nmcli`); the click just launches it detached (`setsid
+-f`) so the bar doesn't block waiting on it. The four "Notify" rows pop a
+notification through the same `notifications.c` popup system described
+above rather than printing anything to the bar itself. That popup now
+wraps long bodies (see "Notifications" → "Word-wrap"), but each of these
+four still packs several fields onto one line (ping, interface, IPs,
+etc.), so they're ordered most-important-field-first in case a
+particularly long value (a full IPv6 address, say) still pushes something
+off the end.
 
 ## FIFO commands (IPC)
 
