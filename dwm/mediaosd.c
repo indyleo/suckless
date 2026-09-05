@@ -14,7 +14,10 @@
  * stdout instead of just an int.
  */
 #include <Imlib2.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +54,11 @@ extern const int fontslen;
   1000 /* while visible, re-check `mediactl status`                            \
         * (cheap: no art re-fetch) this often so                               \
         * the progress bar keeps moving */
+#define MOSD_FETCH_TIMEOUT_MS                                                  \
+  5000 /* safety net: if a `mediactl status`/`art` child hasn't produced        \
+        * EOF by this long (e.g. a stalled network fetch for album art),       \
+        * give up on it and go back to idle rather than leaving the            \
+        * fetch state machine stuck forever */
 
 /* Same Nerd Font / Font Awesome codepoints as mediactl's ICON_* consts
  * (see the readonly ICON_PLAYING etc. lines near the top of mediactl) --
@@ -73,6 +81,10 @@ typedef struct {
   char progresstime[32]; /* "M:SS / M:SS", empty if unavailable */
 } MediaState;
 
+/* Forward declarations for functions defined later in this file */
+static void mediaosdpaint(const MediaState *st, const char *artpath);
+static int parsestate(const char *line, MediaState *st);
+
 static Window mosdwin;
 static Drw *mosddrw;
 static int mosdvisible;
@@ -81,21 +93,42 @@ static struct timespec mosdpolledat;
 static char lastart[1024]; /* art path from the last real trigger, reused
                             * by the cheap poll refreshes in between */
 
-/* Runs argv, waits for it, returns a pointer to a static buffer holding
- * its stdout with any trailing newline(s) stripped. Empty string on any
- * failure. Caller must copy out before the next call -- the buffer is
- * reused. */
-static char *runargv_getline(const char *const argv[]) {
-  static char buf[1200];
+/* Non-blocking fetch state machine -- see mosd_poll_child(). Replaces
+ * what used to be a synchronous fork+wait (runargv_getline()) called
+ * directly from mediaosdtrigger()/mediaosdtick(), which blocked dwm's
+ * whole event loop on every media key press (and, when fetching album
+ * art, potentially on a network round-trip) for as long as `mediactl`
+ * took to run. */
+typedef enum { MOSD_IDLE = 0, MOSD_FETCH_STATUS, MOSD_FETCH_ART } MosdStage;
+
+static MosdStage mosdstage = MOSD_IDLE;
+static pid_t mosdchildpid = -1;
+static pid_t mosdzombiepid = -1;
+static int mosdchildfd = -1;
+static char mosdchildbuf[1200];
+static size_t mosdchildlen;
+static struct timespec mosdfetchstarted;
+static int mosdpendingfetchart;  /* fetch art once the status fetch completes? */
+static int mosdpendingistrigger; /* did this chain start from a real trigger
+                                   * (vs. a background poll), i.e. should
+                                   * completing it reset the shown/timeout
+                                   * clock? */
+static MediaState mosdpendingstate; /* status parsed mid-chain; held until
+                                      * an art fetch (if any) completes */
+
+/* Starts argv running in the background with its stdout piped back
+ * through a non-blocking fd -- poll it via mosd_poll_child() on
+ * subsequent ticks instead of waiting for it here. Returns 1 if the
+ * child was started, 0 on a fork/pipe failure. */
+static int mosd_start_fetch(const char *const argv[], MosdStage stage) {
   int pipefd[2];
   pid_t pid;
-  ssize_t n, total = 0;
+  int flags;
 
-  buf[0] = '\0';
   if (!argv || !argv[0])
-    return buf;
+    return 0;
   if (pipe(pipefd) < 0)
-    return buf;
+    return 0;
   if ((pid = fork()) == 0) {
     close(pipefd[0]);
     dup2(pipefd[1], STDOUT_FILENO);
@@ -106,20 +139,143 @@ static char *runargv_getline(const char *const argv[]) {
   } else if (pid < 0) {
     close(pipefd[0]);
     close(pipefd[1]);
-    return buf;
+    return 0;
   }
   close(pipefd[1]);
-  while (total < (ssize_t)sizeof(buf) - 1 &&
-         (n = read(pipefd[0], buf + total, sizeof(buf) - 1 - total)) > 0)
-    total += n;
-  buf[total > 0 ? total : 0] = '\0';
-  close(pipefd[0]);
-  waitpid(pid, NULL, 0);
+  flags = fcntl(pipefd[0], F_GETFL, 0);
+  fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK);
 
-  while (total > 0 && (buf[total - 1] == '\n' || buf[total - 1] == '\r'))
-    buf[--total] = '\0';
+  mosdchildpid = pid;
+  mosdchildfd = pipefd[0];
+  mosdchildlen = 0;
+  mosdchildbuf[0] = '\0';
+  mosdstage = stage;
+  clock_gettime(CLOCK_MONOTONIC, &mosdfetchstarted);
+  return 1;
+}
 
-  return buf;
+/* Non-blocking opportunistic retry for a child whose stdout hit EOF
+ * before it had actually exited yet (rare for these short-lived CLI
+ * tools, but possible) -- avoids ever calling a blocking waitpid(). */
+static void mosd_reap_zombie(void) {
+  if (mosdzombiepid > 0 && waitpid(mosdzombiepid, NULL, WNOHANG) > 0)
+    mosdzombiepid = -1;
+}
+
+/* Closes the pipe, reaps (or defers to mosd_reap_zombie()) the child,
+ * strips trailing newlines, and returns the accumulated output. Never
+ * blocks. */
+static char *mosd_reap_fetch(void) {
+  if (mosdchildfd >= 0) {
+    close(mosdchildfd);
+    mosdchildfd = -1;
+  }
+  if (mosdchildpid > 0) {
+    if (waitpid(mosdchildpid, NULL, WNOHANG) <= 0)
+      mosdzombiepid = mosdchildpid;
+    mosdchildpid = -1;
+  }
+  mosdchildbuf[mosdchildlen] = '\0';
+  while (mosdchildlen > 0 && (mosdchildbuf[mosdchildlen - 1] == '\n' ||
+                              mosdchildbuf[mosdchildlen - 1] == '\r'))
+    mosdchildbuf[--mosdchildlen] = '\0';
+  return mosdchildbuf;
+}
+
+/* Paints (or, for an idle status, hides) using whatever the just-completed
+ * fetch chain produced, and returns the state machine to idle. Only a
+ * real (push) trigger's completion resets the shown/timeout clock --
+ * a background poll refresh shouldn't restart the popup's countdown. */
+static void mosd_finish_and_paint(void) {
+  if (mosdpendingistrigger) {
+    clock_gettime(CLOCK_MONOTONIC, &mosdshownat);
+    mosdpolledat = mosdshownat;
+  }
+  mediaosdpaint(&mosdpendingstate, lastart);
+  mosdstage = MOSD_IDLE;
+}
+
+/* Advances the fetch state machine by one non-blocking step. Safe to
+ * call every tick while mosdstage != MOSD_IDLE; does nothing until
+ * either the child's stdout hits EOF or MOSD_FETCH_TIMEOUT_MS elapses. */
+static void mosd_poll_child(void) {
+  static const char *const artargv[] = {"mediactl", "art", NULL};
+  struct timespec now;
+  long agems;
+  ssize_t n;
+  char *result;
+  MosdStage finishedstage;
+
+  if (mosdchildfd < 0) {
+    mosdstage = MOSD_IDLE;
+    return;
+  }
+
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  agems = (now.tv_sec - mosdfetchstarted.tv_sec) * 1000 +
+          (now.tv_nsec - mosdfetchstarted.tv_nsec) / 1000000;
+  if (agems >= MOSD_FETCH_TIMEOUT_MS) {
+    /* Stalled child (e.g. a hung network fetch for album art) -- give
+     * up on this fetch rather than leaving the state machine stuck.
+     * SIGKILL since we're not going to wait around for a graceful
+     * exit; mosd_reap_zombie() will pick up the corpse. */
+    if (mosdchildpid > 0)
+      kill(mosdchildpid, SIGKILL);
+    mosd_reap_fetch();
+    mosdstage = MOSD_IDLE;
+    return;
+  }
+
+  while (mosdchildlen < sizeof(mosdchildbuf) - 1) {
+    n = read(mosdchildfd, mosdchildbuf + mosdchildlen,
+             sizeof(mosdchildbuf) - 1 - mosdchildlen);
+    if (n > 0) {
+      mosdchildlen += n;
+      continue;
+    }
+    if (n == 0)
+      break; /* EOF: child is done writing */
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
+      return; /* nothing to read yet -- try again next tick */
+    break;    /* real error: treat like EOF with whatever we have */
+  }
+
+  finishedstage = mosdstage;
+  result = mosd_reap_fetch();
+
+  if (finishedstage == MOSD_FETCH_STATUS) {
+    if (!parsestate(result, &mosdpendingstate)) {
+      mosdstage = MOSD_IDLE;
+      return;
+    }
+    if (strcmp(mosdpendingstate.type, "idle") == 0) {
+      if (mosdvisible) {
+        XUnmapWindow(dpy, mosdwin);
+        mosdvisible = 0;
+      }
+      mosdstage = MOSD_IDLE;
+      return;
+    }
+    if (mosdpendingfetchart) {
+      if (!mosd_start_fetch(artargv, MOSD_FETCH_ART))
+        mosd_finish_and_paint(); /* couldn't start the art fetch --
+                                   * paint with whatever lastart we
+                                   * already have rather than dropping
+                                   * the status update entirely */
+      return;
+    }
+    mosd_finish_and_paint();
+    return;
+  }
+
+  if (finishedstage == MOSD_FETCH_ART) {
+    strncpy(lastart, result, sizeof(lastart) - 1);
+    lastart[sizeof(lastart) - 1] = '\0';
+    mosd_finish_and_paint();
+    return;
+  }
+
+  mosdstage = MOSD_IDLE;
 }
 
 /* Splits a 9-field `mediactl status` line (type, player, status, title,
@@ -275,34 +431,6 @@ static void mediaosdpaint(const MediaState *st, const char *artpath) {
  * art` and remembers it in lastart; 0 on a background poll tick --
  * reuses lastart so we're not shelling out to curl/mediactl art every
  * second while the popup sits there. */
-static void mediaosdrefresh(int fetchart) {
-  static const char *const statusargv[] = {"mediactl", "status", NULL};
-  static const char *const artargv[] = {"mediactl", "art", NULL};
-  char linebuf[1200];
-  MediaState st;
-
-  strncpy(linebuf, runargv_getline(statusargv), sizeof(linebuf) - 1);
-  linebuf[sizeof(linebuf) - 1] = '\0';
-
-  if (!parsestate(linebuf, &st))
-    return;
-
-  if (strcmp(st.type, "idle") == 0) {
-    if (mosdvisible) {
-      XUnmapWindow(dpy, mosdwin);
-      mosdvisible = 0;
-    }
-    return;
-  }
-
-  if (fetchart) {
-    strncpy(lastart, runargv_getline(artargv), sizeof(lastart) - 1);
-    lastart[sizeof(lastart) - 1] = '\0';
-  }
-
-  mediaosdpaint(&st, lastart);
-}
-
 void mediaosdsetup(void) {
   XSetWindowAttributes wa = {
       .override_redirect = True,
@@ -326,6 +454,16 @@ void mediaosdsetup(void) {
 }
 
 void mediaosdcleanup(void) {
+  /* Don't leave an in-flight fetch's child (or a not-yet-reaped one)
+   * behind on shutdown. */
+  if (mosdchildpid > 0)
+    kill(mosdchildpid, SIGKILL);
+  if (mosdzombiepid > 0)
+    waitpid(mosdzombiepid, NULL, 0);
+  if (mosdchildpid > 0)
+    waitpid(mosdchildpid, NULL, 0);
+  if (mosdchildfd >= 0)
+    close(mosdchildfd);
   if (mosddrw)
     drw_free(mosddrw);
   if (mosdwin)
@@ -333,15 +471,30 @@ void mediaosdcleanup(void) {
 }
 
 void mediaosdtrigger(const Arg *arg) {
+  static const char *const statusargv[] = {"mediactl", "status", NULL};
   (void)arg;
-  mediaosdrefresh(1);
-  clock_gettime(CLOCK_MONOTONIC, &mosdshownat);
-  mosdpolledat = mosdshownat;
+  if (mosdstage != MOSD_IDLE)
+    return; /* a fetch is already in flight -- let it finish instead of
+              * overlapping a second `mediactl` child */
+  mosdpendingfetchart = 1;
+  mosdpendingistrigger = 1;
+  mosd_start_fetch(statusargv, MOSD_FETCH_STATUS);
 }
 
 void mediaosdtick(void) {
+  static const char *const statusargv[] = {"mediactl", "status", NULL};
   struct timespec now;
   long shownms, polledms;
+
+  mosd_reap_zombie();
+
+  /* Drive any in-flight fetch forward regardless of mosdvisible -- a
+   * fresh trigger's chain hasn't painted (and therefore hasn't set
+   * mosdvisible) yet. */
+  if (mosdstage != MOSD_IDLE) {
+    mosd_poll_child();
+    return;
+  }
 
   if (!mosdvisible)
     return;
@@ -359,7 +512,13 @@ void mediaosdtick(void) {
   polledms = (now.tv_sec - mosdpolledat.tv_sec) * 1000 +
              (now.tv_nsec - mosdpolledat.tv_nsec) / 1000000;
   if (polledms >= MOSD_POLL_MS) {
-    mosdpolledat = now;
-    mediaosdrefresh(0);
+    mosdpolledat = now; /* stamp now even though the result lands async
+                          * later, so the poll cadence stays steady
+                          * rather than drifting by each fetch's
+                          * duration */
+    mosdpendingfetchart = 0;
+    mosdpendingistrigger = 0; /* background poll -- don't reset the
+                                * shown/timeout clock when this lands */
+    mosd_start_fetch(statusargv, MOSD_FETCH_STATUS);
   }
 }
