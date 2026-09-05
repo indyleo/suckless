@@ -102,7 +102,7 @@ setpos  center  forcefullscreen */
     {"^lfsc$", NULL, NULL, SPTAG(1), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^qalsc$", NULL, NULL, SPTAG(2), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
     {"^wiremixsc$", NULL, NULL, SPTAG(3), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-    {"^musicsc", NULL, NULL, SPTAG(5), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
+    {"^musicsc", NULL, NULL, SPTAG(4), 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
 };
 
 /* Layout(s) */
