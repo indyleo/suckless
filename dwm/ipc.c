@@ -144,7 +144,7 @@ static FifoCmd fifocmds[] = {
                                               * first, one per line */
     /* screenshots */
     {"screenshot", takescreenshot,
-     1}, /* screenshot 0=full 1=screen 2=window 3=select */
+     1}, /* screenshot 0=full 1=screen 2=window 3=select 4=qrcode */
     {"colorpicker", pickcolor, 0}, /* colorpicker */
     /* clipboard history */
     {"clippick", clippick, 0},   /* open the dmenu history picker */

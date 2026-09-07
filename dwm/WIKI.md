@@ -580,6 +580,7 @@ these — see the "Status text" row in Mouse bindings below.
 | `MODKEY+SHIFT+Print` | Capture full (all monitors) |
 | `MODKEY+CTRL+Print`  | Capture focused window      |
 | `MODKEY+ALT+Print`   | Pick a color under cursor   |
+| `CTRL+Print`         | Scan QR code in selection   |
 
 Screenshots save to `~/Pictures/Screenshots/<timestamp>.png`, copy to
 clipboard via `xclip`, and confirm via `notify-send`. The colorpicker copies
@@ -707,13 +708,14 @@ echo "<command> [arg]" > /tmp/dwm.fifo
 | `hideallscratch`    | —                | Hide every visible scratchpad                 |
 | `togglebar`         | —                | Show/hide bar                                 |
 | `nextwallpaper`     | —                | Load new random wallpaper                     |
-| `screenshot`        | 0–3              | Capture full/monitor/window/select            |
+| `screenshot`        | 0–4              | Capture full/monitor/window/select/qr         |
 | `colorpicker`       | —                | Pick a color under cursor                     |
 | `clippick`          | —                | Open the clipboard history picker (dmenu)     |
 | `clippin`           | —                | Pin/unpin the most recently copied entry      |
 | `clipclear`         | —                | Clear unpinned clipboard history              |
 | `statusblock`       | 0–N, or `-1`     | Rerun one status bar block, or all            |
 | `osd`               | 0–N              | Trigger an OSD popup by `osds[]` index        |
+| `mediaosd`          | —                | Trigger the media OSD popup (ignores arg)     |
 | `notifdnd`          | —                | Toggle notification Do Not Disturb            |
 | `notifdismissall`   | —                | Dismiss all visible notification popups       |
 | `notifclearhistory` | —                | Clear notification history                    |
@@ -730,6 +732,7 @@ echo "nextwallpaper" > /tmp/dwm.fifo
 echo "togglescratch 3" > /tmp/dwm.fifo
 echo "statusblock -1" > /tmp/dwm.fifo   # rerun every status bar block
 echo "osd 0" > /tmp/dwm.fifo            # OsdVolUp, per the enum in config.h
+echo "qrscan" > /tmp/dwm.fifo           # scan QR code from selected region
 echo "notifdnd" > /tmp/dwm.fifo         # toggle Do Not Disturb
 echo "clippick" > /tmp/dwm.fifo         # open the clipboard history picker
 ```

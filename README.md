@@ -49,6 +49,7 @@ A dynamic window manager for X, enhanced with:
 - 🖥️🖥️ **Automatic monitor hotplug detection** via RandR
 - 🚀 **Custom autostart process management** (`autostart.sh`)
 - 🖥️ **Inbuilt screenshot tool** (region select, color picker, clipboard + notifications)
+- 🔳 **QR code scanning** (select a region, decode QR code, copy to clipboard, notify)
 
 [dwm/README.md](dwm/README.md)
 
@@ -121,8 +122,11 @@ Typical dependencies on Debian/Ubuntu:
 ```bash
 sudo apt install libx11-dev libxinerama-dev libxft-dev libimlib2-dev \
                  libxcb1-dev libxcb-res0-dev libxext-dev libfontconfig-dev \
-                 libharfbuzz-dev libpcre2-dev libdbus-1-dev libxfixes-dev
+                 libharfbuzz-dev libpcre2-dev libdbus-1-dev libxfixes-dev \
+                 zbar-tools
 ```
+
+> Note: zbar-tools is only required for dwm's QR code scanning feature.
 
 ## Building & Installation
 

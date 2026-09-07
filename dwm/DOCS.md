@@ -678,8 +678,8 @@ add it if you actually observe the lag on your hardware.
 
 Functions: `takescreenshot()`, `screenshotpath()`, `selectregion()`,
 `pickcolor()`, `copytoclip()`, `copytextclip()`, `notifyshot()`,
-`notifycolor()`. Only `takescreenshot()` and `pickcolor()` are public
-(declared in `screenshot.h`, called from `ipc.c`'s `fifocmds[]` table and
+`notifycolor()`, `scan_qr_from_image()`. Only `takescreenshot()` and
+`pickcolor()` are public (declared in `screenshot.h`, called from `ipc.c`'s `fifocmds[]` table and
 from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
 `screenshot.c`.
 
@@ -687,7 +687,9 @@ from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
   `imlib_create_image_from_drawable()`, then crops to a rectangle depending
   on `arg->i` (`ShotFull` = whole root, `ShotScreen` = `selmon`'s geometry,
   `ShotWindow` = `selmon->sel`'s geometry, `ShotSelect` = a user-dragged
-  rectangle from `selectregion()`) using `imlib_create_cropped_image()`,
+  rectangle from `selectregion()`, `ShotQR` = a user-dragged rectangle that is
+  scanned for QR codes instead of being saved) using
+  `imlib_create_cropped_image()`,
   and saves as PNG via `imlib_save_image()`. Reuses the same Imlib2 context
   calls as the wallpaper engine — no new library dependency.
 - `screenshotpath()` builds `~/Pictures/Screenshots/<timestamp>.png`,
@@ -717,6 +719,15 @@ from `keys[]`/`buttons[]` in `config.h`); the rest are `static` inside
   `notify-send` call is now received by dwm's own DBus server instead of
   an external daemon, but the screenshot code itself is unchanged and
   still doesn't know or care who's listening on the other end of the bus.
+
+- `scan_qr_from_image()` (static) handles the `ShotQR` mode. It saves the
+  selected region to a temporary PNG, runs `zbarimg --quiet --raw` on it
+  (via `popen()`), copies the decoded text to the clipboard with
+  `copytextclip()`, and sends a notification with the result (or a
+  "No QR code found" message). This operation is synchronous and blocks
+  the event loop while `zbarimg` runs, similar to `selectregion()` or a
+  mouse‑drag resize. The temporary file is removed immediately after
+  decoding. Requires `zbarimg` from the `zbar-tools` package.
 
 ## Clipboard history (`clipboard.c` / `clipboard.h`, custom, not a suckless patch)
 
