@@ -381,6 +381,7 @@ static const Key keys[] = {
 
     /* Screenshots */
     {0, XK_Print, takescreenshot, {.i = ShotSelect}},
+    {CTRLKEY, XK_Print, takescreenshot, {.i = ShotQR}},
     {MODKEY, XK_Print, takescreenshot, {.i = ShotScreen}},
     {MODKEY | SHIFTKEY, XK_Print, takescreenshot, {.i = ShotFull}},
     {MODKEY | CTRLKEY, XK_Print, takescreenshot, {.i = ShotWindow}},

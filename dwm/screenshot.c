@@ -6,6 +6,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
+#include <limits.h>          /* for L_tmpnam */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,8 @@
 #include "util.h"
 
 static void selectregion(int *rx, int *ry, int *rw, int *rh);
+static void copytextclip(const char *text);
+static void scan_qr_from_image(Imlib_Image img);
 
 static void mkdir_p(char *path) {
   struct stat st;
@@ -71,66 +74,6 @@ static void notifyshot(const char *path) {
   }
 }
 
-void takescreenshot(const Arg *arg) {
-  Imlib_Image full, out;
-  int x = 0, y = 0, w = sw, h = sh;
-  char path[2048];
-  Client *c;
-
-  switch (arg->i) {
-  case ShotSelect: {
-    int rx, ry, rw, rh;
-    selectregion(&rx, &ry, &rw, &rh);
-    if (rw < 2 || rh < 2)
-      return; /* cancelled, or just a click with no drag */
-    x = MAX(0, rx);
-    y = MAX(0, ry);
-    w = MIN(rw, sw - x);
-    h = MIN(rh, sh - y);
-    break;
-  }
-  case ShotScreen:
-    x = selmon->mx;
-    y = selmon->my;
-    w = selmon->mw;
-    h = selmon->mh;
-    break;
-  case ShotWindow:
-    if (!(c = selmon->sel))
-      return;
-    x = c->x;
-    y = c->y;
-    w = c->w + 2 * c->bw;
-    h = c->h + 2 * c->bw;
-    break;
-  case ShotFull:
-  default:
-    break; /* whole root, all monitors */
-  }
-
-  imlib_context_set_display(dpy);
-  imlib_context_set_visual(DefaultVisual(dpy, screen));
-  imlib_context_set_colormap(DefaultColormap(dpy, screen));
-  imlib_context_set_drawable(root);
-
-  full = imlib_create_image_from_drawable(0, 0, 0, sw, sh, 1);
-  if (!full)
-    return;
-
-  imlib_context_set_image(full);
-  out = imlib_create_cropped_image(x, y, w, h);
-  imlib_free_image(); /* frees 'full', context still points at it */
-
-  screenshotpath(path, sizeof path);
-  imlib_context_set_image(out);
-  imlib_image_set_format("png");
-  imlib_save_image(path);
-  imlib_free_image();
-
-  copytoclip(path);
-  notifyshot(path);
-}
-
 static void copytextclip(const char *text) {
   int fd[2];
 
@@ -155,6 +98,149 @@ static void notifycolor(const char *hex) {
     execlp("notify-send", "notify-send", "Color Picked", hex, NULL);
     _exit(1);
   }
+}
+
+/* Decode QR code(s) from an Imlib_Image, copy result to clipboard and notify */
+static void scan_qr_from_image(Imlib_Image img) {
+  char temp_path[] = "/tmp/qrscan_XXXXXX";  /* mkstemp will replace XXXXXX */
+  char cmd[512];
+  char buf[4096] = "";
+  FILE *fp;
+  int status, fd;
+  size_t total = 0;
+
+  if (!img) return;
+
+  /* Create a unique temporary file */
+  fd = mkstemp(temp_path);
+  if (fd == -1) {
+    fprintf(stderr, "dwm: mkstemp failed\n");
+    return;
+  }
+  close(fd);  /* we only need the path; the file exists now */
+
+  imlib_context_set_image(img);
+  imlib_image_set_format("png");
+  imlib_save_image(temp_path);  /* ignore return, check file existence */
+
+  if (access(temp_path, R_OK) != 0) {
+    fprintf(stderr, "dwm: failed to save temp image for QR scan\n");
+    unlink(temp_path);
+    return;
+  }
+
+  snprintf(cmd, sizeof(cmd), "zbarimg --quiet --raw '%s'", temp_path);
+  if ((fp = popen(cmd, "r")) == NULL) {
+    fprintf(stderr, "dwm: popen failed for zbarimg\n");
+    unlink(temp_path);
+    return;
+  }
+
+  while (fgets(buf + total, sizeof(buf) - total, fp)) {
+    total = strlen(buf);
+    if (total >= sizeof(buf) - 1) break;
+  }
+  status = pclose(fp);
+  unlink(temp_path);  /* clean up */
+
+  if (status != 0 || total == 0) {
+    const char *msg = "No QR code found in selection";
+    if (fork() == 0) {
+      setsid();
+      execlp("notify-send", "notify-send", "QR Scan", msg, NULL);
+      _exit(1);
+    }
+    return;
+  }
+
+  while (total > 0 && (buf[total-1] == '\n' || buf[total-1] == '\r'))
+    buf[--total] = '\0';
+
+  copytextclip(buf);
+
+  char notify_msg[256];
+  snprintf(notify_msg, sizeof(notify_msg), "Copied: %.200s%s",
+           buf, strlen(buf) > 200 ? "…" : "");
+  if (fork() == 0) {
+    setsid();
+    execlp("notify-send", "notify-send", "QR Code Scanned", notify_msg, NULL);
+    _exit(1);
+  }
+}
+
+void takescreenshot(const Arg *arg) {
+  Imlib_Image full, out;
+  int x = 0, y = 0, w = sw, h = sh;
+  char path[2048];
+  Client *c;
+
+  imlib_context_set_display(dpy);
+  imlib_context_set_visual(DefaultVisual(dpy, screen));
+  imlib_context_set_colormap(DefaultColormap(dpy, screen));
+  imlib_context_set_drawable(root);
+
+  switch (arg->i) {
+  case ShotSelect: {
+    int rx, ry, rw, rh;
+    selectregion(&rx, &ry, &rw, &rh);
+    if (rw < 2 || rh < 2)
+      return;
+    x = MAX(0, rx);
+    y = MAX(0, ry);
+    w = MIN(rw, sw - x);
+    h = MIN(rh, sh - y);
+    break;
+  }
+  case ShotScreen:
+    x = selmon->mx;
+    y = selmon->my;
+    w = selmon->mw;
+    h = selmon->mh;
+    break;
+  case ShotWindow:
+    if (!(c = selmon->sel))
+      return;
+    x = c->x;
+    y = c->y;
+    w = c->w + 2 * c->bw;
+    h = c->h + 2 * c->bw;
+    break;
+  case ShotFull:
+    break;
+  case ShotQR: {
+    int rx, ry, rw, rh;
+    selectregion(&rx, &ry, &rw, &rh);
+    if (rw < 2 || rh < 2) return;
+    full = imlib_create_image_from_drawable(0, 0, 0, sw, sh, 1);
+    if (!full) return;
+    imlib_context_set_image(full);
+    Imlib_Image cropped = imlib_create_cropped_image(rx, ry, rw, rh);
+    imlib_free_image();
+    if (!cropped) return;
+    scan_qr_from_image(cropped);
+    imlib_free_image();
+    return;
+  }
+  default:
+    return;
+  }
+
+  full = imlib_create_image_from_drawable(0, 0, 0, sw, sh, 1);
+  if (!full)
+    return;
+
+  imlib_context_set_image(full);
+  out = imlib_create_cropped_image(x, y, w, h);
+  imlib_free_image();
+
+  screenshotpath(path, sizeof path);
+  imlib_context_set_image(out);
+  imlib_image_set_format("png");
+  imlib_save_image(path);
+  imlib_free_image();
+
+  copytoclip(path);
+  notifyshot(path);
 }
 
 void pickcolor(const Arg *arg) {
@@ -197,7 +283,7 @@ void pickcolor(const Arg *arg) {
 static void selectregion(int *rx, int *ry, int *rw, int *rh) {
   XEvent ev;
   Cursor cur;
-  Window borders[4]; /* top, bottom, left, right */
+  Window borders[4];
   XSetWindowAttributes swa;
   int i, startx, starty, curx, cury, ox, oy, ow, oh;
 
@@ -238,12 +324,10 @@ static void selectregion(int *rx, int *ry, int *rw, int *rh) {
     ow = MAX(abs(curx - startx), 1);
     oh = MAX(abs(cury - starty), 1);
 
-    XMoveResizeWindow(dpy, borders[0], ox, oy, ow, 2); /* top */
-    XMoveResizeWindow(dpy, borders[1], ox, oy + MAX(oh - 2, 0), ow,
-                      2);                              /* bottom */
-    XMoveResizeWindow(dpy, borders[2], ox, oy, 2, oh); /* left */
-    XMoveResizeWindow(dpy, borders[3], ox + MAX(ow - 2, 0), oy, 2,
-                      oh); /* right */
+    XMoveResizeWindow(dpy, borders[0], ox, oy, ow, 2);
+    XMoveResizeWindow(dpy, borders[1], ox, oy + MAX(oh - 2, 0), ow, 2);
+    XMoveResizeWindow(dpy, borders[2], ox, oy, 2, oh);
+    XMoveResizeWindow(dpy, borders[3], ox + MAX(ow - 2, 0), oy, 2, oh);
 
     if (ev.type == ButtonRelease)
       break;
@@ -254,8 +338,7 @@ static void selectregion(int *rx, int *ry, int *rw, int *rh) {
 
   XUngrabPointer(dpy, CurrentTime);
   XFreeCursor(dpy, cur);
-  XSync(dpy, False); /* let the destroys + resulting Expose repaints land before
-                        we grab pixels */
+  XSync(dpy, False);
 
   *rx = MIN(startx, curx);
   *ry = MIN(starty, cury);

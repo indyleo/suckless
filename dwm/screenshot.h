@@ -8,8 +8,7 @@
 
 #include "dwm.h" /* Arg */
 
-enum { ShotFull, ShotScreen, ShotWindow, ShotSelect }; /* screenshot modes,
-                                                           passed as arg->i */
+enum { ShotFull, ShotScreen, ShotWindow, ShotSelect, ShotQR }; /* screenshot modes, passed as arg->i */
 
 void takescreenshot(const Arg *arg);
 void pickcolor(const Arg *arg);
