@@ -6,15 +6,16 @@ custom Gruvbox color scheme with per-scheme highlight colors.
 
 ## Feature summary
 
-| Feature | Source |
-|---|---|
-| Fuzzy matching with toggle | `fuzzymatch` patch |
-| Per-scheme highlight colors (`SchemeSelHighlight`, `SchemeNormHighlight`) | `highlight` patch |
-| Background transparency (per-scheme alpha) | `alpha` patch |
-| Prefix matching mode (toggleable with `-x`) | `prefix` patch |
-| Custom bar height padding (`user_bh`) | `lineheight` patch |
-| Preselected item on open (`-n`) | `preselect` patch |
-| Custom prompt text (`-p`) | stock |
+| Feature                                                                   | Source             |
+| ------------------------------------------------------------------------- | ------------------ |
+| Fuzzy matching with toggle                                                | `fuzzymatch` patch |
+| Per-scheme highlight colors (`SchemeSelHighlight`, `SchemeNormHighlight`) | `highlight` patch  |
+| Background transparency (per-scheme alpha)                                | `alpha` patch      |
+| Prefix matching mode (toggleable with `-x`)                               | `prefix` patch     |
+| Custom bar height padding (`user_bh`)                                     | `lineheight` patch |
+| Preselected item on open (`-n`)                                           | `preselect` patch  |
+| Custom prompt text (`-p`)                                                 | stock              |
+| Flatpak apps merged into the list (launched via `flatpak run` on select)  | custom             |
 
 See **[DOCS.md](DOCS.md)** for code layout and **[WIKI.md](WIKI.md)** for
 configuration reference.

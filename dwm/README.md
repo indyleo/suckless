@@ -1,4 +1,4 @@
-# dwm
+# dwm (custom build)
 
 A build of [dwm](https://dwm.suckless.org/), the suckless dynamic window
 manager, extended with a curated set of upstream patches plus several
