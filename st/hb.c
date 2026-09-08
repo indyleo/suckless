@@ -64,7 +64,12 @@ hbfindfont(XftFont *match)
 	}
 
 	/* Font not found in cache, caching it now. */
-	hbfontcache.fonts = realloc(hbfontcache.fonts, sizeof(HbFontMatch) * (hbfontcache.capacity + 1));
+	/* NOTE: this used to be a raw, unchecked realloc() - inconsistent with
+	 * the rest of the codebase, which always goes through xrealloc() (see
+	 * st.c) specifically so an allocation failure dies cleanly with an
+	 * error message instead of leaving a NULL hbfontcache.fonts that the
+	 * very next line would then dereference and crash on. */
+	hbfontcache.fonts = xrealloc(hbfontcache.fonts, sizeof(HbFontMatch) * (hbfontcache.capacity + 1));
 	FT_Face face = XftLockFace(match);
 	hb_font_t *font = hb_ft_font_create(face, NULL);
 	if (font == NULL)
@@ -93,7 +98,9 @@ void hbtransform(HbTransformData *data, XftFont *xfont, const Glyph *glyphs, int
 	/* Resize the buffer if required length is larger. */
 	if (hbrunebuffer.capacity < length) {
 		hbrunebuffer.capacity = (length / BUFFER_STEP + 1) * BUFFER_STEP;
-		hbrunebuffer.runes = realloc(hbrunebuffer.runes, hbrunebuffer.capacity * sizeof(Rune));
+		/* see the same note above in hbfindfont() about xrealloc() vs raw
+		 * realloc() */
+		hbrunebuffer.runes = xrealloc(hbrunebuffer.runes, hbrunebuffer.capacity * sizeof(Rune));
 	}
 
 	/* Fill buffer with codepoints. */

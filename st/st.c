@@ -1129,7 +1129,6 @@ void tscrolldown(int orig, int n, int copyhist) {
 void tscrollup(int orig, int n, int copyhist) {
   int i;
   Line temp;
-	ImageList *im;
 
   LIMIT(n, 0, term.bot - orig + 1);
 

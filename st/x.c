@@ -1310,7 +1310,13 @@ xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len, int x
 	FcFontSet *fcsets[] = { NULL };
 	FcCharSet *fccharset;
 	int f, code_idx, numspecs = 0;
-	float cluster_xp = xp, cluster_yp = yp;
+	/* NOTE: this used to read `xp = xp, cluster_yp = yp` here, before xp/yp
+	 * are ever assigned (they're declared but uninitialized above) - real
+	 * undefined behavior, though harmless in practice since both get
+	 * overwritten a few lines down (right after xp/yp get their real
+	 * values) before anything ever reads them. Just declare them plainly
+	 * instead of seeding them from garbage. */
+	float cluster_xp, cluster_yp;
 	HbTransformData shaped = { 0 };
 
 	/* Initial values. */
@@ -1755,7 +1761,6 @@ void
 xsixelnewimage(SixelContext *ctx, int tx, int ty)
 {
 	ImageList *new_image;
-	int i;
 
 	new_image = malloc(sizeof(ImageList));
 	if (!new_image) {
