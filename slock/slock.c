@@ -430,23 +430,39 @@ int main(int argc, char **argv) {
       int red = 0;
       int green = 0;
       int blue = 0;
+      /* NOTE: block dimensions are clamped to the image edge - the loop
+       * below used to check `j < pxsz && j < height` / `i < pxsz && i <
+       * width`, comparing the LOCAL block offset (0..pxsz-1) against the
+       * full image height/width instead of the actual pixel position
+       * (y+j / x+i). Since i/j never reach anywhere near a typical
+       * screen's width/height, that check was effectively a no-op: for
+       * any pixelSize that doesn't evenly divide the screen resolution,
+       * the rightmost/bottom partial blocks read pixels past the image's
+       * actual edge via imlib_image_query_pixel(), and then divided by a
+       * fixed pxsz*pxsz instead of the real sample count, skewing the
+       * averaged color for every edge block.
+       */
+      int jmax = (y + pxsz <= height) ? pxsz : height - y;
+      int imax = (x + pxsz <= width) ? pxsz : width - x;
+      int count = 0;
 
       Imlib_Color pixel;
       Imlib_Color *pp;
       pp = &pixel;
-      for (int j = 0; j < pxsz && j < height; j++) {
-        for (int i = 0; i < pxsz && i < width; i++) {
+      for (int j = 0; j < jmax; j++) {
+        for (int i = 0; i < imax; i++) {
           imlib_image_query_pixel(x + i, y + j, pp);
           red += pixel.red;
           green += pixel.green;
           blue += pixel.blue;
+          count++;
         }
       }
-      red /= (pxsz * pxsz);
-      green /= (pxsz * pxsz);
-      blue /= (pxsz * pxsz);
+      red /= count;
+      green /= count;
+      blue /= count;
       imlib_context_set_color(red, green, blue, pixel.alpha);
-      imlib_image_fill_rectangle(x, y, pxsz, pxsz);
+      imlib_image_fill_rectangle(x, y, imax, jmax);
       red = 0;
       green = 0;
       blue = 0;
