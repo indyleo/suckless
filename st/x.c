@@ -312,8 +312,23 @@ zoom(const Arg *arg)
 void
 zoomabs(const Arg *arg)
 {
+	SixelContext *ctx = tsixelctx();
+	ImageList *im;
+	int i;
+
 	xunloadfonts();
 	xloadfonts(usedfont, arg->f);
+
+	/* the cell size changed: throw away the pixmaps so that xdrawsixel()
+	 * recreates them, scaled to the new cell size */
+	for (i = 0, im = ctx->images; i < 2; i++, im = ctx->images_alt) {
+		for (; im; im = im->next) {
+			if (im->pixmap)
+				XFreePixmap(xw.dpy, (Drawable)im->pixmap);
+			im->pixmap = NULL;
+		}
+	}
+
 	cresize(0, 0);
 	redraw();
 	xhints();
@@ -1791,16 +1806,19 @@ xsixelnewimage(SixelContext *ctx, int tx, int ty)
 	new_image->height = ctx->state.image.height;
 	sixel_parser_deinit(&ctx->state);
 
+	/* remember the cell size the sixel was decoded at, so it can be rescaled
+	 * if the font size changes later */
+	new_image->cw = win.cw;
+	new_image->ch = win.ch;
+	new_image->cols = cols = DIVCEIL(new_image->width, win.cw);
+	new_image->rows = rows = DIVCEIL(new_image->height, win.ch);
+
 	/* delete the old images that the new one covers, otherwise they keep
 	 * being blitted through/around it (ATTR_SIXEL is shared by all images) */
-	cols = (new_image->width + win.cw - 1) / win.cw;
-	rows = (new_image->height + win.ch - 1) / win.ch;
 	for (im = ctx->images; im; im = next) {
 		next = im->next;
-		if (im->x < new_image->x + cols &&
-		    im->x + (im->width + win.cw - 1) / win.cw > new_image->x &&
-		    im->y < new_image->y + rows &&
-		    im->y + (im->height + win.ch - 1) / win.ch > new_image->y)
+		if (im->x < new_image->x + cols && im->x + im->cols > new_image->x &&
+		    im->y < new_image->y + rows && im->y + im->rows > new_image->y)
 			xsixeldeleteimage(ctx, im);
 	}
 
@@ -1828,30 +1846,6 @@ xsixeldeleteimage(SixelContext *ctx, ImageList *im)
 		XFreePixmap(xw.dpy, (Drawable)im->pixmap);
 	free(im->pixels);
 	free(im);
-}
-
-void
-xsixelscrolldown(SixelContext *ctx, int n, int bottom)
-{
-	ImageList *im;
-	for (im = ctx->images; im; im = im->next) {
-		if (im->y < bottom)
-			im->y += n;
-		if (im->y > bottom)
-			im->should_delete = 1;
-	}
-}
-
-void
-xsixelscrollup(SixelContext *ctx, int n, int top)
-{
-	ImageList *im;
-	for (im = ctx->images; im; im = im->next) {
-		if (im->y+im->height/win.ch > top)
-			im->y -= n;
-		if (im->y+im->height/win.ch < top)
-			im->should_delete = 1;
-	}
 }
 
 int
@@ -1892,11 +1886,87 @@ xdrawline(Line line, int x1, int y1, int x2)
   }
 }
 
+/*
+ * Resample a BGRA image. Box filter when shrinking (sixels are usually
+ * downscaled a lot when zooming out, and plain sampling aliases badly),
+ * bilinear when growing. Returns a newly allocated buffer.
+ */
+static unsigned char *
+xsixelresample(const unsigned char *src, int sw, int sh, int dw, int dh)
+{
+	unsigned char *dst;
+	const unsigned char *r0, *r1;
+	int x, y, c, x0, x1, y0, y1, sx0, sx1, sy0, sy1, i, j, n;
+	float xr, yr, fx, fy, sx, sy;
+	int acc[4];
+
+	if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0)
+		return NULL;
+	if (!(dst = malloc((size_t)dw * dh * 4)))
+		return NULL;
+
+	xr = (float)sw / dw;
+	yr = (float)sh / dh;
+
+	if (dw < sw || dh < sh) {
+		for (y = 0; y < dh; y++) {
+			sy0 = (int)(y * yr);
+			sy1 = MAX((int)((y + 1) * yr), sy0 + 1);
+			sy1 = MIN(sy1, sh);
+			for (x = 0; x < dw; x++) {
+				sx0 = (int)(x * xr);
+				sx1 = MAX((int)((x + 1) * xr), sx0 + 1);
+				sx1 = MIN(sx1, sw);
+				acc[0] = acc[1] = acc[2] = acc[3] = 0;
+				n = 0;
+				for (j = sy0; j < sy1; j++) {
+					r0 = src + ((size_t)j * sw + sx0) * 4;
+					for (i = sx0; i < sx1; i++, r0 += 4) {
+						for (c = 0; c < 4; c++)
+							acc[c] += r0[c];
+						n++;
+					}
+				}
+				for (c = 0; c < 4; c++)
+					dst[((size_t)y * dw + x) * 4 + c] = acc[c] / MAX(n, 1);
+			}
+		}
+		return dst;
+	}
+
+	for (y = 0; y < dh; y++) {
+		sy = (y + 0.5f) * yr - 0.5f;
+		y0 = (int)floorf(sy);
+		fy = sy - y0;
+		if (y0 < 0)
+			y0 = 0, fy = 0.0f;
+		y1 = MIN(y0 + 1, sh - 1);
+		r0 = src + (size_t)y0 * sw * 4;
+		r1 = src + (size_t)y1 * sw * 4;
+		for (x = 0; x < dw; x++) {
+			sx = (x + 0.5f) * xr - 0.5f;
+			x0 = (int)floorf(sx);
+			fx = sx - x0;
+			if (x0 < 0)
+				x0 = 0, fx = 0.0f;
+			x1 = MIN(x0 + 1, sw - 1);
+			for (c = 0; c < 4; c++) {
+				float t = (r0[x0 * 4 + c] * (1.0f - fx) + r0[x1 * 4 + c] * fx) * (1.0f - fy)
+				        + (r1[x0 * 4 + c] * (1.0f - fx) + r1[x1 * 4 + c] * fx) * fy;
+				dst[((size_t)y * dw + x) * 4 + c] = (unsigned char)(t + 0.5f);
+			}
+		}
+	}
+	return dst;
+}
+
 void
-xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
+xdrawsixel(SixelContext *ctx, int row, int col)
 {
 	ImageList *im, *next;
-	int x, y, cols, rows;
+	Line line;
+	unsigned char *scaled = NULL;
+	int x, y, width, height;
 	int n = 0;
 	int nlimit = 256;
 	XRectangle *rects = NULL;
@@ -1911,41 +1981,54 @@ xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
 			continue;
 		}
 
-		cols = (im->width + win.cw - 1) / win.cw;
-		rows = (im->height + win.ch - 1) / win.ch;
-
-		/* skip, but keep, images that are currently off screen */
-		if (im->x >= col || im->y >= row || im->y + rows <= 0)
+		/* skip, but keep, images that are currently off screen or in the
+		 * scrollback */
+		if (im->x >= col || im->y >= row || im->y + im->rows <= 0)
 			continue;
 
+		/* size the image at the current cell size, so it stays anchored to
+		 * its cells when the font is zoomed */
+		width = MAX(im->width * win.cw / im->cw, 1);
+		height = MAX(im->height * win.ch / im->ch, 1);
+
 		if (!im->pixmap) {
-			im->pixmap = (void *)XCreatePixmap(xw.dpy, xw.win, im->width, im->height, xw.depth);
+			im->pixmap = (void *)XCreatePixmap(xw.dpy, xw.win, width, height, xw.depth);
 			if (!im->pixmap)
 				continue;
+			if (win.cw != im->cw || win.ch != im->ch) {
+				scaled = xsixelresample(im->pixels, im->width, im->height, width, height);
+				if (!scaled) {
+					XFreePixmap(xw.dpy, (Drawable)im->pixmap);
+					im->pixmap = NULL;
+					continue;
+				}
+			}
 			XImage ximage = {
 				.format = ZPixmap,
-				.data = (char *)im->pixels,
-				.width = im->width,
-				.height = im->height,
+				.data = (char *)(scaled ? scaled : im->pixels),
+				.width = width,
+				.height = height,
 				.xoffset = 0,
 				.byte_order = LSBFirst,
 				.bitmap_bit_order = MSBFirst,
 				.bits_per_pixel = 32,
-				.bytes_per_line = im->width * 4,
+				.bytes_per_line = width * 4,
 				.bitmap_unit = 32,
 				.bitmap_pad = 32,
 				.depth = xw.depth
 			};
-			XPutImage(xw.dpy, (Drawable)im->pixmap, dc.gc, &ximage, 0, 0, 0, 0, im->width, im->height);
-			free(im->pixels);
-			im->pixels = NULL;
+			XPutImage(xw.dpy, (Drawable)im->pixmap, dc.gc, &ximage, 0, 0, 0, 0, width, height);
+			free(scaled);
+			scaled = NULL;
+			/* im->pixels is kept: it is the source for any later rescale */
 		}
 		n = 0;
-		for (y = MAX(im->y, 0); y < im->y + rows && y < row; y++) {
-			for (x = im->x; x < im->x + cols && x < col; x++) {
+		for (y = MAX(im->y, 0); y < im->y + im->rows && y < row; y++) {
+			line = tgetline(y);
+			for (x = im->x; x < im->x + im->cols && x < col; x++) {
 				if (!rects)
 					rects = xmalloc(sizeof(XRectangle) * nlimit);
-				if (line[y][x].mode & ATTR_SIXEL) {
+				if (line[x].mode & ATTR_SIXEL) {
 					if (n > 0 && rects[n-1].x+rects[n-1].width == borderpx+x*win.cw && rects[n-1].y == borderpx+y*win.ch) {
 						rects[n-1].width += win.cw;
 					} else {
@@ -1968,7 +2051,7 @@ xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
 		if (n == 0) {
 			/* every cell of the image has been erased: drop it for good,
 			 * but only if we were able to inspect all of its cells */
-			if (im->y >= 0 && im->x + cols <= col && im->y + rows <= row)
+			if (im->y >= 0 && im->x + im->cols <= col && im->y + im->rows <= row)
 				xsixeldeleteimage(ctx, im);
 			continue;
 		}
@@ -1980,7 +2063,7 @@ xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
 		/* always clip: with a single rectangle the unclipped image used to
 		 * be blitted over everything around it */
 		XSetClipRectangles(xw.dpy, gc, 0, 0, rects, n, Unsorted);
-		XCopyArea(xw.dpy, (Drawable)im->pixmap, xw.buf, gc, 0, 0, im->width, im->height, borderpx + im->x * win.cw, borderpx + im->y * win.ch);
+		XCopyArea(xw.dpy, (Drawable)im->pixmap, xw.buf, gc, 0, 0, width, height, borderpx + im->x * win.cw, borderpx + im->y * win.ch);
 	}
 	if (gc)
 		XFreeGC(xw.dpy, gc);

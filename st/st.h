@@ -78,10 +78,14 @@ typedef struct _ImageList {
 	struct _ImageList *next, *prev;
 	unsigned char *pixels;
 	void *pixmap;
-	int width;
+	int width;         /* pixel size of the decoded sixel */
 	int height;
-	int x;
-	int y;
+	int cw;            /* cell size the sixel was decoded at */
+	int ch;
+	int cols;          /* size in cells (invariant across font changes) */
+	int rows;
+	int x;             /* position in cells; y is in viewport coordinates, */
+	int y;             /* i.e. line + term.scr, so it may be negative */
 	int should_delete;
 } ImageList;
 
@@ -99,6 +103,9 @@ typedef union {
 	const void *v;
 	const char *s;
 } Arg;
+
+Line tgetline(int);
+SixelContext *tsixelctx(void);
 
 void die(const char *, ...);
 void redraw(void);

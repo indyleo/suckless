@@ -1047,6 +1047,8 @@ void treset(void) {
 
 	for (im = term.sixel.images; im; im = im->next)
 		im->should_delete = 1;
+	for (im = term.sixel.images_alt; im; im = im->next)
+		im->should_delete = 1;
 }
 
 void tnew(int col, int row) {
@@ -1056,6 +1058,42 @@ void tnew(int col, int row) {
 }
 
 int tisaltscr(void) { return IS_SET(MODE_ALTSCREEN); }
+
+Line tgetline(int y) { return TLINE(y); }
+
+SixelContext *tsixelctx(void) { return &term.sixel; }
+
+/*
+ * Move images together with the lines they are attached to. An image's y is
+ * kept in viewport coordinates (line index + term.scr), so that y is the
+ * screen row it is drawn on and TLINE(y) is the line it is attached to; a
+ * negative y means the image has scrolled into the scrollback.
+ *
+ * n > 0 scrolls the content up, n < 0 scrolls it down. dscr is the change
+ * that was applied to term.scr in the same operation, and keephist tells
+ * whether the lines leaving the top of the region went to the scrollback.
+ */
+static void tsixelscroll(int orig, int bot, int n, int dscr, int keephist) {
+  ImageList *im, *next;
+  int scr = term.scr - dscr; /* term.scr before the change */
+  int l;
+
+  for (im = term.sixel.images; im; im = next) {
+    next = im->next;
+    l = im->y - scr; /* line index, negative means scrollback */
+    if (l > bot)
+      continue; /* below the scrolling region */
+    if (l < orig && !(keephist && l < 0))
+      continue; /* above it, and not in the scrollback */
+
+    im->y += dscr - n;
+    l -= n;
+
+    if (l > bot || (l + im->rows <= orig && !keephist) ||
+        (keephist && l + im->rows <= -HISTSIZE))
+      xsixeldeleteimage(&term.sixel, im);
+  }
+}
 
 void tswapscreen(void) {
   Line *tmp = term.line;
@@ -1079,7 +1117,11 @@ void kscrolldown(const Arg *a) {
     n = term.scr;
 
   if (term.scr > 0) {
+    ImageList *im;
+
     term.scr -= n;
+    for (im = term.sixel.images; im; im = im->next)
+      im->y -= n;
     selscroll(0, -n);
     tfulldirt();
   }
@@ -1092,29 +1134,48 @@ void kscrollup(const Arg *a) {
     n = term.row + n;
 
   if (term.scr <= HISTSIZE - n) {
+    ImageList *im;
+
     term.scr += n;
+    for (im = term.sixel.images; im; im = im->next)
+      im->y += n;
     selscroll(0, n);
     tfulldirt();
   }
 }
 
 void tscrolldown(int orig, int n, int copyhist) {
-  int i;
+  int i, dscr = 0, keephist;
   Line temp;
 
   LIMIT(n, 0, term.bot - orig + 1);
 
-  if (copyhist) {
-    term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
-    temp = term.hist[term.histi];
-    term.hist[term.histi] = term.line[term.bot];
-    term.line[term.bot] = temp;
+  keephist = copyhist && !IS_SET(MODE_ALTSCREEN) && orig == 0;
+  if (keephist) {
+    /* pull n lines back out of the scrollback, not just one, and take the
+     * newest entry first: tscrollup() writes to term.histi, so decrementing
+     * before reading restored the wrong line */
+    for (i = 0; i < n; i++) {
+      temp = term.hist[term.histi];
+      term.hist[term.histi] = term.line[term.bot - i];
+      term.line[term.bot - i] = temp;
+      term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
+    }
+    if (term.scr > 0) {
+      dscr = -MIN(n, term.scr);
+      term.scr += dscr;
+    }
   }
-	/* process scrolldown */
-	xsixelscrolldown(&term.sixel, n, term.bot);
+  /* move the images with their lines */
+  tsixelscroll(orig, term.bot, -n, dscr, keephist);
 
-  tsetdirt(orig, term.bot - n);
-  tclearregion(0, term.bot - n + 1, term.col - 1, term.bot);
+  if (keephist) {
+    /* the restored lines must not be wiped */
+    tsetdirt(orig, term.bot);
+  } else {
+    tsetdirt(orig, term.bot - n);
+    tclearregion(0, term.bot - n + 1, term.col - 1, term.bot);
+  }
 
   for (i = term.bot; i >= orig + n; i--) {
     temp = term.line[i];
@@ -1127,23 +1188,27 @@ void tscrolldown(int orig, int n, int copyhist) {
 }
 
 void tscrollup(int orig, int n, int copyhist) {
-  int i;
+  int i, dscr = 0, keephist;
   Line temp;
 
   LIMIT(n, 0, term.bot - orig + 1);
 
-  if (copyhist) {
-    term.histi = (term.histi + 1) % HISTSIZE;
-    temp = term.hist[term.histi];
-    term.hist[term.histi] = term.line[orig];
-    term.line[orig] = temp;
+  keephist = copyhist && !IS_SET(MODE_ALTSCREEN) && orig == 0;
+  if (keephist) {
+    /* push all n lines into the scrollback, not just the first one */
+    for (i = 0; i < n; i++) {
+      term.histi = (term.histi + 1) % HISTSIZE;
+      temp = term.hist[term.histi];
+      term.hist[term.histi] = term.line[orig + i];
+      term.line[orig + i] = temp;
+    }
+    if (term.scr > 0 && term.scr < HISTSIZE) {
+      dscr = MIN(term.scr + n, HISTSIZE - 1) - term.scr;
+      term.scr += dscr;
+    }
   }
-
-  if (term.scr > 0 && term.scr < HISTSIZE)
-    term.scr = MIN(term.scr + n, HISTSIZE - 1);
-	/* process scrollup */
-	xsixelscrollup(&term.sixel, n, term.top);
-
+  /* move the images with their lines */
+  tsixelscroll(orig, term.bot, n, dscr, keephist);
 
   tclearregion(0, orig, term.col - 1, orig + n - 1);
   tsetdirt(orig + n, term.bot);
@@ -2028,7 +2093,8 @@ void strhandle(void) {
 				return;
 			}
 			win = gettermwindow();
-			if (xsixelnewimage(&term.sixel, term.c.x, term.c.y) != 0)
+			if (xsixelnewimage(&term.sixel, term.c.x,
+			    term.c.y + (IS_SET(MODE_ALTSCREEN) ? 0 : term.scr)) != 0)
 				return;
 
 			/* the image origin is fixed: never recompute it from term.c.x,
@@ -2598,10 +2664,12 @@ int twrite(const char *buf, int buflen, int show_ctrl) {
 }
 
 void tresize(int col, int row) {
-  int i, j;
+  int i, j, x;
   int minrow = MIN(row, term.row);
   int mincol = MIN(col, term.col);
+  int dropped = MAX(term.c.y - row + 1, 0); /* lines slid off the top below */
   int *bp;
+  ImageList *im, *next;
   TCursor c;
 
   if (col < 1 || row < 1) {
@@ -2682,6 +2750,29 @@ void tresize(int col, int row) {
     tcursor(CURSOR_LOAD);
   }
   term.c = c;
+
+  /* keep the images in step with the resized screen */
+  for (i = 0; i < 2; i++) {
+    int scr = IS_SET(MODE_ALTSCREEN) ? 0 : term.scr;
+    for (im = term.sixel.images; im; im = next) {
+      int l;
+
+      next = im->next;
+      im->y -= dropped;
+      l = im->y - scr;
+      if (l >= row || l + im->rows <= -HISTSIZE) {
+        xsixeldeleteimage(&term.sixel, im);
+        continue;
+      }
+      /* the window got wider: flag the cells that were just exposed, so the
+       * image is drawn over them again instead of being clipped away */
+      if (mincol < col && l >= 0 && im->x < col && im->x + im->cols > mincol) {
+        for (x = MAX(im->x, mincol); x < MIN(im->x + im->cols, col); x++)
+          term.line[l][x].mode |= ATTR_SIXEL;
+      }
+    }
+    tswapscreen();
+  }
 }
 
 void resettitle(void) { xsettitle(NULL, 0); }
@@ -2714,8 +2805,7 @@ void draw(void) {
   if (term.line[term.c.y][cx].mode & ATTR_WDUMMY)
     cx--;
   drawregion(0, 0, term.col, term.row);
-  if (term.scr == 0)
-    xdrawsixel(&term.sixel, term.line, term.row, term.col);
+  xdrawsixel(&term.sixel, term.row, term.col);
   if (term.scr == 0)
     xdrawcursor(cx, term.c.y, term.line[term.c.y][cx], term.ocx, term.ocy,
                 term.line[term.ocy][term.ocx], term.line[term.ocy], term.col);
