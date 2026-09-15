@@ -1757,35 +1757,54 @@ xsixelparse(SixelContext *ctx, unsigned char *u, int len)
 	return sixel_parser_parse(&ctx->state, u, len);
 }
 
-void
+int
 xsixelnewimage(SixelContext *ctx, int tx, int ty)
 {
-	ImageList *new_image;
+	ImageList *new_image, *im, *next;
+	int cols, rows;
 
 	new_image = malloc(sizeof(ImageList));
 	if (!new_image) {
 		sixel_parser_deinit(&ctx->state);
-		return;
+		return -1;
 	}
 	memset(new_image, 0, sizeof(ImageList));
 	new_image->x = tx;
 	new_image->y = ty;
-	new_image->width = ctx->state.image.width;
-	new_image->height = ctx->state.image.height;
-	new_image->pixels = malloc(new_image->width * new_image->height * 4);
+	/* sixel_parser_finalize() may shrink the image buffer, so size the
+	 * pixel buffer from the current (upper bound) dimensions and read the
+	 * final dimensions back afterwards */
+	new_image->pixels = malloc(ctx->state.image.width * ctx->state.image.height * 4);
 	if (!new_image->pixels) {
 		sixel_parser_deinit(&ctx->state);
 		free(new_image);
-		return;
+		return -1;
 	}
 	if (sixel_parser_finalize(&ctx->state, new_image->pixels) != 0) {
 		perror("sixel_parser_finalize() failed");
 		sixel_parser_deinit(&ctx->state);
-		return;
+		free(new_image->pixels);
+		free(new_image);
+		return -1;
 	}
+	new_image->width = ctx->state.image.width;
+	new_image->height = ctx->state.image.height;
 	sixel_parser_deinit(&ctx->state);
+
+	/* delete the old images that the new one covers, otherwise they keep
+	 * being blitted through/around it (ATTR_SIXEL is shared by all images) */
+	cols = (new_image->width + win.cw - 1) / win.cw;
+	rows = (new_image->height + win.ch - 1) / win.ch;
+	for (im = ctx->images; im; im = next) {
+		next = im->next;
+		if (im->x < new_image->x + cols &&
+		    im->x + (im->width + win.cw - 1) / win.cw > new_image->x &&
+		    im->y < new_image->y + rows &&
+		    im->y + (im->height + win.ch - 1) / win.ch > new_image->y)
+			xsixeldeleteimage(ctx, im);
+	}
+
 	if (ctx->images) {
-		ImageList *im;
 		for (im = ctx->images; im->next;)
 			im = im->next;
 		im->next = new_image;
@@ -1793,6 +1812,7 @@ xsixelnewimage(SixelContext *ctx, int tx, int ty)
 	} else {
 		ctx->images = new_image;
 	}
+	return 0;
 }
 
 void
@@ -1875,24 +1895,33 @@ xdrawline(Line line, int x1, int y1, int x2)
 void
 xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
 {
-	ImageList *im, *tmp;
-	int x, y;
+	ImageList *im, *next;
+	int x, y, cols, rows;
 	int n = 0;
 	int nlimit = 256;
 	XRectangle *rects = NULL;
-	XGCValues gcvalues = { 0 };
-	GC gc;
+	XGCValues gcvalues;
+	GC gc = NULL;
 
-	for (im = ctx->images; im;) {
+	for (im = ctx->images; im; im = next) {
+		next = im->next;
+
 		if (im->should_delete) {
-			tmp = im;
-			im = im->next;
-			xsixeldeleteimage(ctx, tmp);
+			xsixeldeleteimage(ctx, im);
 			continue;
 		}
 
+		cols = (im->width + win.cw - 1) / win.cw;
+		rows = (im->height + win.ch - 1) / win.ch;
+
+		/* skip, but keep, images that are currently off screen */
+		if (im->x >= col || im->y >= row || im->y + rows <= 0)
+			continue;
+
 		if (!im->pixmap) {
 			im->pixmap = (void *)XCreatePixmap(xw.dpy, xw.win, im->width, im->height, xw.depth);
+			if (!im->pixmap)
+				continue;
 			XImage ximage = {
 				.format = ZPixmap,
 				.data = (char *)im->pixels,
@@ -1912,22 +1941,20 @@ xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
 			im->pixels = NULL;
 		}
 		n = 0;
-		for (y = im->y; y < (im->y + (im->height + win.ch - 1) / win.ch) && y < row; y++) {
-			if (y >= 0) {
-				for (x = im->x; x < (im->x + (im->width + win.cw - 1) / win.cw) && x < col; x++) {
-					if (!rects)
-						rects = xmalloc(sizeof(XRectangle) * nlimit);
-					if (line[y][x].mode & ATTR_SIXEL) {
-						if (n > 0 && rects[n-1].x+rects[n-1].width == borderpx+x*win.cw && rects[n-1].y == borderpx+y*win.ch) {
-							rects[n-1].width += win.cw;
-						} else {
-							rects[n].x = borderpx+x*win.cw;
-							rects[n].y = borderpx+y*win.ch;
-							rects[n].width = win.cw;
-							rects[n].height = win.ch;
-							if (++n == nlimit && (rects = realloc(rects, sizeof(XRectangle) * (nlimit *= 2))) == NULL)
-								die("Out of memory\n");
-						}
+		for (y = MAX(im->y, 0); y < im->y + rows && y < row; y++) {
+			for (x = im->x; x < im->x + cols && x < col; x++) {
+				if (!rects)
+					rects = xmalloc(sizeof(XRectangle) * nlimit);
+				if (line[y][x].mode & ATTR_SIXEL) {
+					if (n > 0 && rects[n-1].x+rects[n-1].width == borderpx+x*win.cw && rects[n-1].y == borderpx+y*win.ch) {
+						rects[n-1].width += win.cw;
+					} else {
+						rects[n].x = borderpx+x*win.cw;
+						rects[n].y = borderpx+y*win.ch;
+						rects[n].width = win.cw;
+						rects[n].height = win.ch;
+						if (++n == nlimit && (rects = realloc(rects, sizeof(XRectangle) * (nlimit *= 2))) == NULL)
+							die("Out of memory\n");
 					}
 				}
 			}
@@ -1939,18 +1966,24 @@ xdrawsixel(SixelContext *ctx, Line *line, int row, int col)
 			}
 		}
 		if (n == 0) {
-			tmp = im;
-			im = im->next;
-			xsixeldeleteimage(ctx, tmp);
+			/* every cell of the image has been erased: drop it for good,
+			 * but only if we were able to inspect all of its cells */
+			if (im->y >= 0 && im->x + cols <= col && im->y + rows <= row)
+				xsixeldeleteimage(ctx, im);
 			continue;
 		}
-		gc = XCreateGC(xw.dpy, xw.win, 0, &gcvalues);
-		if (n > 1)
-			XSetClipRectangles(xw.dpy, gc, 0, 0, rects, n, YXSorted);
+		if (!gc) {
+			memset(&gcvalues, 0, sizeof(gcvalues));
+			gcvalues.graphics_exposures = False;
+			gc = XCreateGC(xw.dpy, xw.win, GCGraphicsExposures, &gcvalues);
+		}
+		/* always clip: with a single rectangle the unclipped image used to
+		 * be blitted over everything around it */
+		XSetClipRectangles(xw.dpy, gc, 0, 0, rects, n, Unsorted);
 		XCopyArea(xw.dpy, (Drawable)im->pixmap, xw.buf, gc, 0, 0, im->width, im->height, borderpx + im->x * win.cw, borderpx + im->y * win.ch);
-		XFreeGC(xw.dpy, gc);
-		im = im->next;
 	}
+	if (gc)
+		XFreeGC(xw.dpy, gc);
 	free(rects);
 }
 

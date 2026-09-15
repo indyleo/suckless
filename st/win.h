@@ -39,7 +39,7 @@ void xclipcopy(void);
 int xsixelinit(SixelContext *);
 void xsixelscrolldown(SixelContext *, int, int);
 void xsixelscrollup(SixelContext *, int, int);
-void xsixelnewimage(SixelContext *, int, int);
+int xsixelnewimage(SixelContext *, int, int);
 int xsixelparse(SixelContext *, unsigned char *, int);
 void xsixeldeleteimage(SixelContext *, ImageList *);
 void xdrawsixel(SixelContext *, Line *, int, int);

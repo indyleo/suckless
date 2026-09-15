@@ -2020,15 +2020,30 @@ void strhandle(void) {
     return;
   case 'P': /* DCS -- Device Control String */
 		if (IS_SET(MODE_SIXEL)) {
+			int x, x1, x2, rows;
+
 			term.mode &= ~MODE_SIXEL;
-			xsixelnewimage(&term.sixel, term.c.x, term.c.y);
+			if (!term.sixel.state.image.data) {
+				sixel_parser_deinit(&term.sixel.state);
+				return;
+			}
 			win = gettermwindow();
-			for (i = 0; i < (term.sixel.state.image.height + win.ch-1)/win.ch; ++i) {
-				int x;
-				tclearregion(term.c.x, term.c.y, term.c.x+(term.sixel.state.image.width+win.cw-1)/win.cw, term.c.y);
-				for (x = term.c.x; x < MIN(term.col, term.c.x+(term.sixel.state.image.width+win.cw-1)/win.cw); x++)
+			if (xsixelnewimage(&term.sixel, term.c.x, term.c.y) != 0)
+				return;
+
+			/* the image origin is fixed: never recompute it from term.c.x,
+			 * which tnewline() would have reset to column 0 */
+			x1 = term.c.x;
+			x2 = MIN(x1 + DIVCEIL(term.sixel.state.image.width, win.cw), term.col) - 1;
+			rows = DIVCEIL(term.sixel.state.image.height, win.ch);
+
+			for (i = 0; i < rows; ++i) {
+				tclearregion(x1, term.c.y, x2, term.c.y);
+				for (x = x1; x <= x2; x++)
 					term.line[term.c.y][x].mode |= ATTR_SIXEL;
-				tnewline(1);
+				term.dirty[term.c.y] = 1;
+				if (i < rows - 1)
+					tnewline(0);
 			}
 		}
 		return;
@@ -2698,9 +2713,9 @@ void draw(void) {
     term.ocx--;
   if (term.line[term.c.y][cx].mode & ATTR_WDUMMY)
     cx--;
-  xdrawsixel(&term.sixel, term.line, term.row, term.col);
-
   drawregion(0, 0, term.col, term.row);
+  if (term.scr == 0)
+    xdrawsixel(&term.sixel, term.line, term.row, term.col);
   if (term.scr == 0)
     xdrawcursor(cx, term.c.y, term.line[term.c.y][cx], term.ocx, term.ocy,
                 term.line[term.ocy][term.ocx], term.line[term.ocy], term.col);
