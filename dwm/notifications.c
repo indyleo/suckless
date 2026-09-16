@@ -13,6 +13,7 @@
 #include <X11/Xft/Xft.h>
 #include <fontconfig/fontconfig.h>
 #include <Imlib2.h>
+#include <gtk/gtk.h>
 
 #include <dbus/dbus.h>
 #include <stdio.h>
@@ -135,6 +136,10 @@ static Imlib_Image load_image_from_path(const char *path) {
     return img;
 }
 
+static Imlib_Image load_image_from_data(int width, int height, int rowstride,
+                                        int has_alpha, int channels,
+                                        const unsigned char *data);
+
 static Imlib_Image load_image_from_icon_name(const char *name) {
     if (!name || name[0] == '\0') return NULL;
 
@@ -142,28 +147,27 @@ static Imlib_Image load_image_from_icon_name(const char *name) {
         return load_image_from_path(name);
     }
 
-    const char *dirs[] = {
-        "/usr/share/icons/hicolor/48x48/apps/",
-        "/usr/share/icons/hicolor/64x64/apps/",
-        "/usr/share/icons/hicolor/128x128/apps/",
-        "/usr/share/pixmaps/",
-        NULL
-    };
-    char path[512];
-    Imlib_Image img = NULL;
+    GtkIconTheme *theme = gtk_icon_theme_get_default();
+    GdkPixbuf *pixbuf;
+    GError *error = NULL;
+    Imlib_Image img;
 
-    pthread_mutex_lock(&imlib_mutex);
-    for (int i = 0; dirs[i]; i++) {
-        snprintf(path, sizeof(path), "%s%s.png", dirs[i], name);
-        img = load_image_from_path_unlocked(path);
-        if (img) break;
+    if (!theme) return NULL;
 
-        snprintf(path, sizeof(path), "%s%s.svg", dirs[i], name);
-        img = load_image_from_path_unlocked(path);
-        if (img) break;
+    pixbuf = gtk_icon_theme_load_icon(theme, name, 48,
+                                      GTK_ICON_LOOKUP_USE_BUILTIN, &error);
+    if (!pixbuf) {
+        if (error) g_error_free(error);
+        return NULL;
     }
-    pthread_mutex_unlock(&imlib_mutex);
 
+    img = load_image_from_data(gdk_pixbuf_get_width(pixbuf),
+                               gdk_pixbuf_get_height(pixbuf),
+                               gdk_pixbuf_get_rowstride(pixbuf),
+                               gdk_pixbuf_get_has_alpha(pixbuf),
+                               gdk_pixbuf_get_n_channels(pixbuf),
+                               gdk_pixbuf_get_pixels(pixbuf));
+    g_object_unref(pixbuf);
     return img;
 }
 
@@ -1143,6 +1147,9 @@ void notifsetup(void) {
   DBusError err;
   int i;
   int ret;
+
+  if (!gtk_init_check(NULL, NULL))
+    fprintf(stderr, "dwm: notifications: GTK icon theme unavailable\n");
 
   dbus_error_init(&err);
   dbusconn = dbus_bus_get(DBUS_BUS_SESSION, &err);
