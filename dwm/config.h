@@ -64,6 +64,10 @@ static Sp scratchpads[] = {
     {"termsc", spcmd1},    {"lfsc", spcmd2},    {"qalsc", spcmd3},
     {"wiremixsc", spcmd4}, {"musicsc", spcmd5},
 };
+/* external linkage (no `static`) so ipc.c can range-check the
+ * `togglescratch N` fifo command's index before it reaches
+ * scratchpads[] -- see fifotogglescratch() there */
+const int scratchpadslen = LENGTH(scratchpads);
 
 /* Autostart */
 static const char *const autostart[] = {"/usr/local/bin/autostart.sh", NULL,

@@ -24,6 +24,7 @@ extern const char *fifopath;
 extern const char *fiforeplypath;
 extern const Tag tags[];
 extern const int tagslen;
+extern const int scratchpadslen;
 
 int fifofd = -1;
 int fiforeplyfd = -1;
@@ -34,17 +35,46 @@ typedef struct {
   int argtype; /* 0 = none, 1 = int, 2 = uint, 3 = float */
 } FifoCmd;
 
-/* tag index → bitmask wrappers */
-static void fifoviewtag(const Arg *arg) { view(&((Arg){.ui = 1u << arg->i})); }
-static void fifotagtag(const Arg *arg) { tag(&((Arg){.ui = 1u << arg->i})); }
+/* tag index → bitmask wrappers.
+ *
+ * arg->i comes straight from atoi() on whatever was written to the
+ * fifo, so it has to be range-checked here. An out-of-range index used
+ * to produce either an undefined shift (`1u << 99`, or a negative
+ * shift count) or a bitmask above the real tags, which then walked
+ * dwm's per-tag settings arrays off their ends. */
+static int fifovalidtag(const Arg *arg) {
+  if (arg->i < 0 || arg->i >= tagslen) {
+    fprintf(stderr, "dwm: fifo tag index %d out of range (0-%d)\n", arg->i,
+            tagslen - 1);
+    return 0;
+  }
+  return 1;
+}
+
+static void fifoviewtag(const Arg *arg) {
+  if (fifovalidtag(arg))
+    view(&((Arg){.ui = 1u << arg->i}));
+}
+static void fifotagtag(const Arg *arg) {
+  if (fifovalidtag(arg))
+    tag(&((Arg){.ui = 1u << arg->i}));
+}
 static void fifotoggletag(const Arg *arg) {
-  toggleview(&((Arg){.ui = 1u << arg->i}));
+  if (fifovalidtag(arg))
+    toggleview(&((Arg){.ui = 1u << arg->i}));
 }
 static void fifotogglewintag(const Arg *arg) {
-  toggletag(&((Arg){.ui = 1u << arg->i}));
+  if (fifovalidtag(arg))
+    toggletag(&((Arg){.ui = 1u << arg->i}));
 }
-/* scratchpad index → ui wrapper */
+/* scratchpad index → ui wrapper. togglescratch() indexes scratchpads[]
+ * with arg->ui directly, so the same range check applies. */
 static void fifotogglescratch(const Arg *arg) {
+  if (arg->i < 0 || arg->i >= scratchpadslen) {
+    fprintf(stderr, "dwm: fifo scratchpad index %d out of range (0-%d)\n",
+            arg->i, scratchpadslen - 1);
+    return;
+  }
   togglescratch(&((Arg){.ui = (unsigned int)arg->i}));
 }
 
@@ -180,10 +210,14 @@ void readfifo(void) {
 
   while ((nl = strchr(buf, '\n'))) {
     *nl = '\0';
-    char cmd[64], param[64];
+    char cmd[64] = "", param[64];
     int items = sscanf(buf, "%63s %63s", cmd, param);
 
-    for (i = 0; i < LENGTH(fifocmds); i++) {
+    /* A blank line (or one that's pure whitespace) matches zero
+     * conversions, leaving cmd uninitialized -- strcmp() on it below
+     * used to read garbage. cmd is zero-initialized above so this just
+     * falls through to "unknown fifo command ''" instead. */
+    for (i = 0; items >= 1 && i < LENGTH(fifocmds); i++) {
       if (strcmp(cmd, fifocmds[i].cmd) != 0)
         continue;
       arg = (Arg){0};

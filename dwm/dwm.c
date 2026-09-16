@@ -83,8 +83,17 @@
 /* ISVISIBLE now lives in dwm.h */
 #define HIDDEN(C) ((getstate(C->win) == IconicState))
 #define MOUSEMASK (BUTTONMASK | PointerMotionMask)
-#define WIDTH(X) ((X)->w + 2 * (X)->bw + gappx)
-#define HEIGHT(X) ((X)->h + 2 * (X)->bw + gappx)
+/* gappx is `unsigned int`, so plain (X)->w + 2*(X)->bw + gappx promotes
+ * the whole expression to unsigned -- every caller that does
+ * `abs(something - WIDTH(c))` (movemouse's right/bottom-edge snap,
+ * resizemouse's snap-to-tile threshold) was then calling abs() on an
+ * already-unsigned value, which is a silent no-op: the sign is gone
+ * before abs() ever sees it, so snapping only worked while the client
+ * was approaching an edge from the "positive" side and quietly failed
+ * on the other. Casting back to int here restores signed arithmetic
+ * everywhere WIDTH/HEIGHT are used. */
+#define WIDTH(X) ((int)((X)->w + 2 * (X)->bw + gappx))
+#define HEIGHT(X) ((int)((X)->h + 2 * (X)->bw + gappx))
 #define NUMTAGS (LENGTH(tags) + LENGTH(scratchpads))
 #define TAGMASK ((1 << NUMTAGS) - 1)
 #define SPTAG(i) ((1 << LENGTH(tags)) << (i))
@@ -609,7 +618,15 @@ void swallow(Client *p, Client *c) {
 
   if (c->noswallow || c->isterminal)
     return;
-  if (c->noswallow && !swallowfloating && c->isfloating)
+  /* This used to read `if (c->noswallow && !swallowfloating &&
+   * c->isfloating)`, which can never be true -- the line above already
+   * returns whenever c->noswallow is set, so this second check was
+   * dead code and swallowfloating=0 (the config.def.h default) had no
+   * effect: floating windows were swallowed regardless. Dropping the
+   * c->noswallow half of the condition is what the config option
+   * actually promises: only swallow a floating window if
+   * swallowfloating is enabled. */
+  if (!swallowfloating && c->isfloating)
     return;
 
   detach(c);
@@ -723,6 +740,10 @@ void buttonpress(XEvent *e) {
         x += thisw;
       }
 
+      /* Ran off the end of the tabs without matching (rounding, or the
+       * click landed in the gap past the last tab). arg.v stays NULL
+       * here, so the ClkWinTitle handler must tolerate that -- see the
+       * guard at the top of togglewin(). */
       click = ClkWinTitle;
       goto clickfound;
     }
@@ -750,9 +771,17 @@ void buttonpress(XEvent *e) {
           *s = '^';
           if (*(++s) == 'f')
             x += atoi(++s);
-          while (*(s++) != '^')
-            ;
+          /* Skip to the closing '^'. This used to be
+           * `while (*(s++) != '^');`, which ran off the end of stext
+           * entirely if a code was left unterminated -- same failure
+           * as the scanner in drawstatusbar(). Stop at the NUL too. */
+          while (*s && *s != '^')
+            s++;
+          if (*s == '^')
+            s++;
           text = s;
+          if (!*s)
+            break;
           s--;
         }
       }
@@ -1109,39 +1138,49 @@ int drawstatusbar(Monitor *m, int bh, char *stext) {
 
       x += w;
 
-      /* process code */
-      while (text[++i] != '^') {
-        if (text[i] == 'c') {
+      /* Process code.
+       *
+       * Every scan in here used to be unbounded: `while (text[++i] !=
+       * '^')` walked straight off the end of the heap buffer if a code
+       * was never closed, the ',' scans in 'r' did the same, and the
+       * 'c'/'b' handlers memcpy'd a fixed 7 bytes whether or not that
+       * many were left in the string. A single malformed status block
+       * (a truncated "^c#ff00" say) was enough to read out of bounds
+       * and take dwm down. `textlen` bounds all of it now, and a code
+       * that reaches the end of the string without a closing '^' just
+       * ends the loop. */
+      int textlen = (int)strlen(text);
+      while (text[++i] && text[i] != '^') {
+        if (text[i] == 'c' || text[i] == 'b') {
           char buf[8];
-          memcpy(buf, (char *)text + i + 1, 7);
+          int avail = textlen - (i + 1);
+          if (avail < 7)
+            break; /* truncated colour code, nothing sane to parse */
+          memcpy(buf, text + i + 1, 7);
           buf[7] = '\0';
-          drw_clr_create(drw, &drw->scheme[ColFg], buf);
-          i += 7;
-        } else if (text[i] == 'b') {
-          char buf[8];
-          memcpy(buf, (char *)text + i + 1, 7);
-          buf[7] = '\0';
-          drw_clr_create(drw, &drw->scheme[ColBg], buf);
+          drw_clr_create(drw, text[i] == 'c' ? &drw->scheme[ColFg]
+                                             : &drw->scheme[ColBg],
+                         buf);
           i += 7;
         } else if (text[i] == 'd') {
           drw->scheme[ColFg] = scheme[SchemeNorm][ColFg];
           drw->scheme[ColBg] = scheme[SchemeNorm][ColBg];
         } else if (text[i] == 'r') {
-          int rx = atoi(text + ++i);
-          while (text[++i] != ',')
-            ;
-          int ry = atoi(text + ++i);
-          while (text[++i] != ',')
-            ;
-          int rw = atoi(text + ++i);
-          while (text[++i] != ',')
-            ;
-          int rh = atoi(text + ++i);
+          int rx, ry, rw, rh;
+          int consumed = 0;
 
-          drw_rect(drw, rx + x, ry, rw, rh, 1, 0);
+          if (sscanf(text + i + 1, "%d,%d,%d,%d%n", &rx, &ry, &rw, &rh,
+                     &consumed) == 4) {
+            drw_rect(drw, rx + x, ry, rw, rh, 1, 0);
+            i += consumed;
+          } else {
+            break; /* malformed rect spec */
+          }
         } else if (text[i] == 'f') {
           x += atoi(text + ++i);
         }
+        if (i >= textlen)
+          break;
       }
 
       text = text + i + 1;
@@ -1655,8 +1694,15 @@ void manage(Window w, XWindowAttributes *wa) {
     c->x = c->mon->wx + c->rulex;
     c->y = c->mon->wy + c->ruley;
   } else {
-    c->x = c->mon->mx + (c->mon->mw - WIDTH(c)) / 2;
-    c->y = c->mon->my + (c->mon->mh - HEIGHT(c)) / 2;
+    /* mx/my/mw/mh is the full monitor including the bar; wx/wy/ww/wh
+     * is the usable work area updatebarpos() already shrank to
+     * exclude it. Centering against the former (as this previously
+     * did) put new floating windows off-center by about half the bar
+     * height -- inconsistent with the clamping just above in this
+     * function and with the scratchpad centering in applyrules(),
+     * both of which already use the work area. */
+    c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
+    c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
   }
 
   XSelectInput(dpy, w,
@@ -1684,7 +1730,12 @@ void manage(Window w, XWindowAttributes *wa) {
   arrange(c->mon);
   if (c->ruleforcefullscreen)
     setfullscreen(c, 1);
-  XMapWindow(dpy, c->win);
+  /* Only map if the client isn't meant to start hidden. This used to
+   * be an unconditional XMapWindow(dpy, c->win) followed immediately
+   * by this same conditional one -- the unconditional call defeated
+   * the HIDDEN(c) check just above (which had already sent it
+   * IconicState via setclientstate()), so a client meant to open
+   * hidden got force-mapped anyway. */
   if (!HIDDEN(c))
     XMapWindow(dpy, c->win);
   if (term)
@@ -1889,8 +1940,8 @@ void resize(Client *c, int x, int y, int w, int h, int interact) {
 
 void resizeclient(Client *c, int x, int y, int w, int h) {
   XWindowChanges wc;
-  unsigned int gapoffset;
-  unsigned int gapincr;
+  int gapoffset;
+  int gapincr;
 
   wc.border_width = c->bw;
 
@@ -2041,7 +2092,12 @@ void run(void) {
         rrscreenchangenotify(&ev);
       else if (fixesbase >= 0 && ev.type == fixesbase + XFixesSelectionNotify)
         clipboardfixesnotify(&ev);
-      else if (handler[ev.type])
+      /* handler[] is only LASTEvent entries long; any other extension
+       * event (RandR/XFixes event codes besides the two handled above,
+       * or any future extension we select input for) carries a type at
+       * or past that, which would otherwise index off the end of the
+       * array. */
+      else if (ev.type >= 0 && ev.type < LASTEvent && handler[ev.type])
         handler[ev.type](&ev);
     } else {
       struct timespec ts = {.tv_sec = 0, .tv_nsec = 10000000};
@@ -2239,6 +2295,16 @@ void setup(void) {
   signal(SIGHUP, sighup);
   signal(SIGUSR1, sigusr1);
   signal(SIGTERM, sigterm);
+  /* clipboard.c's copytextclip()/runargv_io(), screenshot.c's
+   * copytextclip(), and osd.c's runargv_* all write into a pipe whose
+   * read end is a just-forked child (xclip, dmenu, ...). If that
+   * execvp fails -- the tool isn't installed, isn't on PATH, whatever
+   * -- the child _exit()s immediately and the next write() raises
+   * SIGPIPE, whose default action is to terminate the process. A
+   * missing external dependency shouldn't be able to kill the window
+   * manager; every write() call already checks its return value for
+   * this same failure and just proceeds best-effort. */
+  signal(SIGPIPE, SIG_IGN);
 
   if (wallpaperinterval > 0) {
     signal(SIGALRM, sigalrm);
@@ -2567,12 +2633,28 @@ void toggleview(const Arg *arg) {
       selmon->pertag->curtag = 0;
     }
 
-    /* test if the user did not select the same tag */
-    if (!(newtagset & 1 << (selmon->pertag->curtag - 1))) {
-      selmon->pertag->prevtag = selmon->pertag->curtag;
-      for (i = 0; !(newtagset & 1 << i); i++)
-        ;
-      selmon->pertag->curtag = i + 1;
+    /* test if the user did not select the same tag.
+     *
+     * Two things to be careful of here, both of which used to index
+     * pertag's [LENGTH(tags) + 1]-sized arrays out of bounds:
+     *
+     *  - curtag == 0 means "all tags" (set by view() for Mod+0), and
+     *    1 << (0 - 1) is a shift by -1, which is undefined.
+     *  - newtagset can contain scratchpad bits (SPTAGMASK), which live
+     *    above LENGTH(tags). Scanning for the lowest set bit without
+     *    masking those off yields curtag > LENGTH(tags) -- reachable
+     *    just by having a scratchpad open and toggling the current tag
+     *    off, which then read a garbage Layout pointer out of
+     *    pertag->ltidxs and crashed. */
+    unsigned int realtags = newtagset & ~SPTAGMASK;
+    if (selmon->pertag->curtag == 0 ||
+        !(newtagset & 1 << (selmon->pertag->curtag - 1))) {
+      if (realtags) {
+        selmon->pertag->prevtag = selmon->pertag->curtag;
+        for (i = 0; !(realtags & 1 << i); i++)
+          ;
+        selmon->pertag->curtag = i + 1;
+      }
     }
 
     /* apply settings for this view */
@@ -2594,6 +2676,15 @@ void toggleview(const Arg *arg) {
 
 void togglewin(const Arg *arg) {
   Client *c = (Client *)arg->v;
+
+  /* arg->v is NULL when buttonpress() couldn't resolve the click to a
+   * specific tab, and selmon->sel is NULL whenever nothing is focused
+   * (e.g. every visible client is hidden). Without this guard the
+   * c == selmon->sel branch below reached arrange(c->mon) with c NULL,
+   * and the else branch reached HIDDEN(c) -> c->win, either of which
+   * takes the whole WM down. */
+  if (!c)
+    return;
 
   if (c == selmon->sel) {
     hidewin(c);
@@ -2939,9 +3030,17 @@ void view(const Arg *arg) {
     if (arg->ui == ~0)
       selmon->pertag->curtag = 0;
     else {
-      for (i = 0; !(arg->ui & 1 << i); i++)
-        ;
-      selmon->pertag->curtag = i + 1;
+      /* Mask off scratchpad bits before looking for the lowest set
+       * tag: they sit above LENGTH(tags), and pertag's arrays are only
+       * LENGTH(tags) + 1 long, so a scratchpad-only tagset (or a fifo
+       * `view N` with N past the last real tag) indexed them out of
+       * bounds. Leave curtag alone if no real tag is being viewed. */
+      unsigned int realtags = arg->ui & ~SPTAGMASK & TAGMASK;
+      if (realtags) {
+        for (i = 0; !(realtags & 1 << i); i++)
+          ;
+        selmon->pertag->curtag = i + 1;
+      }
     }
   } else {
     tmptag = selmon->pertag->prevtag;
