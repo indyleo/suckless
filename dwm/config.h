@@ -401,6 +401,9 @@ static const Key keys[] = {
      XK_t,
      hideallscratchpads,
      {0}}, /* hide all scratchpads */
+
+    /* Mouse Movement */
+    {0, XK_F9, spawn, SHCMD("mouse_move")},
 };
 
 /* Button Definitions */
