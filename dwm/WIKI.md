@@ -115,16 +115,13 @@ check) adjusts on its own. You do still need to add/remove the matching
 
 Toggle-able floating terminal apps, bound via `togglescratch`:
 
-| Slot           | Tag bind   | Command                              |
-| -------------- | ---------- | ------------------------------------ |
-| 0 `termsc`     | `MODKEY+t` | `st` (plain scratch terminal)        |
-| 1 `lfsc`       | `MODKEY+y` | `st` running `lf` (file manager)     |
-| 2 `qalsc`      | `MODKEY+z` | `st` running `qalc` (calculator)     |
-| 3 `wiremixsc`  | `MODKEY+a` | `st` running `wiremix` (audio mixer) |
-| 4 `gurks`      | `MODKEY+g` | `st` running `gurks`                 |
-| 5 `discordo`   | `MODKEY+d` | `st` running `discordo`              |
-| 6 `twitch-tui` | `MODKEY+c` | `st` running `twt`                   |
-| 7 `musicsc`    | `MODKEY+m` | `st` running `subsonic-tui`          |
+| Slot          | Tag bind   | Command                              |
+| ------------- | ---------- | ------------------------------------ |
+| 0 `termsc`    | `MODKEY+t` | `st` (plain scratch terminal)        |
+| 1 `lfsc`      | `MODKEY+y` | `st` running `lf` (file manager)     |
+| 2 `qalsc`     | `MODKEY+z` | `st` running `qalc` (calculator)     |
+| 3 `wiremixsc` | `MODKEY+a` | `st` running `wiremix` (audio mixer) |
+| 4 `musicsc`   | `MODKEY+m` | `st` running `subsonic-tui`          |
 
 To add a new scratchpad: add a `const char *spcmdN[]` array, add it to the
 `scratchpads[]` table, add a matching rule in `rules[]` using `SPTAG(N)`,
