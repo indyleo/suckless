@@ -113,6 +113,7 @@ static unsigned int nextid = 1;
 static int dndenabled = 0;
 static unsigned int unreadcount = 0;
 static int notifh = 0;
+static const char *notif_app_icon(const char *appname);
 
 /* --- small helpers ------------------------------------------------- */
 
@@ -155,11 +156,13 @@ static Imlib_Image load_image_from_icon_name(const char *name) {
     if (!theme) return NULL;
 
     pixbuf = gtk_icon_theme_load_icon(theme, name, 48,
-                                      GTK_ICON_LOOKUP_USE_BUILTIN, &error);
+                                  GTK_ICON_LOOKUP_USE_BUILTIN, &error);
     if (!pixbuf) {
-        if (error) g_error_free(error);
-        return NULL;
-    }
+        fprintf(stderr, "dwm: notifications: icon lookup failed for '%s': %s\n",
+            name, error ? error->message : "unknown error");
+    if (error) g_error_free(error);
+    return NULL;
+}
 
     img = load_image_from_data(gdk_pixbuf_get_width(pixbuf),
                                gdk_pixbuf_get_height(pixbuf),
@@ -421,7 +424,13 @@ static void notif_paint(int slot) {
         imlib_image_get_width(), imlib_image_get_height(),
         img_area_x, img_area_y, img_area_w, img_area_h);
     pthread_mutex_unlock(&imlib_mutex);
-  }
+} else {
+    const char *icon = notif_app_icon(p->appname);
+    drw_setscheme(d, scheme[SchemeNorm]);
+    int icon_w = drw_fontset_getwidth(d, icon);
+    drw_text(d, img_area_x, img_area_y + (img_area_h - d->fonts->h) / 2,
+             icon_w, d->fonts->h, 0, icon, 0);
+}
 
   /* Center each line when it fits text_width; otherwise pin it to
    * text_left and pass the *remaining* box width (not the text's own
