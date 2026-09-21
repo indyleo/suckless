@@ -115,13 +115,13 @@ check) adjusts on its own. You do still need to add/remove the matching
 
 Toggle-able floating terminal apps, bound via `togglescratch`:
 
-| Slot          | Tag bind   | Command                              |
-| ------------- | ---------- | ------------------------------------ |
-| 0 `termsc`    | `MODKEY+t` | `st` (plain scratch terminal)        |
-| 1 `lfsc`      | `MODKEY+y` | `st` running `lf` (file manager)     |
-| 2 `qalsc`     | `MODKEY+z` | `st` running `qalc` (calculator)     |
-| 3 `wiremixsc` | `MODKEY+a` | `st` running `wiremix` (audio mixer) |
-| 4 `musicsc`   | `MODKEY+m` | `st` running `subsonic-tui`          |
+| Slot          | Tag bind   | Command                                     |
+| ------------- | ---------- | ------------------------------------------- |
+| 0 `termsc`    | `MODKEY+t` | `alacritty` (plain scratch terminal)        |
+| 1 `lfsc`      | `MODKEY+y` | `alacritty` running `lf` (file manager)     |
+| 2 `qalsc`     | `MODKEY+z` | `alacritty` running `qalc` (calculator)     |
+| 3 `wiremixsc` | `MODKEY+a` | `alacritty` running `wiremix` (audio mixer) |
+| 4 `musicsc`   | `MODKEY+m` | `alacritty` running `subsonic-tui`          |
 
 To add a new scratchpad: add a `const char *spcmdN[]` array, add it to the
 `scratchpads[]` table, add a matching rule in `rules[]` using `SPTAG(N)`,
@@ -409,7 +409,7 @@ static const Rule rules[] = {
        forcefullscreen: 1 = go fullscreen immediately on open */
     {"Gimp",       NULL,     NULL,   0,         1,          0,          0,  -1},
     {"Firefox",    NULL,     NULL,   1 << 8,    0,          0,          -1, -1},
-    {"St",         NULL,     NULL,   0,         0,          1,          0,  -1},
+    {"Alacritty",  NULL,     NULL,   0,         0,          1,          0,  -1},
     {NULL, NULL, "^Picture-in-Picture$", 0, 1, 0, 0, -1, 480, 270, 14, 12, 1, 0},
     {"^steam_app_(?!0$)[0-9]+$", NULL, NULL, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1},
     ...
@@ -751,7 +751,7 @@ The command fifo is one-way (script → dwm). For the other direction, send
 ```sh
 echo "state" > /tmp/dwm.fifo
 cat /tmp/dwm.fifo.reply
-# mon=0 tags=web layout=monocle clients=3 urgent=0 title=st
+    # mon=0 tags=web layout=monocle clients=3 urgent=0 title=alacritty
 ```
 
 `tags` here is built from each visible tag's `name` (not `icon`, and not a
