@@ -52,14 +52,16 @@ static const char *colors[][3] = {
                    gruvbox_urgbordercolor}, /* urgent */
 };
 
-const char *spcmd1[] = {"st", "-c", "termsc", "-n", "Termsc", NULL};
-const char *spcmd2[] = {"st", "-c",  "lfsc", "-n", "Lfsc",
-                        "-e", "zsh", "-c",   "lf", NULL};
-const char *spcmd3[] = {"st", "-c", "qalsc", "-n", "Qalsc", "-e", "qalc", NULL};
-const char *spcmd4[] = {"st",        "-c", "wiremixsc", "-n",
-                        "Wiremixsc", "-e", "wiremix",   NULL};
-const char *spcmd5[] = {"st", "-c",  "musicsc", "-n",           "Musicsc",
-                        "-e", "zsh", "-c",      "subsonic-tui", NULL};
+const char *spcmd1[] = {"alacritty", "--class", "termsc", "-t", "Termsc", NULL};
+const char *spcmd2[] = {"alacritty", "--class", "lfsc", "-t", "Lfsc",
+                        "-e",        "zsh",     "-c",   "lf", NULL};
+const char *spcmd3[] = {"alacritty", "--class", "qalsc", "-t",
+                        "Qalsc",     "-e",      "qalc",  NULL};
+const char *spcmd4[] = {"alacritty", "--class", "wiremixsc", "-t",
+                        "Wiremixsc", "-e",      "wiremix",   NULL};
+const char *spcmd5[] = {"alacritty",    "--class", "musicsc", "-t",
+                        "Musicsc",      "-e",      "zsh",     "-c",
+                        "subsonic-tui", NULL};
 static Sp scratchpads[] = {
     {"termsc", spcmd1},    {"lfsc", spcmd2},    {"qalsc", spcmd3},
     {"wiremixsc", spcmd4}, {"musicsc", spcmd5},
@@ -313,7 +315,7 @@ static const Key keys[] = {
     {MODKEY, XK_p, spawn, SHCMD("picom_toggle")},
 
     /* Applications */
-    {MODKEY, XK_Return, spawn, SHCMD("st")},
+    {MODKEY, XK_Return, spawn, SHCMD("alacritty")},
     {MODKEY, XK_f, spawn, SHCMD("thunar")},
     {MODKEY, XK_b, spawn, SHCMD("librewolf")},
     {MODKEY | SHIFTKEY, XK_d, spawn, SHCMD("vesktop")},
