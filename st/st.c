@@ -625,7 +625,7 @@ void highlighturlsline(int row) {
   int url_start = -1;
   while ((match = strstrany(linestr + url_start + 1, urlprefixes))) {
     url_start = match - linestr;
-    for (int c = url_start; c < term.col && strchr(urlchars, linestr[c]); c++) {
+    for (int c = url_start; c < term.col && linestr[c] && strchr(urlchars, linestr[c]); c++) {
       term.line[row][c].mode |= ATTR_URL;
       tsetdirt(row, c);
     }
@@ -657,7 +657,8 @@ int followurl(int col, int row) {
   while ((match = strstrany(linestr + url_start + 1, urlprefixes))) {
     url_start = match - linestr;
     int url_end = url_start;
-    for (int c = url_start; c < term.col && strchr(urlchars, linestr[c]); c++) {
+    for (int c = url_start; c < term.col && linestr[c] && strchr(urlchars, linestr[c]); c++)
+    {
       url_end++;
     }
     if (url_start <= col && col < url_end) {
