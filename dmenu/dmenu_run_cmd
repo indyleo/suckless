@@ -2,4 +2,4 @@
 # Same $PATH listing as dmenu_run, but in run mode (-r): Enter always
 # executes exactly what's typed, so you can pick a suggestion and then
 # add arguments before running it.
-dmenu_path | dmenu -r -p "Run:" "$@" | ${SHELL:-"/bin/sh"} &
+dmenu_path | dmenu -r "$@" | ${SHELL:-"/bin/sh"} &
