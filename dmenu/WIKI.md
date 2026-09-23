@@ -89,6 +89,29 @@ already collected, so `dmenu_path | dmenu` (i.e. `dmenu_run`) shows `$PATH`
 executables and flatpak apps together. Selecting a flatpak entry runs
 `flatpak run <app-id>` instead of printing the selection to stdout.
 
+## Run mode
+
+```c
+-r  /* no config.h knob — invocation-only, like -b or -F */
+```
+
+Without `-r`, Enter prints the highlighted item's text (`sel->text`) if
+something matches, and only falls back to the raw input (`text`) when
+nothing does — so typing `firefox --private-window` and pressing Enter
+normally just runs bare `firefox`, since `firefox` fuzzy-matches and gets
+highlighted. Shift+Enter is the existing escape hatch that forces the raw
+input instead.
+
+`-r` inverts that default: plain Enter always prints the raw input text,
+args and all, and Shift+Enter becomes the way to take the highlighted
+item verbatim. Tab-completion into the input field (see Keybindings)
+still works the same either way, so you can Tab-complete a suggestion in
+and then add arguments before running it.
+
+Intended for a "run mode" wrapper (see `dmenu_run_cmd`) that lists
+`$PATH` like `dmenu_run` but is meant to run whatever you actually typed,
+not just what dmenu decided you meant.
+
 ## Word delimiters
 
 ```c
@@ -100,40 +123,41 @@ to taste: `" /?\\\"&[]"` for shell-style word boundaries.
 
 ## Keybindings (built-in, not configurable in config.h)
 
-| Key            | Action                                              |
-| -------------- | --------------------------------------------------- |
-| Type           | Filter items                                        |
-| `Enter`        | Accept selected item                                |
-| `Shift+Enter`  | Accept typed input verbatim (even if not in list)   |
-| `Escape`       | Exit without output                                 |
-| `Tab`          | Complete to selected item                           |
-| `↑` / `↓`      | Move selection (vertical mode)                      |
-| `←` / `→`      | Move selection (horizontal mode) / move cursor      |
-| `Ctrl+W`       | Delete word                                         |
-| `Ctrl+U`       | Clear input                                         |
-| `Ctrl+Y`       | Paste from primary selection                        |
-| `Ctrl+Shift+Y` | Paste from clipboard (instead of primary selection) |
-| `Page Up/Down` | Scroll list                                         |
+| Key            | Action                                                        |
+| -------------- | ------------------------------------------------------------- |
+| Type           | Filter items                                                  |
+| `Enter`        | Accept selected item (with `-r`: accept typed input verbatim) |
+| `Shift+Enter`  | Accept typed input verbatim (with `-r`: accept selected item) |
+| `Escape`       | Exit without output                                           |
+| `Tab`          | Complete to selected item                                     |
+| `↑` / `↓`      | Move selection (vertical mode)                                |
+| `←` / `→`      | Move selection (horizontal mode) / move cursor                |
+| `Ctrl+W`       | Delete word                                                   |
+| `Ctrl+U`       | Clear input                                                   |
+| `Ctrl+Y`       | Paste from primary selection                                  |
+| `Ctrl+Shift+Y` | Paste from clipboard (instead of primary selection)           |
+| `Page Up/Down` | Scroll list                                                   |
 
 ## Command-line flags
 
-| Flag                        | Effect                                                                                 |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| `-v`                        | Print version and exit                                                                 |
-| `-b`                        | Appear at bottom of screen                                                             |
-| `-f`                        | Grab keyboard before reading stdin (faster startup; only if stdin isn't a tty)         |
-| `-F`                        | Disable fuzzy matching                                                                 |
-| `-s`                        | Case-**sensitive** matching (matching is case-insensitive by default)                  |
-| `-P`                        | Password mode: mask typed input with dots                                              |
-| `-x`                        | Invert `use_prefix` (only has an effect once `-F` is also passed — see Matching above) |
-| `-l N`                      | Vertical list with N lines                                                             |
-| `-m N`                      | Show on monitor N (Xinerama, 0-indexed)                                                |
-| `-n N`                      | Preselect item at index N                                                              |
-| `-p prompt`                 | Override prompt text                                                                   |
-| `-fn font`                  | Override font                                                                          |
-| `-nb`/`-nf`/`-sb`/`-sf`     | Override normal/selected background/foreground colors                                  |
-| `-nhb`/`-nhf`/`-shb`/`-shf` | Override normal/selected **highlight** background/foreground colors                    |
-| `-w windowid`               | Embed into an existing window instead of creating one                                  |
+| Flag                        | Effect                                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `-v`                        | Print version and exit                                                                                                               |
+| `-b`                        | Appear at bottom of screen                                                                                                           |
+| `-f`                        | Grab keyboard before reading stdin (faster startup; only if stdin isn't a tty)                                                       |
+| `-F`                        | Disable fuzzy matching                                                                                                               |
+| `-s`                        | Case-**sensitive** matching (matching is case-insensitive by default)                                                                |
+| `-P`                        | Password mode: mask typed input with dots                                                                                            |
+| `-x`                        | Invert `use_prefix` (only has an effect once `-F` is also passed — see Matching above)                                               |
+| `-l N`                      | Vertical list with N lines                                                                                                           |
+| `-m N`                      | Show on monitor N (Xinerama, 0-indexed)                                                                                              |
+| `-n N`                      | Preselect item at index N                                                                                                            |
+| `-p prompt`                 | Override prompt text                                                                                                                 |
+| `-fn font`                  | Override font                                                                                                                        |
+| `-nb`/`-nf`/`-sb`/`-sf`     | Override normal/selected background/foreground colors                                                                                |
+| `-nhb`/`-nhf`/`-shb`/`-shf` | Override normal/selected **highlight** background/foreground colors                                                                  |
+| `-w windowid`               | Embed into an existing window instead of creating one                                                                                |
+| `-r`                        | Run mode: Enter executes the typed text verbatim; Shift+Enter takes the highlighted item instead (inverts default Enter/Shift+Enter) |
 
 There is no `-i` flag — matching is case-insensitive by default, and `-s`
 switches to case-sensitive (the opposite of what a hypothetical `-i` flag

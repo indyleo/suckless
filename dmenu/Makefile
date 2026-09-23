@@ -43,19 +43,20 @@ dist: clean
 	$(PRINTF) "DIST" dmenu-$(VERSION).tar.gz
 	$Qmkdir -p dmenu-$(VERSION)
 	$Qcp LICENSE Makefile README arg.h config.def.h config.mk dmenu.1\
-		drw.h util.h dmenu_path dmenu_run stest.1 $(SRC)\
+		drw.h util.h dmenu_path dmenu_run dmenu_run_cmd stest.1 $(SRC)\
 		dmenu-$(VERSION)
 	$Qtar -cf dmenu-$(VERSION).tar dmenu-$(VERSION)
 	$Qgzip dmenu-$(VERSION).tar
 	$Qrm -rf dmenu-$(VERSION)
 
 install: all
-	$(PRINTF) "INSTALL" "$(DESTDIR)$(PREFIX)/bin/{dmenu,dmenu_path,dmenu_run,stest}"
+	$(PRINTF) "INSTALL" "$(DESTDIR)$(PREFIX)/bin/{dmenu,dmenu_path,dmenu_run,dmenu_run_cmd,stest}"
 	$Qmkdir -p $(DESTDIR)$(PREFIX)/bin
-	$Qcp -f dmenu dmenu_path dmenu_run stest $(DESTDIR)$(PREFIX)/bin
+	$Qcp -f dmenu dmenu_path dmenu_run dmenu_run_cmd stest $(DESTDIR)$(PREFIX)/bin
 	$Qchmod 755 $(DESTDIR)$(PREFIX)/bin/dmenu
 	$Qchmod 755 $(DESTDIR)$(PREFIX)/bin/dmenu_path
 	$Qchmod 755 $(DESTDIR)$(PREFIX)/bin/dmenu_run
+	$Qchmod 755 $(DESTDIR)$(PREFIX)/bin/dmenu_run_cmd
 	$Qchmod 755 $(DESTDIR)$(PREFIX)/bin/stest
 	$(PRINTF) "MAN" "$(DESTDIR)$(MANPREFIX)/man1/{dmenu,stest}.1"
 	$Qmkdir -p $(DESTDIR)$(MANPREFIX)/man1
@@ -65,10 +66,11 @@ install: all
 	$Qchmod 644 $(DESTDIR)$(MANPREFIX)/man1/stest.1
 
 uninstall:
-	$(PRINTF) "RM" "dmenu, dmenu_path, dmenu_run, stest + man pages"
+	$(PRINTF) "RM" "dmenu, dmenu_path, dmenu_run, dmenu_run_cmd, stest + man pages"
 	$Qrm -f $(DESTDIR)$(PREFIX)/bin/dmenu\
 		$(DESTDIR)$(PREFIX)/bin/dmenu_path\
 		$(DESTDIR)$(PREFIX)/bin/dmenu_run\
+    $(DESTDIR)$(PREFIX)/bin/dmenu_run_cmd\
 		$(DESTDIR)$(PREFIX)/bin/stest\
 		$(DESTDIR)$(MANPREFIX)/man1/dmenu.1\
 		$(DESTDIR)$(MANPREFIX)/man1/stest.1

@@ -19,6 +19,7 @@ A dynamic menu launcher for X, enhanced with:
 - 📏 **Custom bar height padding** (`user_bh`)
 - 📌 **Preselected item on open** (`-n` argument)
 - 💬 **Custom prompt text** (`-p` argument)
+- ㊙️ **Password Mode** (`-P` argument)
 
 [dmenu/README.md](dmenu/README.md)
 

@@ -18,7 +18,7 @@
 
 ```
 main()
-  ├─ parse args (-b, -F, -l, -n, -p, -x, ...)
+  ├─ parse args (-b, -F, -l, -n, -p, -r, -x, ...)
   ├─ setup()
   │    ├─ XOpenDisplay / XineramaQueryScreens
   │    ├─ drw_create / drw_fontset_create

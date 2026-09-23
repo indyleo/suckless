@@ -264,7 +264,7 @@ const int osdslen = LENGTH(osds);
 /* Commands */
 static char dmenumon[2] =
     "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = {"dmenu_run", NULL};
+static const char *dmenucmd[] = {"dmenu_run_cmd", NULL};
 
 static const Key keys[] = {
     /* modifier                     key        function        argument */
@@ -322,7 +322,7 @@ static const Key keys[] = {
     {MODKEY | SHIFTKEY, XK_g, spawn, SHCMD("signal-desktop")},
 
     /* Launchers */
-    {MODKEY, XK_r, spawn, SHCMD("dmenu_run")},
+    {MODKEY, XK_r, spawn, SHCMD("dmenu_run_cmd")},
     {MODKEY, XK_n, spawn, SHCMD("notebook")},
     {MODKEY | SHIFTKEY, XK_c, clippick, {0}},
     {MODKEY | CTRLKEY, XK_c, clippin, {0}},

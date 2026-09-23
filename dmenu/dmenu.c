@@ -62,6 +62,7 @@ static struct item *items = NULL;
 static struct item *matches, *matchend;
 static struct item *prev, *curr, *next, *sel;
 static int mon = -1, screen;
+static int runmode = 0;
 
 static Atom clip, utf8, type, dock;
 static Display *dpy;
@@ -563,9 +564,24 @@ static void keypress(XKeyEvent *ev) {
     case XK_KP_Right:
       movewordedge(+1);
       goto draw;
-    case XK_Return:
-    case XK_KP_Enter:
-      break;
+       case XK_Return:
+  case XK_KP_Enter:
+    if (!runmode && sel && !(ev->state & ShiftMask) && sel->flatpak_id) {
+      if (fork() == 0) {
+        setsid();
+        close(ConnectionNumber(dpy));
+        execlp("flatpak", "flatpak", "run", sel->flatpak_id, NULL);
+        _exit(1);
+      }
+    } else if (runmode) {
+      /* Run mode: Enter always executes exactly what's in the input box,
+       * args and all. Shift+Enter instead takes the highlighted suggestion
+       * verbatim - the inverse of normal dmenu, and the opposite of what
+       * you'd want for a "type a command" launcher. */
+      puts((sel && (ev->state & ShiftMask)) ? sel->text : text);
+    } else {
+      puts((sel && !(ev->state & ShiftMask)) ? sel->text : text);
+    }
     case XK_bracketleft:
       cleanup();
       exit(1);
@@ -1007,7 +1023,7 @@ static void setup(void) {
 }
 
 static void usage(void) {
-  die("usage: dmenu [-bFfivPx] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
+  die("usage: dmenu [-bFfirvPx] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
       "             [-nb color] [-nf color] [-sb color] [-sf color]\n"
       "             [-nhb color] [-nhf color] [-shb color] [-shf color] [-w "
       "windowid] [-n number]");
@@ -1033,6 +1049,8 @@ int main(int argc, char *argv[]) {
       fstrstr = strstr;
     } else if (!strcmp(argv[i], "-P")) /* password mode */
       passwd = 1;
+  else if (!strcmp(argv[i], "-r")) /* run mode: Enter executes what's typed, not the highlight */
+  runmode = 1;
     else if (!strcmp(argv[i], "-x")) /* invert use_prefix */
       use_prefix = !use_prefix;
     else if (i + 1 == argc)
